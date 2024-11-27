@@ -1,0 +1,68 @@
+// This is your Prisma schema file,
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Loan {
+  id                      String           @id @default(cuid())
+  dealName                String
+  currentBalance          Float
+  currentPeriodTerms      String
+  priorPeriodPaymentStatus String
+  agentBank               String
+  lenderPositions         LenderPosition[]
+  trades                  Trade[]
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @default(now()) @updatedAt
+}
+
+model Lender {
+  id              String           @id @default(cuid())
+  name            String
+  lenderPositions LenderPosition[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @default(now()) @updatedAt
+}
+
+model LenderPosition {
+  id        String   @id @default(cuid())
+  loan      Loan     @relation(fields: [loanId], references: [id])
+  loanId    String
+  lender    Lender   @relation(fields: [lenderId], references: [id])
+  lenderId  String
+  balance   Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Trade {
+  id                   Int                @id @default(autoincrement())
+  loanId               String
+  quantity            Float
+  price               Float
+  counterparty        String
+  tradeDate           DateTime
+  expectedSettlementDate DateTime
+  accruedInterest     Float
+  status              String             // 'Open' or 'Completed'
+  tradeType           String             // 'Buy' or 'Sell'
+  historicalBalances  HistoricalBalance[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  loan                Loan               @relation(fields: [loanId], references: [id])
+}
+
+model HistoricalBalance {
+  id        Int      @id @default(autoincrement())
+  tradeId   Int
+  date      String
+  balance   Float
+  trade     Trade    @relation(fields: [tradeId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
