@@ -1,5 +1,16 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Description
+
+This application is a loan management system that allows users to 12manage their loans efficiently. Users can view, add, and edit loan details, making it easier to keep track of their financial commitments.
+
+## Technologies Used
+
+- **Next.js**: A React framework for building server-side rendered applications.
+- **TypeScript**: A superset of JavaScript that adds static types.
+- **React**: A JavaScript library for building user interfaces.
+- **Vercel**: The platform for deploying Next.js applications.
+
 ## Getting Started
 
 First, run the development server:

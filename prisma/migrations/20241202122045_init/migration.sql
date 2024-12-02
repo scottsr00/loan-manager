@@ -5,6 +5,8 @@ CREATE TABLE "Loan" (
     "currentBalance" REAL NOT NULL,
     "currentPeriodTerms" TEXT NOT NULL,
     "priorPeriodPaymentStatus" TEXT NOT NULL,
+    "agentBank" TEXT NOT NULL,
+    "borrower" TEXT NOT NULL DEFAULT 'Unknown',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -41,6 +43,8 @@ CREATE TABLE "Trade" (
     "accruedInterest" REAL NOT NULL,
     "status" TEXT NOT NULL,
     "tradeType" TEXT NOT NULL,
+    "costOfCarryAccrued" REAL NOT NULL DEFAULT 0,
+    "lastCarryCalculation" DATETIME,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "Trade_loanId_fkey" FOREIGN KEY ("loanId") REFERENCES "Loan" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
@@ -56,3 +60,43 @@ CREATE TABLE "HistoricalBalance" (
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "HistoricalBalance_tradeId_fkey" FOREIGN KEY ("tradeId") REFERENCES "Trade" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
+-- CreateTable
+CREATE TABLE "TradeComment" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "tradeId" INTEGER NOT NULL,
+    "author" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "TradeComment_tradeId_fkey" FOREIGN KEY ("tradeId") REFERENCES "Trade" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "ServicingActivity" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "loanId" TEXT NOT NULL,
+    "activityType" TEXT NOT NULL,
+    "status" TEXT NOT NULL,
+    "dueDate" DATETIME NOT NULL,
+    "completedDate" DATETIME,
+    "description" TEXT NOT NULL,
+    "amount" REAL,
+    "rateChange" REAL,
+    "assignedTo" TEXT,
+    "priority" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "ServicingActivity_loanId_fkey" FOREIGN KEY ("loanId") REFERENCES "Loan" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateIndex
+CREATE INDEX "TradeComment_tradeId_idx" ON "TradeComment"("tradeId");
+
+-- CreateIndex
+CREATE INDEX "ServicingActivity_loanId_idx" ON "ServicingActivity"("loanId");
+
+-- CreateIndex
+CREATE INDEX "ServicingActivity_dueDate_idx" ON "ServicingActivity"("dueDate");
+
+-- CreateIndex
+CREATE INDEX "ServicingActivity_status_idx" ON "ServicingActivity"("status");

@@ -1,11 +1,10 @@
-// This is your Prisma schema file,
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
 }
 
 model Loan {
@@ -15,8 +14,10 @@ model Loan {
   currentPeriodTerms      String
   priorPeriodPaymentStatus String
   agentBank               String
+  borrower                String          @default("Unknown")
   lenderPositions         LenderPosition[]
   trades                  Trade[]
+  servicingActivities     ServicingActivity[]
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @default(now()) @updatedAt
 }
@@ -41,20 +42,23 @@ model LenderPosition {
 }
 
 model Trade {
-  id                   Int                @id @default(autoincrement())
-  loanId               String
-  quantity            Float
-  price               Float
-  counterparty        String
-  tradeDate           DateTime
+  id                    Int                @id @default(autoincrement())
+  loanId                String
+  quantity              Float
+  price                 Float
+  counterparty          String
+  tradeDate            DateTime
   expectedSettlementDate DateTime
-  accruedInterest     Float
-  status              String             // 'Open' or 'Completed'
-  tradeType           String             // 'Buy' or 'Sell'
-  historicalBalances  HistoricalBalance[]
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  loan                Loan               @relation(fields: [loanId], references: [id])
+  accruedInterest      Float
+  status               String             // 'Open' or 'Completed'
+  tradeType            String             // 'Buy' or 'Sell'
+  historicalBalances   HistoricalBalance[]
+  costOfCarryAccrued   Float              @default(0)
+  lastCarryCalculation DateTime?
+  comments             TradeComment[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  loan                 Loan               @relation(fields: [loanId], references: [id])
 }
 
 model HistoricalBalance {
@@ -65,4 +69,36 @@ model HistoricalBalance {
   trade     Trade    @relation(fields: [tradeId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model TradeComment {
+  id        Int      @id @default(autoincrement())
+  tradeId   Int
+  author    String   // Can be 'Buyer', 'Seller', or 'Agent'
+  content   String
+  createdAt DateTime @default(now())
+  trade     Trade    @relation(fields: [tradeId], references: [id])
+
+  @@index([tradeId])
+}
+
+model ServicingActivity {
+  id              Int      @id @default(autoincrement())
+  loanId          String
+  activityType    String   // e.g., 'Payment', 'Rate Change', 'Amendment', 'Notice'
+  status          String   // e.g., 'Pending', 'Completed', 'Failed'
+  dueDate         DateTime
+  completedDate   DateTime?
+  description     String
+  amount          Float?
+  rateChange      Float?
+  assignedTo      String?
+  priority        String   // e.g., 'High', 'Medium', 'Low'
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  loan            Loan     @relation(fields: [loanId], references: [id])
+
+  @@index([loanId])
+  @@index([dueDate])
+  @@index([status])
 }

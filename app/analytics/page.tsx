@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { AnalyticsComponent } from '@/components/Analytics'
+import { MarketRates } from '@/components/MarketRates'
 import { getAnalytics } from '@/app/actions/getAnalytics'
 
 export default function AnalyticsPage() {
@@ -27,5 +28,10 @@ export default function AnalyticsPage() {
     return <div>Loading analytics...</div>
   }
 
-  return data ? <AnalyticsComponent {...data} /> : null
+  return (
+    <div className="space-y-6">
+      {data && <AnalyticsComponent {...data} />}
+      <MarketRates />
+    </div>
+  )
 } 

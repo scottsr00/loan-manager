@@ -1,8 +1,6 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export interface HistoricalBalance {
   date: string
@@ -22,6 +20,8 @@ export interface Trade {
   status: 'Open' | 'Completed'
   tradeType: 'Buy' | 'Sell'
   historicalBalances: HistoricalBalance[]
+  costOfCarryAccrued: number
+  lastCarryCalculation?: Date
 }
 
 interface PrismaTrade {
@@ -35,6 +35,8 @@ interface PrismaTrade {
   accruedInterest: number
   status: string
   tradeType: string
+  costOfCarryAccrued: number
+  lastCarryCalculation: Date | null
   loan: {
     dealName: string
   }
@@ -74,6 +76,8 @@ export async function getTradeHistory(): Promise<Trade[]> {
       accruedInterest: trade.accruedInterest,
       status: trade.status as 'Open' | 'Completed',
       tradeType: trade.tradeType as 'Buy' | 'Sell',
+      costOfCarryAccrued: trade.costOfCarryAccrued,
+      lastCarryCalculation: trade.lastCarryCalculation || undefined,
       historicalBalances: trade.historicalBalances.map(hb => ({
         date: hb.date,
         balance: hb.balance,
@@ -82,7 +86,5 @@ export async function getTradeHistory(): Promise<Trade[]> {
   } catch (error) {
     console.error('Error in getTradeHistory:', error)
     return []
-  } finally {
-    await prisma.$disconnect()
   }
 } 

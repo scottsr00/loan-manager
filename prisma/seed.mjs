@@ -145,6 +145,23 @@ async function main() {
       },
     });
 
+    // Add sample comments for trade1
+    await prisma.$executeRaw`
+      INSERT INTO TradeComment (tradeId, author, content, createdAt)
+      VALUES 
+        (${trade1.id}, 'Agent', 'Trade booked successfully. Awaiting settlement confirmation.', datetime('now', '-2 days')),
+        (${trade1.id}, 'Seller', 'Settlement instructions sent to custodian.', datetime('now', '-1 days')),
+        (${trade1.id}, 'Buyer', 'Confirmed receipt of settlement instructions.', datetime('now', '-12 hours'))
+    `
+
+    // Add sample comments for trade2
+    await prisma.$executeRaw`
+      INSERT INTO TradeComment (tradeId, author, content, createdAt)
+      VALUES 
+        (${trade2.id}, 'Agent', 'Trade pending final approval.', datetime('now', '-1 days')),
+        (${trade2.id}, 'Buyer', 'Please confirm settlement account details.', datetime('now', '-6 hours'))
+    `
+
     console.log('Seed data created successfully');
   } catch (error) {
     console.error('Error seeding data:', error);
