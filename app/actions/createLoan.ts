@@ -1,8 +1,6 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 interface LenderShare {
   lenderName: string
@@ -23,7 +21,36 @@ interface CreateLoanParams {
 
 export async function createLoan(params: CreateLoanParams) {
   if (!params || typeof params !== 'object') {
-    throw new Error('Invalid parameters: payload must be an object');
+    throw new Error('Invalid parameters: payload must be an object')
+  }
+
+  // Validate required fields
+  if (!params.dealName || !params.currentBalance || !params.currentPeriodTerms || 
+      !params.baseRate || !params.spread || !params.agentBank || !params.lenderShares ||
+      !params.startDate || !params.maturityDate) {
+    throw new Error('Missing required fields')
+  }
+
+  // Validate dates
+  const startDate = new Date(params.startDate)
+  const maturityDate = new Date(params.maturityDate)
+  
+  if (isNaN(startDate.getTime()) || isNaN(maturityDate.getTime())) {
+    throw new Error('Invalid date format')
+  }
+  
+  if (maturityDate <= startDate) {
+    throw new Error('Maturity date must be after start date')
+  }
+
+  // Validate lender shares
+  if (!Array.isArray(params.lenderShares) || params.lenderShares.length === 0) {
+    throw new Error('At least one lender share is required')
+  }
+
+  const totalShares = params.lenderShares.reduce((sum, share) => sum + share.share, 0)
+  if (Math.abs(totalShares - 100) > 0.01) { // Allow for small floating point differences
+    throw new Error('Lender shares must total 100%')
   }
 
   try {
@@ -31,11 +58,11 @@ export async function createLoan(params: CreateLoanParams) {
       data: {
         dealName: params.dealName,
         currentBalance: params.currentBalance,
-        currentPeriodTerms: `${params.baseRate} + ${params.spread}%`,
+        currentPeriodTerms: params.currentPeriodTerms,
         priorPeriodPaymentStatus: 'Pending',
         agentBank: params.agentBank,
-        startDate: new Date(params.startDate),
-        maturityDate: new Date(params.maturityDate),
+        startDate: startDate,
+        maturityDate: maturityDate,
         lenderPositions: {
           create: params.lenderShares.map(share => ({
             lender: {

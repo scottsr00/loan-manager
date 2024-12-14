@@ -53,8 +53,8 @@ const menuItems = [
     icon: Users
   },
   {
-    title: "Institutions",
-    href: "/institutions",
+    title: "Entities",
+    href: "/entities",
     icon: Building2
   },
   {

@@ -1,8 +1,6 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export interface LenderPosition {
   lenderId: string
@@ -16,6 +14,7 @@ export interface LoanPosition {
   currentBalance: number
   currentPeriodTerms: string
   priorPeriodPaymentStatus: 'Paid' | 'Overdue' | 'Pending'
+  agentBank: string
   lenderPositions: LenderPosition[]
 }
 
@@ -33,6 +32,7 @@ interface PrismaLoan {
   currentBalance: number
   currentPeriodTerms: string
   priorPeriodPaymentStatus: string
+  agentBank: string
   lenderPositions: PrismaLenderPosition[]
 }
 
@@ -54,6 +54,7 @@ export async function getInventory(): Promise<LoanPosition[]> {
       currentBalance: loan.currentBalance,
       currentPeriodTerms: loan.currentPeriodTerms,
       priorPeriodPaymentStatus: loan.priorPeriodPaymentStatus as 'Paid' | 'Overdue' | 'Pending',
+      agentBank: loan.agentBank,
       lenderPositions: loan.lenderPositions.map((position: PrismaLenderPosition) => ({
         lenderId: position.lender.id,
         lenderName: position.lender.name,
@@ -63,7 +64,5 @@ export async function getInventory(): Promise<LoanPosition[]> {
   } catch (error) {
     console.error('Error in getInventory:', error)
     return []
-  } finally {
-    await prisma.$disconnect()
   }
 }

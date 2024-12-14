@@ -122,6 +122,20 @@ export function LoanPositionsInventoryComponent() {
     })
   }, [positions, trades])
 
+  const totals = useMemo(() => {
+    return positionsWithDetailedTrades.reduce((acc, position) => ({
+      currentBalance: acc.currentBalance + position.currentBalance,
+      completedTradeBalance: acc.completedTradeBalance + position.tradeBalance.completed,
+      openTradeBalance: acc.openTradeBalance + position.tradeBalance.open,
+      netPosition: acc.netPosition + position.tradeBalance.total
+    }), {
+      currentBalance: 0,
+      completedTradeBalance: 0,
+      openTradeBalance: 0,
+      netPosition: 0
+    })
+  }, [positionsWithDetailedTrades])
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
   }
@@ -149,21 +163,21 @@ export function LoanPositionsInventoryComponent() {
     setFilters(prev => ({ ...prev, [key]: value }))
   }
 
-  const getAgentBadge = (agentBank: string) => {
-    if (agentBank === 'NxtBank') {
+  const getAgentBadge = (position: LoanPosition) => {
+    const isAgent = position.agentBank === 'NxtBank'
+    const isParticipant = position.lenderPositions.some(lp => lp.lenderName === 'NxtBank')
+
+    if (isAgent) {
       return (
-        <div className="flex items-center gap-1 text-green-600">
-          <Shield className="h-4 w-4" />
-          <span className="text-xs">Agent Bank</span>
-        </div>
+        <span className="text-sm font-medium text-green-600">Agent</span>
       )
     }
-    return (
-      <div className="flex items-center gap-1 text-gray-500">
-        <ShieldAlert className="h-4 w-4" />
-        <span className="text-xs">Participant</span>
-      </div>
-    )
+    if (isParticipant) {
+      return (
+        <span className="text-sm font-medium text-gray-500">Participant</span>
+      )
+    }
+    return null
   }
 
   if (isLoading) {
@@ -185,16 +199,6 @@ export function LoanPositionsInventoryComponent() {
             </div>
             <div className="flex items-center gap-4">
               <NewLoanModal onLoanCreated={loadData} />
-            </div>
-          </div>
-          <div className="flex gap-4 items-center text-sm mt-2">
-            <div className="flex items-center gap-1">
-              <Shield className="h-4 w-4 text-green-600" />
-              <span>Agent Bank</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <ShieldAlert className="h-4 w-4 text-gray-500" />
-              <span>Participant</span>
             </div>
           </div>
         </div>
@@ -229,7 +233,7 @@ export function LoanPositionsInventoryComponent() {
                         <ChevronRight className="h-4 w-4" />
                       }
                     </TableCell>
-                    <TableCell>{getAgentBadge(position.agentBank)}</TableCell>
+                    <TableCell>{getAgentBadge(position)}</TableCell>
                     <TableCell>{position.id}</TableCell>
                     <TableCell>{position.dealName}</TableCell>
                     <TableCell>{formatCurrency(position.currentBalance)}</TableCell>
@@ -273,6 +277,18 @@ export function LoanPositionsInventoryComponent() {
                   )}
                 </Fragment>
               ))}
+              <TableRow className="font-medium bg-muted/50">
+                <TableCell></TableCell>
+                <TableCell>Total</TableCell>
+                <TableCell></TableCell>
+                <TableCell></TableCell>
+                <TableCell>{formatCurrency(totals.currentBalance)}</TableCell>
+                <TableCell>{formatCurrency(totals.completedTradeBalance)}</TableCell>
+                <TableCell>{formatCurrency(totals.openTradeBalance)}</TableCell>
+                <TableCell>{formatCurrency(totals.netPosition)}</TableCell>
+                <TableCell></TableCell>
+                <TableCell></TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </ScrollArea>

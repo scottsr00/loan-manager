@@ -32,7 +32,6 @@ export function NewLoanModal({ onLoanCreated }: NewLoanModalProps) {
   const [formData, setFormData] = useState({
     dealName: '',
     currentBalance: '',
-    currentPeriodTerms: '',
     baseRate: 'SOFR',
     spread: '',
     agentBank: 'NxtBank',
@@ -66,36 +65,63 @@ export function NewLoanModal({ onLoanCreated }: NewLoanModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate required fields
+    if (!formData.dealName || !formData.currentBalance || !formData.spread || !formData.agentBank ||
+        !formData.startDate || !formData.maturityDate) {
+      console.error('Missing required fields')
+      return
+    }
+
+    // If no lenders are added, use Agent Bank as 100% lender
+    let lenderShares = formData.lenderShares
+    if (lenderShares.length === 0) {
+      lenderShares = [{
+        lenderName: formData.agentBank,
+        share: '100'
+      }]
+    } else {
+      // Only validate total shares if custom lenders are added
+      const totalShares = lenderShares.reduce((sum, share) => sum + Number(share.share), 0)
+      if (Math.abs(totalShares - 100) > 0.01) {
+        console.error('Lender shares must total 100%')
+        return
+      }
+    }
+
     try {
-      await createLoan({
+      const payload = {
         dealName: formData.dealName,
         currentBalance: Number(formData.currentBalance),
-        currentPeriodTerms: `${formData.baseRate} + ${formData.spread}%`,
         baseRate: formData.baseRate,
         spread: Number(formData.spread),
         agentBank: formData.agentBank,
+        currentPeriodTerms: `${formData.baseRate} + ${formData.spread}%`,
         startDate: formData.startDate,
         maturityDate: formData.maturityDate,
-        lenderShares: formData.lenderShares.map(share => ({
+        lenderShares: lenderShares.map(share => ({
           lenderName: share.lenderName,
           share: Number(share.share)
         }))
-      })
+      }
+
+      const result = await createLoan(payload)
       
-      setOpen(false)
-      setFormData({
-        dealName: '',
-        currentBalance: '',
-        currentPeriodTerms: '',
-        baseRate: 'SOFR',
-        spread: '',
-        agentBank: 'NxtBank',
-        startDate: '',
-        maturityDate: '',
-        lenderShares: []
-      })
-      
-      onLoanCreated()
+      if (result.success) {
+        setOpen(false)
+        setFormData({
+          dealName: '',
+          currentBalance: '',
+          baseRate: 'SOFR',
+          spread: '',
+          agentBank: 'NxtBank',
+          startDate: '',
+          maturityDate: '',
+          lenderShares: []
+        })
+        
+        onLoanCreated()
+      }
     } catch (error) {
       console.error('Error creating loan:', error)
     }
@@ -195,7 +221,14 @@ export function NewLoanModal({ onLoanCreated }: NewLoanModalProps) {
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <Label>Lender Shares</Label>
+                <div className="space-y-1">
+                  <Label>Lender Shares</Label>
+                  {formData.lenderShares.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {formData.agentBank} will be assigned 100% if no other lenders are added
+                    </p>
+                  )}
+                </div>
                 <Button type="button" onClick={handleAddLender} variant="outline" size="sm">
                   <PlusCircle className="h-4 w-4 mr-2" />
                   Add Lender

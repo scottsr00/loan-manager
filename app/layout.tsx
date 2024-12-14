@@ -1,11 +1,16 @@
-'use client'
-
 import './globals.css'
 import { Inter } from 'next/font/google'
 import { MainNav } from '@/components/MainNav'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { Metadata } from 'next'
+import { Providers } from '@/components/Providers'
 
 const inter = Inter({ subsets: ['latin'] })
+
+export const metadata: Metadata = {
+  title: 'NxtBank - Loan Management',
+  description: 'Corporate loan management and trading platform',
+}
 
 export default function RootLayout({
   children,
@@ -15,12 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <Providers>
           <div className="flex h-screen">
             <MainNav />
             <div className="flex-1 flex flex-col">
@@ -34,7 +34,7 @@ export default function RootLayout({
               </footer>
             </div>
           </div>
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   )

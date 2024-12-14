@@ -25,6 +25,8 @@ async function main() {
         currentPeriodTerms: '3M LIBOR + 2.5%',
         priorPeriodPaymentStatus: 'Paid',
         agentBank: 'NxtBank',
+        startDate: new Date(),
+        maturityDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
       },
     });
 
@@ -35,6 +37,8 @@ async function main() {
         currentPeriodTerms: '1M LIBOR + 3%',
         priorPeriodPaymentStatus: 'Pending',
         agentBank: 'Bank A',
+        startDate: new Date(),
+        maturityDate: new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000), // 2 years from now
       },
     });
 

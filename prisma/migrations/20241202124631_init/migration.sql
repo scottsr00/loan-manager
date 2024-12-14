@@ -7,6 +7,8 @@ CREATE TABLE "Loan" (
     "priorPeriodPaymentStatus" TEXT NOT NULL,
     "agentBank" TEXT NOT NULL,
     "borrower" TEXT NOT NULL DEFAULT 'Unknown',
+    "startDate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "maturityDate" DATETIME NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -88,6 +90,9 @@ CREATE TABLE "ServicingActivity" (
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "ServicingActivity_loanId_fkey" FOREIGN KEY ("loanId") REFERENCES "Loan" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Lender_name_key" ON "Lender"("name");
 
 -- CreateIndex
 CREATE INDEX "TradeComment_tradeId_idx" ON "TradeComment"("tradeId");
