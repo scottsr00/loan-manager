@@ -10,6 +10,8 @@ datasource db {
 model Loan {
   id                      String           @id @default(cuid())
   dealName                String
+  facility               Facility         @relation(fields: [facilityId], references: [id])
+  facilityId             String
   currentBalance          Float
   currentPeriodTerms      String
   priorPeriodPaymentStatus String
@@ -22,6 +24,8 @@ model Loan {
   servicingActivities     ServicingActivity[]
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @default(now()) @updatedAt
+
+  @@index([facilityId])
 }
 
 model Lender {
@@ -123,6 +127,8 @@ model Entity {
   documents        EntityDocument[]
   relationships    EntityRelationship[] @relation("FromEntity")
   relatedTo        EntityRelationship[] @relation("ToEntity")
+  borrowerAgreements CreditAgreement[] @relation("Borrower")
+  agentAgreements   CreditAgreement[] @relation("AgentBank")
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
@@ -292,4 +298,48 @@ model CounterpartyDocument {
   updatedAt     DateTime      @updatedAt
 
   @@index([counterpartyId])
+}
+
+model CreditAgreement {
+  id                String      @id @default(cuid())
+  agreementName     String
+  agreementNumber   String      @unique
+  borrower          Entity      @relation("Borrower", fields: [borrowerId], references: [id])
+  borrowerId        String
+  agent            Entity      @relation("AgentBank", fields: [agentBankId], references: [id])
+  agentBankId      String
+  status           String      @default("ACTIVE")  // ACTIVE, TERMINATED, DEFAULTED, MATURED
+  effectiveDate    DateTime
+  maturityDate     DateTime
+  totalAmount      Float
+  currency         String      @default("USD")
+  facilities       Facility[]
+  description      String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([borrowerId])
+  @@index([agentBankId])
+}
+
+model Facility {
+  id                String      @id @default(cuid())
+  facilityName      String
+  facilityType      String      // REVOLVING, TERM, DELAYED_DRAW
+  creditAgreement   CreditAgreement @relation(fields: [creditAgreementId], references: [id])
+  creditAgreementId String
+  status           String      @default("ACTIVE")  // ACTIVE, TERMINATED, DEFAULTED, MATURED
+  commitmentAmount Float
+  currency         String      @default("USD")
+  startDate        DateTime
+  maturityDate     DateTime
+  interestType     String      // FIXED, FLOATING
+  baseRate         String      // SOFR, PRIME, etc.
+  margin           Float
+  loans            Loan[]
+  description      String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([creditAgreementId])
 }
