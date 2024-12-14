@@ -1,37 +1,36 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { AnalyticsComponent } from '@/components/Analytics'
-import { MarketRates } from '@/components/MarketRates'
+import { Analytics } from '@/components/Analytics'
 import { getAnalytics } from '@/app/actions/getAnalytics'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Suspense } from 'react'
+
+async function AnalyticsContent() {
+  const data = await getAnalytics()
+  return <Analytics data={data} />
+}
 
 export default function AnalyticsPage() {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    async function loadAnalytics() {
-      try {
-        const analyticsData = await getAnalytics()
-        setData(analyticsData)
-      } catch (error) {
-        console.error('Error loading analytics:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadAnalytics()
-  }, [])
-
-  if (loading) {
-    return <div>Loading analytics...</div>
-  }
-
   return (
-    <div className="space-y-6">
-      {data && <AnalyticsComponent {...data} />}
-      <MarketRates />
+    <div className="flex-1 space-y-4 p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
+      </div>
+      <Suspense fallback={<AnalyticsSkeleton />}>
+        <AnalyticsContent />
+      </Suspense>
+    </div>
+  )
+}
+
+function AnalyticsSkeleton() {
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Skeleton className="col-span-4 h-[300px]" />
+      <Skeleton className="col-span-2 h-[300px]" />
+      <Skeleton className="col-span-2 h-[300px]" />
+      <Skeleton className="col-span-4 h-[400px]" />
+      <Skeleton className="col-span-4 h-[300px]" />
     </div>
   )
 } 

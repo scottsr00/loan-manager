@@ -5,8 +5,15 @@ import { Prisma } from '@prisma/client'
 
 export type CreditAgreementWithRelations = Prisma.CreditAgreementGetPayload<{
   include: {
-    bank: true
-    borrower: true
+    agent: true
+    borrower: {
+      include: {
+        entity: true
+        requiredDocuments: true
+        financialStatements: true
+        covenants: true
+      }
+    }
     facilities: true
   }
 }>
@@ -15,8 +22,15 @@ export async function getCreditAgreements() {
   try {
     const creditAgreements = await prisma.creditAgreement.findMany({
       include: {
-        bank: true,
-        borrower: true,
+        agent: true,
+        borrower: {
+          include: {
+            entity: true,
+            requiredDocuments: true,
+            financialStatements: true,
+            covenants: true
+          }
+        },
         facilities: true
       },
       orderBy: {
@@ -36,8 +50,15 @@ export async function getCreditAgreement(id: string) {
     const creditAgreement = await prisma.creditAgreement.findUnique({
       where: { id },
       include: {
-        bank: true,
-        borrower: true,
+        agent: true,
+        borrower: {
+          include: {
+            entity: true,
+            requiredDocuments: true,
+            financialStatements: true,
+            covenants: true
+          }
+        },
         facilities: true
       }
     })

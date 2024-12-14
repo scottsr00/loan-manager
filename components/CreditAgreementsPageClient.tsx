@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollText, Plus } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatCurrency } from '@/lib/utils'
+import { NewCreditAgreementModal } from '@/components/NewCreditAgreementModal'
 
 interface CreditAgreementsPageClientProps {
   creditAgreements: {
@@ -20,6 +21,11 @@ export function CreditAgreementsPageClient({
   creditAgreements: creditAgreementsData
 }: CreditAgreementsPageClientProps) {
   const [selectedCreditAgreement, setSelectedCreditAgreement] = useState<CreditAgreementWithRelations | null>(null)
+  const [creditAgreements, setCreditAgreements] = useState(creditAgreementsData.creditAgreements)
+
+  const handleCreditAgreementCreated = (newCreditAgreement: CreditAgreementWithRelations) => {
+    setCreditAgreements(prev => [newCreditAgreement, ...prev])
+  }
 
   if (creditAgreementsData.error) {
     return (
@@ -39,10 +45,7 @@ export function CreditAgreementsPageClient({
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Agreement
-          </Button>
+          <NewCreditAgreementModal onCreditAgreementCreated={handleCreditAgreementCreated} />
         </div>
       </div>
 
@@ -54,10 +57,7 @@ export function CreditAgreementsPageClient({
             <p className="mb-4 mt-2 text-sm text-muted-foreground">
               You haven't created any credit agreements yet. Add one to get started.
             </p>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Agreement
-            </Button>
+            <NewCreditAgreementModal onCreditAgreementCreated={handleCreditAgreementCreated} />
           </div>
         </div>
       ) : (
@@ -71,7 +71,7 @@ export function CreditAgreementsPageClient({
               <div className="grid gap-1">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <h3 className="font-semibold">{agreement.bank.name}</h3>
+                    <h3 className="font-semibold">{agreement.agent.legalName}</h3>
                     <Badge variant={agreement.status === 'ACTIVE' ? 'success' : 'secondary'}>
                       {agreement.status}
                     </Badge>
@@ -83,12 +83,20 @@ export function CreditAgreementsPageClient({
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm font-medium">Borrower</p>
-                    <p className="text-sm text-muted-foreground">{agreement.borrower.name}</p>
+                    <p className="text-sm text-muted-foreground">{agreement.borrower.entity.legalName}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-xs">
+                        {agreement.borrower.creditRating || 'No Rating'}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        KYC: {agreement.borrower.kycStatus}
+                      </Badge>
+                    </div>
                   </div>
                   <div>
                     <p className="text-sm font-medium">Start Date</p>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(agreement.startDate), 'PP')}
+                      {format(new Date(agreement.effectiveDate), 'PP')}
                     </p>
                   </div>
                   <div>
@@ -103,7 +111,21 @@ export function CreditAgreementsPageClient({
                   <div className="flex flex-wrap gap-2">
                     {agreement.facilities.map((facility) => (
                       <Badge key={facility.id} variant="outline">
-                        {facility.type} - {formatCurrency(facility.amount)}
+                        {facility.facilityType} - {formatCurrency(facility.commitmentAmount)}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <p className="text-sm font-medium mb-1">Covenants ({agreement.borrower.covenants.length})</p>
+                  <div className="flex flex-wrap gap-2">
+                    {agreement.borrower.covenants.map((covenant) => (
+                      <Badge 
+                        key={covenant.id} 
+                        variant={covenant.status === 'COMPLIANT' ? 'success' : 'destructive'}
+                        className="text-xs"
+                      >
+                        {covenant.description}
                       </Badge>
                     ))}
                   </div>

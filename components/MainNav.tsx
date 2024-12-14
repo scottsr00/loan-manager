@@ -15,7 +15,8 @@ import {
   Zap,
   FileText,
   ScrollText,
-  Files
+  Files,
+  Building
 } from 'lucide-react'
 
 const menuItems = [
@@ -68,6 +69,11 @@ const menuItems = [
     title: "Facilities",
     href: "/facilities",
     icon: Files
+  },
+  {
+    title: "Borrowers",
+    href: "/borrowers",
+    icon: Building
   },
   {
     title: "Settings",

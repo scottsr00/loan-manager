@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LoanCalculatorComponent } from '@/components/LoanCalculator'
 import { LoanPositionsInventoryComponent } from '@/components/LoanPositionsInventory'
 import { TradeHistoryComponent } from '@/components/TradeHistory'
-import { AnalyticsComponent } from '@/components/Analytics'
+import { Analytics } from '@/components/Analytics'
 import { getAnalytics } from '@/app/actions/getAnalytics'
 
 export default async function DashboardPage() {
@@ -17,7 +17,7 @@ export default async function DashboardPage() {
           <CardDescription>Comprehensive view of your loan portfolio</CardDescription>
         </CardHeader>
         <CardContent>
-          <AnalyticsComponent {...analyticsData} />
+          <Analytics data={analyticsData} />
         </CardContent>
       </Card>
 

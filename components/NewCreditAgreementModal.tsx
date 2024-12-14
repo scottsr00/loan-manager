@@ -21,8 +21,7 @@ import { CreditAgreementWithRelations } from '@/app/actions/getCreditAgreements'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FacilityFormDialog } from '@/components/FacilityFormDialog'
-import { getBankEntities } from '@/app/actions/getBankEntities'
-import { getBorrowerEntities } from '@/app/actions/getBorrowerEntities'
+import { getEntities, EntityWithRelations } from '@/app/actions/getEntities'
 
 // Helper component for required field label
 function RequiredLabel({ children }: { children: React.ReactNode }) {
@@ -75,19 +74,14 @@ export function NewCreditAgreementModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [facilities, setFacilities] = useState<z.infer<typeof facilitySchema>[]>([])
-  const [bankEntities, setBankEntities] = useState<{ id: string; legalName: string }[]>([])
-  const [borrowerEntities, setBorrowerEntities] = useState<{ id: string; legalName: string }[]>([])
+  const [entities, setEntities] = useState<EntityWithRelations[]>([])
   
   // Load entities on mount
   useEffect(() => {
     const loadEntities = async () => {
       try {
-        const [banks, borrowers] = await Promise.all([
-          getBankEntities(),
-          getBorrowerEntities(),
-        ])
-        setBankEntities(banks)
-        setBorrowerEntities(borrowers)
+        const loadedEntities = await getEntities()
+        setEntities(loadedEntities)
       } catch (error) {
         console.error('Error loading entities:', error)
         toast.error('Failed to load entities')
@@ -95,6 +89,9 @@ export function NewCreditAgreementModal({
     }
     loadEntities()
   }, [])
+
+  const bankEntities = entities.filter(entity => entity.entityType.name === 'Bank')
+  const borrowerEntities = entities.filter(entity => entity.entityType.name === 'Corporate')
 
   const form = useForm<CreditAgreementFormValues>({
     resolver: zodResolver(creditAgreementFormSchema),
