@@ -104,3 +104,192 @@ model ServicingActivity {
   @@index([dueDate])
   @@index([status])
 }
+
+model Entity {
+  id                String              @id @default(cuid())
+  legalName         String
+  dba              String?             // Doing Business As (optional)
+  registrationNumber String?           // Legal registration number
+  taxId            String?             // Tax ID / EIN
+  entityType       EntityType          @relation(fields: [entityTypeId], references: [id])
+  entityTypeId     String
+  status           String              @default("ACTIVE")  // Values: ACTIVE, INACTIVE, PENDING, DISSOLVED
+  incorporationDate DateTime?
+  fiscalYearEnd    String?            // e.g., "12-31"
+  website          String?
+  description      String?
+  addresses        EntityAddress[]
+  contacts         EntityContact[]
+  documents        EntityDocument[]
+  relationships    EntityRelationship[] @relation("FromEntity")
+  relatedTo        EntityRelationship[] @relation("ToEntity")
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([entityTypeId])
+}
+
+model EntityType {
+  id          String    @id @default(cuid())
+  name        String    @unique // e.g., "Corporation", "LLC", "Partnership"
+  description String?
+  entities    Entity[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model EntityAddress {
+  id          String    @id @default(cuid())
+  entity      Entity    @relation(fields: [entityId], references: [id])
+  entityId    String
+  type        String    // Values: REGISTERED, MAILING, PHYSICAL, BILLING
+  street1     String
+  street2     String?
+  city        String
+  state       String?
+  postalCode  String?
+  country     String
+  isPrimary   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([entityId])
+}
+
+model EntityContact {
+  id          String    @id @default(cuid())
+  entity      Entity    @relation(fields: [entityId], references: [id])
+  entityId    String
+  type        String    // Values: DIRECTOR, OFFICER, LEGAL_REPRESENTATIVE, AUTHORIZED_SIGNATORY, ADMINISTRATOR
+  firstName   String
+  lastName    String
+  title       String?
+  email       String?
+  phone       String?
+  mobile      String?
+  isPrimary   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([entityId])
+}
+
+model EntityDocument {
+  id          String    @id @default(cuid())
+  entity      Entity    @relation(fields: [entityId], references: [id])
+  entityId    String
+  type        String    // Values: INCORPORATION, LICENSE, REGISTRATION, TAX, REGULATORY, CERTIFICATION
+  title       String
+  description String?
+  fileUrl     String
+  fileType    String
+  validFrom   DateTime?
+  validTo     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([entityId])
+}
+
+model EntityRelationship {
+  id            String    @id @default(cuid())
+  fromEntity    Entity    @relation("FromEntity", fields: [fromEntityId], references: [id])
+  fromEntityId  String
+  toEntity      Entity    @relation("ToEntity", fields: [toEntityId], references: [id])
+  toEntityId    String
+  type          String    // Values: PARENT, SUBSIDIARY, BRANCH, AFFILIATE, JOINT_VENTURE, PARTNERSHIP
+  ownership     Float?    // Percentage of ownership if applicable
+  startDate     DateTime
+  endDate       DateTime?
+  description   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([fromEntityId])
+  @@index([toEntityId])
+}
+
+model Counterparty {
+  id                String              @id @default(cuid())
+  legalName         String
+  parentName        String?
+  ultParentName     String?
+  counterpartyType  CounterpartyType    @relation(fields: [counterpartyTypeId], references: [id])
+  counterpartyTypeId String
+  kycStatus         String              @default("PENDING")  // PENDING, IN_PROGRESS, APPROVED, REJECTED
+  onboardingStatus  String              @default("NEW")      // NEW, IN_PROGRESS, COMPLETED, REJECTED
+  registrationNumber String?            // Legal registration number
+  taxId            String?              // Tax ID / EIN
+  incorporationDate DateTime?
+  website          String?
+  description      String?
+  addresses        CounterpartyAddress[]
+  contacts         CounterpartyContact[]
+  documents        CounterpartyDocument[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([counterpartyTypeId])
+}
+
+model CounterpartyType {
+  id            String        @id @default(cuid())
+  name          String        @unique  // e.g., "Bank", "Broker-Dealer", "Investment Manager", "Insurance Company"
+  description   String?
+  counterparties Counterparty[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model CounterpartyAddress {
+  id            String        @id @default(cuid())
+  counterparty  Counterparty  @relation(fields: [counterpartyId], references: [id])
+  counterpartyId String
+  type          String        // Values: REGISTERED, MAILING, PHYSICAL, BILLING
+  street1       String
+  street2       String?
+  city          String
+  state         String?
+  postalCode    String?
+  country       String
+  isPrimary     Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([counterpartyId])
+}
+
+model CounterpartyContact {
+  id            String        @id @default(cuid())
+  counterparty  Counterparty  @relation(fields: [counterpartyId], references: [id])
+  counterpartyId String
+  type          String        // Values: DIRECTOR, OFFICER, LEGAL_REPRESENTATIVE, AUTHORIZED_SIGNATORY, ADMINISTRATOR
+  firstName     String
+  lastName      String
+  title         String?
+  email         String?
+  phone         String?
+  mobile        String?
+  isPrimary     Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([counterpartyId])
+}
+
+model CounterpartyDocument {
+  id            String        @id @default(cuid())
+  counterparty  Counterparty  @relation(fields: [counterpartyId], references: [id])
+  counterpartyId String
+  type          String        // Values: KYC, ONBOARDING, LICENSE, REGISTRATION, TAX, REGULATORY, CERTIFICATION
+  title         String
+  description   String?
+  fileUrl       String
+  fileType      String
+  validFrom     DateTime?
+  validTo       DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([counterpartyId])
+}

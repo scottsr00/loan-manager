@@ -1,17 +1,13 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Suspense } from 'react'
+import { getEntities } from '@/app/actions/getEntities'
+import { EntitiesPageClient } from '@/components/EntitiesPageClient'
 
-export default function EntitiesPage() {
+export default async function EntitiesPage() {
+  const entities = await getEntities()
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Entities</CardTitle>
-        <CardDescription>Manage banks, funds, and other financial entities</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-          Coming soon...
-        </div>
-      </CardContent>
-    </Card>
+    <Suspense fallback={<div>Loading...</div>}>
+      <EntitiesPageClient entities={entities} />
+    </Suspense>
   )
 } 
