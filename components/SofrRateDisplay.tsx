@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { getSofrRate } from '@/app/actions/getSofrRate'
+import { useState } from 'react'
+import { useMarketRates } from '@/hooks/useMarketRates'
 import {
   Select,
   SelectContent,
@@ -9,52 +9,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
-interface BaseRate {
-  name: string
-  value: number
-  effectiveDate: string
-}
+import { Loader2 } from 'lucide-react'
 
 export function SofrRateDisplay() {
   const [selectedRate, setSelectedRate] = useState<string>('SOFR')
-  const [rates, setRates] = useState<Record<string, BaseRate>>({
-    'SOFR': { name: 'SOFR', value: 0, effectiveDate: '' },
-    'LIBOR': { name: 'LIBOR', value: 5.25, effectiveDate: new Date().toISOString() }, // Example fixed rate
-    'Prime': { name: 'Prime', value: 8.50, effectiveDate: new Date().toISOString() }  // Example fixed rate
-  })
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    async function fetchRates() {
-      try {
-        const sofrData = await getSofrRate()
-        setRates(prev => ({
-          ...prev,
-          'SOFR': {
-            name: 'SOFR',
-            value: sofrData.rate,
-            effectiveDate: sofrData.effectiveDate
-          }
-        }))
-      } catch (error) {
-        console.error('Error fetching SOFR rate:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchRates()
-  }, [])
+  const { rates, isLoading, isError } = useMarketRates()
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString()
   }
 
+  if (isError) {
+    return (
+      <span className="text-sm text-destructive">
+        Error loading rates. Please try again later.
+      </span>
+    )
+  }
+
   return (
     <div className="flex items-center gap-2">
       {isLoading ? (
-        <span className="text-sm text-muted-foreground">Loading rates...</span>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading rates...
+        </div>
       ) : (
         <div className="flex items-center gap-2">
           <Select
@@ -65,8 +44,8 @@ export function SofrRateDisplay() {
               <SelectValue placeholder="Select base rate" />
             </SelectTrigger>
             <SelectContent>
-              {Object.values(rates).map((rate) => (
-                <SelectItem key={rate.name} value={rate.name}>
+              {Object.entries(rates).map(([key, rate]) => (
+                <SelectItem key={key} value={key}>
                   <div className="flex items-center justify-between w-full">
                     <span>{rate.name}</span>
                     <span className="font-mono">{rate.value.toFixed(2)}%</span>
@@ -76,7 +55,7 @@ export function SofrRateDisplay() {
             </SelectContent>
           </Select>
           <span className="text-xs text-muted-foreground">
-            as of {formatDate(rates[selectedRate].effectiveDate)}
+            as of {formatDate(rates[selectedRate as keyof typeof rates].effectiveDate)}
           </span>
         </div>
       )}

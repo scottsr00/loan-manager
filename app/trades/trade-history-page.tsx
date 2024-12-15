@@ -1,7 +1,7 @@
-import { TradeHistoryComponent } from '@/components/TradeHistory'
+import { TradeHistory } from '@/components/TradeHistory'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-export default function TradesPage() {
+export default function TradeHistoryPage() {
   return (
     <Card>
       <CardHeader>
@@ -9,7 +9,7 @@ export default function TradesPage() {
         <CardDescription>View and manage your trade history</CardDescription>
       </CardHeader>
       <CardContent>
-        <TradeHistoryComponent />
+        <TradeHistory />
       </CardContent>
     </Card>
   )

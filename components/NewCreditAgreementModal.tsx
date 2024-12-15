@@ -75,22 +75,20 @@ export function NewCreditAgreementModal({
   const [formError, setFormError] = useState<string | null>(null)
   const [facilities, setFacilities] = useState<z.infer<typeof facilitySchema>[]>([])
   const [entities, setEntities] = useState<EntityWithRelations[]>([])
+  const [isLoadingEntities, setIsLoadingEntities] = useState(true)
   
   // Load entities on mount
   useEffect(() => {
     const loadEntities = async () => {
       try {
-        const response = await fetch('/api/entities')
-        const data = await response.json()
-        
-        if (data.error) {
-          throw new Error(data.error)
-        }
-        
-        setEntities(data.entities || [])
+        setIsLoadingEntities(true)
+        const fetchedEntities = await getEntities()
+        setEntities(fetchedEntities)
       } catch (error) {
         console.error('Error loading entities:', error)
-        toast.error('Failed to load entities')
+        toast.error('Failed to load entities. Please try again later.')
+      } finally {
+        setIsLoadingEntities(false)
       }
     }
     loadEntities()
@@ -213,10 +211,10 @@ export function NewCreditAgreementModal({
                         <RequiredLabel>
                           <FormLabel>Borrower</FormLabel>
                         </RequiredLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingEntities}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select borrower" />
+                              <SelectValue placeholder={isLoadingEntities ? "Loading..." : "Select borrower"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -240,10 +238,10 @@ export function NewCreditAgreementModal({
                         <RequiredLabel>
                           <FormLabel>Agent Bank</FormLabel>
                         </RequiredLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingEntities}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select agent bank" />
+                              <SelectValue placeholder={isLoadingEntities ? "Loading..." : "Select agent bank"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>

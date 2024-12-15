@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { getTradeHistory, type Trade } from '@/app/actions/getTradeHistory'
+import { useState } from 'react'
+import { useTrades } from '@/hooks/useTrades'
 import { calculateCarry } from '@/app/actions/calculateCarry'
 import { Button } from "@/components/ui/button"
 import { TradeDetailsModal } from './TradeDetailsModal'
@@ -16,138 +16,110 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from '@/lib/utils'
-import { Info } from 'lucide-react'
+import { Info, Loader2 } from 'lucide-react'
+import type { Trade } from '@/app/actions/getTradeHistory'
 
-export function TradeHistoryComponent() {
-  const [trades, setTrades] = useState<Trade[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isCalculatingCarry, setIsCalculatingCarry] = useState(false)
-
-  const loadTradeHistory = async () => {
-    try {
-      const tradeHistory = await getTradeHistory()
-      setTrades(tradeHistory)
-    } catch (error) {
-      console.error('Error loading trade history:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const updateCarry = async () => {
-    setIsCalculatingCarry(true)
-    try {
-      await calculateCarry()
-      await loadTradeHistory()
-    } catch (error) {
-      console.error('Error updating carry:', error)
-    } finally {
-      setIsCalculatingCarry(false)
-    }
-  }
-
-  useEffect(() => {
-    loadTradeHistory()
-  }, [])
-
-  useEffect(() => {
-    const interval = setInterval(updateCarry, 60 * 60 * 1000) // Update every hour
-    return () => clearInterval(interval)
-  }, [])
+export function TradeHistory() {
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [isBookTradeOpen, setIsBookTradeOpen] = useState(false)
+  const { trades, isLoading, isError, book } = useTrades()
 
   if (isLoading) {
-    return <div>Loading trade history...</div>
+    return (
+      <div className="flex justify-center items-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center p-8 text-destructive">
+        Error loading trades. Please try again later.
+      </div>
+    )
   }
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Trade History</h2>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={updateCarry}
-            disabled={isCalculatingCarry}
-          >
-            {isCalculatingCarry ? (
-              <>Calculating Carry...</>
-            ) : (
-              <>Update Carry</>
-            )}
-          </Button>
-          <BookTradeModal onTradeBooked={loadTradeHistory}>
-            <Button>
-              <span className="text-lg mr-2">+</span>
-              <span>Add New Trade</span>
-            </Button>
-          </BookTradeModal>
-        </div>
+        <h2 className="text-2xl font-bold tracking-tight">Trade History</h2>
+        <Button onClick={() => setIsBookTradeOpen(true)}>Book Trade</Button>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Deal Name</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Quantity</TableHead>
+            <TableHead>Price</TableHead>
+            <TableHead>Counterparty</TableHead>
+            <TableHead>Trade Date</TableHead>
+            <TableHead>Settlement</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Carry</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {!trades?.length ? (
             <TableRow>
-              <TableHead>Trade Date</TableHead>
-              <TableHead>Deal Name</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead className="text-right">Quantity</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-              <TableHead className="text-right">Accrued Interest</TableHead>
-              <TableHead className="text-right">Cost of Carry</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Settlement</TableHead>
-              <TableHead></TableHead>
+              <TableCell colSpan={9} className="text-center text-muted-foreground">
+                No trades found
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {trades.map((trade) => (
-              <TradeDetailsModal key={trade.id} trade={trade}>
-                <TableRow className="cursor-pointer hover:bg-muted/50">
-                  <TableCell>{new Date(trade.tradeDate).toLocaleDateString()}</TableCell>
-                  <TableCell>{trade.dealName}</TableCell>
-                  <TableCell>
-                    <Badge variant={trade.tradeType === 'Buy' ? 'default' : 'secondary'}>
-                      {trade.tradeType}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(trade.quantity)}
-                  </TableCell>
-                  <TableCell className="text-right">{trade.price.toFixed(2)}%</TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(trade.accruedInterest)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {trade.status === 'Open' ? (
-                      <div className="flex items-center justify-end gap-1">
-                        {formatCurrency(trade.costOfCarryAccrued)}
-                        <Info className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    ) : (
-                      'N/A'
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={trade.status === 'Open' ? 'outline' : 'default'}>
-                      {trade.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(trade.expectedSettlementDate).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm">
-                      Details
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              </TradeDetailsModal>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+          ) : (
+            trades.map((trade) => (
+              <TableRow
+                key={trade.id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => {
+                  setSelectedTrade(trade)
+                  setIsDetailsOpen(true)
+                }}
+              >
+                <TableCell>{trade.dealName}</TableCell>
+                <TableCell>
+                  <Badge variant={trade.tradeType === 'Buy' ? 'default' : 'secondary'}>
+                    {trade.tradeType}
+                  </Badge>
+                </TableCell>
+                <TableCell>{formatCurrency(trade.quantity)}</TableCell>
+                <TableCell>{trade.price.toFixed(2)}%</TableCell>
+                <TableCell>{trade.counterparty}</TableCell>
+                <TableCell>{new Date(trade.tradeDate).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(trade.expectedSettlementDate).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <Badge variant={trade.status === 'Completed' ? 'success' : 'warning'}>
+                    {trade.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {trade.costOfCarryAccrued > 0 && (
+                    <div className="flex items-center gap-1">
+                      <span>{formatCurrency(trade.costOfCarryAccrued)}</span>
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+
+      <TradeDetailsModal
+        trade={selectedTrade}
+        open={isDetailsOpen}
+        onOpenChange={setIsDetailsOpen}
+      />
+
+      <BookTradeModal
+        open={isBookTradeOpen}
+        onOpenChange={setIsBookTradeOpen}
+        onTradeBooked={book}
+      />
     </div>
   )
 }

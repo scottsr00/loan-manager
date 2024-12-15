@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LoanCalculatorComponent } from '@/components/LoanCalculator'
 import { LoanPositionsInventoryComponent } from '@/components/LoanPositionsInventory'
-import { TradeHistoryComponent } from '@/components/TradeHistory'
+import { TradeHistory } from '@/components/TradeHistory'
 import { Analytics } from '@/components/Analytics'
 import { getAnalytics } from '@/app/actions/getAnalytics'
 
@@ -40,7 +40,7 @@ export default async function DashboardPage() {
               <LoanPositionsInventoryComponent />
             </TabsContent>
             <TabsContent value="tradeHistory">
-              <TradeHistoryComponent />
+              <TradeHistory />
             </TabsContent>
           </Tabs>
         </CardContent>

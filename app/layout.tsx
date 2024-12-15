@@ -4,6 +4,7 @@ import { MainNav } from '@/components/MainNav'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { Metadata } from 'next'
 import { Providers } from '@/components/Providers'
+import { Toaster } from 'sonner'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -34,6 +35,7 @@ export default function RootLayout({
               </footer>
             </div>
           </div>
+          <Toaster richColors closeButton position="top-right" />
         </Providers>
       </body>
     </html>
