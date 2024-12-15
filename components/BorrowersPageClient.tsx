@@ -5,17 +5,17 @@ import { Plus } from 'lucide-react'
 import { DataTable } from '@/components/ui/data-table'
 import { columns } from '@/components/borrowers/columns'
 import { NewBorrowerModal } from '@/components/borrowers/NewBorrowerModal'
-import { useData } from '@/hooks/useData'
+import { useBorrowers } from '@/hooks/useBorrowers'
 import { PageLayout, PageHeader } from '@/components/PageLayout'
 import type { Borrower } from '@/components/borrowers/columns'
 
 export function BorrowersPageClient() {
   const {
-    data: borrowers,
+    borrowers,
     isLoading,
-    error,
+    isError: error,
     mutate
-  } = useData<Borrower[]>('/api/borrowers')
+  } = useBorrowers()
 
   const handleBorrowerCreated = async () => {
     await mutate()

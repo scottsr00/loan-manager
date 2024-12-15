@@ -17,8 +17,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
-import { CalendarDatePicker } from '@/components/ui/calendar'
-import { Calendar } from '@/components/ui/calendar-base'
+import { Calendar } from '@/components/ui/calendar'
+import { Calendar as CalendarBase } from '@/components/ui/calendar-base'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 // Helper component for required field label

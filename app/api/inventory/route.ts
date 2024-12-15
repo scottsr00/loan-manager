@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+/* import { NextResponse } from 'next/server';
 import { getInventory } from '@/app/actions/getInventory';
 
 export async function GET() {
@@ -12,4 +12,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-} 
+}  */

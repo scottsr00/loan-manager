@@ -27,6 +27,7 @@ model Entity {
   relatedTo        EntityRelationship[] @relation("ToEntity")
   agentAgreements   CreditAgreement[] @relation("AgentBank")
   borrowerProfile  Borrower?
+  lenderPositions  LenderPosition[]
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
@@ -274,4 +275,64 @@ model BorrowerCovenant {
   updatedAt         DateTime  @updatedAt
 
   @@index([borrowerId])
+}
+
+model Trade {
+  id                    Int       @id @default(autoincrement())
+  loanId                String
+  loan                  Loan      @relation(fields: [loanId], references: [id])
+  quantity              Float
+  price                 Float
+  counterparty          String
+  tradeDate            DateTime
+  expectedSettlementDate DateTime
+  accruedInterest      Float
+  status               String    // Open, Completed
+  tradeType            String    // Buy, Sell
+  costOfCarryAccrued   Float     @default(0)
+  lastCarryCalculation DateTime?
+  historicalBalances   TradeHistoricalBalance[]
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([loanId])
+}
+
+model TradeHistoricalBalance {
+  id        Int      @id @default(autoincrement())
+  tradeId   Int
+  trade     Trade    @relation(fields: [tradeId], references: [id])
+  date      String
+  balance   Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tradeId])
+}
+
+model Loan {
+  id                      String    @id @default(cuid())
+  dealName               String
+  currentBalance         Float
+  currentPeriodTerms     String
+  priorPeriodPaymentStatus String
+  agentBank              String
+  trades                 Trade[]
+  lenderPositions        LenderPosition[]
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+model LenderPosition {
+  id        String    @id @default(cuid())
+  loanId    String
+  loan      Loan      @relation(fields: [loanId], references: [id])
+  lender    Entity    @relation(fields: [lenderId], references: [id])
+  lenderId  String
+  balance   Float
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([loanId])
+  @@index([lenderId])
 }

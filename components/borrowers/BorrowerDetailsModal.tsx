@@ -21,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useBorrowers } from '@/hooks/useBorrowers'
 
 type BorrowerDetailsModalProps = {
   borrower: Borrower
@@ -36,19 +37,12 @@ export function BorrowerDetailsModal({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const { mutate } = useSWRConfig()
+  const { remove } = useBorrowers()
 
   const handleDelete = async () => {
     try {
       setIsDeleting(true)
-      const response = await fetch(`/api/borrowers/${borrower.id}`, {
-        method: "DELETE",
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to delete borrower")
-      }
-
-      await mutate("/api/borrowers")
+      await remove(borrower.id)
       onOpenChange(false)
     } catch (error) {
       console.error("Error deleting borrower:", error)

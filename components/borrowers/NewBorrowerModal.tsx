@@ -21,7 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { useSWRConfig } from "swr"
+import { useBorrowers } from '@/hooks/useBorrowers'
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -30,14 +30,26 @@ const formSchema = z.object({
   industry: z.string().min(1, "Industry is required"),
 })
 
-type NewBorrowerModalProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
+export function NewBorrowerModal({
+  children,
+  onBorrowerCreated
+}: {
+  children: React.ReactNode
+  onBorrowerCreated?: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const { create } = useBorrowers()
 
-export function NewBorrowerModal({ open, onOpenChange }: NewBorrowerModalProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const { mutate } = useSWRConfig()
+  const handleSubmit = async (data: any) => {
+    try {
+      await create(data)
+      setOpen(false)
+      onBorrowerCreated?.()
+    } catch (error) {
+      console.error('Error creating borrower:', error)
+      throw error
+    }
+  }
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,33 +61,8 @@ export function NewBorrowerModal({ open, onOpenChange }: NewBorrowerModalProps) 
     },
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    try {
-      setIsSubmitting(true)
-      const response = await fetch("/api/borrowers", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to create borrower")
-      }
-
-      await mutate("/api/borrowers")
-      form.reset()
-      onOpenChange(false)
-    } catch (error) {
-      console.error("Error creating borrower:", error)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add New Borrower</DialogTitle>
@@ -85,7 +72,7 @@ export function NewBorrowerModal({ open, onOpenChange }: NewBorrowerModalProps) 
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -146,12 +133,12 @@ export function NewBorrowerModal({ open, onOpenChange }: NewBorrowerModalProps) 
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => setOpen(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create Borrower"}
+              <Button type="submit">
+                Create Borrower
               </Button>
             </div>
           </form>
