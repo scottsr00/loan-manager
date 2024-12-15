@@ -21,15 +21,7 @@ import {
 } from '@/components/ui/select'
 import { createEntity } from '@/app/actions/createEntity'
 import { getEntityTypes, type EntityType } from '@/app/actions/getEntityTypes'
-import { CalendarIcon } from 'lucide-react'
-import { format } from 'date-fns'
-import { cn } from '@/lib/utils'
-import { Calendar } from '@/components/ui/calendar'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+import { DatePicker } from '@/components/ui/date-picker'
 
 export function NewEntityModal({
   onEntityCreated,
@@ -155,28 +147,7 @@ export function NewEntityModal({
             </div>
             <div className="space-y-2">
               <Label>Incorporation Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !date && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, 'PPP') : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker date={date} onDateChange={setDate} />
             </div>
           </div>
 
@@ -252,10 +223,7 @@ export function NewEntityModal({
             </div>
           </div>
 
-          <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
+          <div className="flex justify-end">
             <Button type="submit" disabled={loading}>
               {loading ? 'Creating...' : 'Create Entity'}
             </Button>

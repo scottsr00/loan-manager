@@ -80,8 +80,14 @@ export function NewCreditAgreementModal({
   useEffect(() => {
     const loadEntities = async () => {
       try {
-        const loadedEntities = await getEntities()
-        setEntities(loadedEntities)
+        const response = await fetch('/api/entities')
+        const data = await response.json()
+        
+        if (data.error) {
+          throw new Error(data.error)
+        }
+        
+        setEntities(data.entities || [])
       } catch (error) {
         console.error('Error loading entities:', error)
         toast.error('Failed to load entities')

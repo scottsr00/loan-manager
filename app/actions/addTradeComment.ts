@@ -1,9 +1,7 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { TradeComment } from './getTradeComments'
-
-const prisma = new PrismaClient()
 
 interface AddCommentParams {
   tradeId: number

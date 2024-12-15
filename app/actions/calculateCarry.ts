@@ -1,9 +1,7 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { getHistoricalRates } from './getHistoricalRates'
-
-const prisma = new PrismaClient()
 
 const DAYS_IN_YEAR = 360 // Standard for loan calculations
 

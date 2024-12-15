@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { prisma } from "@/lib/prisma"
 
 export async function GET() {
   try {
-    const borrowers = await db.borrower.findMany({
+    const borrowers = await prisma.borrower.findMany({
       orderBy: {
         createdAt: "desc",
       },
@@ -17,7 +17,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const borrower = await db.borrower.create({
+    const borrower = await prisma.borrower.create({
       data: {
         name: body.name,
         taxId: body.taxId,

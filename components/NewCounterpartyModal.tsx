@@ -63,13 +63,24 @@ const counterpartyFormSchema = z.object({
 
 type CounterpartyFormValues = z.infer<typeof counterpartyFormSchema>
 
+interface CounterpartyType {
+  id: string
+  name: string
+  description: string | null
+}
+
+const COUNTERPARTY_TYPES: CounterpartyType[] = [
+  { id: 'bank', name: 'Bank', description: 'Banking institution' },
+  { id: 'broker', name: 'Broker', description: 'Brokerage firm' },
+  { id: 'fund', name: 'Fund', description: 'Investment fund' },
+  { id: 'corporate', name: 'Corporate', description: 'Corporate entity' },
+]
+
 interface NewCounterpartyModalProps {
-  counterpartyTypes: CounterpartyType[]
-  onCounterpartyCreated: (counterparty: CounterpartyWithRelations) => void
+  onCounterpartyCreated: () => void
 }
 
 export function NewCounterpartyModal({
-  counterpartyTypes,
   onCounterpartyCreated,
 }: NewCounterpartyModalProps) {
   const [open, setOpen] = useState(false)
@@ -126,7 +137,7 @@ export function NewCounterpartyModal({
       toast.success('Counterparty created successfully')
       setOpen(false)
       form.reset()
-      onCounterpartyCreated(result)
+      onCounterpartyCreated()
     } catch (error) {
       console.error('Error creating counterparty:', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to create counterparty'
@@ -198,7 +209,7 @@ export function NewCounterpartyModal({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {counterpartyTypes.map((type) => (
+                          {COUNTERPARTY_TYPES.map((type) => (
                             <SelectItem key={type.id} value={type.id}>
                               {type.name}
                             </SelectItem>

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { prisma } from "@/lib/prisma"
 
 export async function DELETE(
   req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    await db.borrower.delete({
+    await prisma.borrower.delete({
       where: {
         id: params.id,
       },

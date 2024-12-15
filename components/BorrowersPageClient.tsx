@@ -1,40 +1,52 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
-import { DataTable } from "@/components/ui/data-table"
-import { columns } from "@/components/borrowers/columns"
-import { NewBorrowerModal } from "@/components/borrowers/NewBorrowerModal"
-import { useBorrowers } from "@/hooks/useBorrowers"
+import { Button } from '@/components/ui/button'
+import { Plus } from 'lucide-react'
+import { DataTable } from '@/components/ui/data-table'
+import { columns } from '@/components/borrowers/columns'
+import { NewBorrowerModal } from '@/components/borrowers/NewBorrowerModal'
+import { useData } from '@/hooks/useData'
+import { PageLayout, PageHeader } from '@/components/PageLayout'
+import type { Borrower } from '@/components/borrowers/columns'
 
 export function BorrowersPageClient() {
-  const [isNewBorrowerModalOpen, setIsNewBorrowerModalOpen] = useState(false)
-  const { data: borrowers, isLoading, error } = useBorrowers()
+  const {
+    data: borrowers,
+    isLoading,
+    error,
+    mutate
+  } = useData<Borrower[]>('/api/borrowers')
 
-  if (error) {
-    return <div>Error loading borrowers</div>
+  const handleBorrowerCreated = async () => {
+    await mutate()
   }
 
-  return (
-    <>
-      <div className="flex justify-end">
-        <Button onClick={() => setIsNewBorrowerModalOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Borrower
-        </Button>
-      </div>
+  const action = (
+    <NewBorrowerModal onBorrowerCreated={handleBorrowerCreated}>
+      <Button>
+        <Plus className="mr-2 h-4 w-4" />
+        Add Borrower
+      </Button>
+    </NewBorrowerModal>
+  )
 
+  return (
+    <PageLayout
+      header={
+        <PageHeader
+          title="Borrowers"
+          description="Manage your borrower relationships"
+          action={action}
+        />
+      }
+      isLoading={isLoading}
+      error={error}
+      retry={() => mutate()}
+    >
       <DataTable
         columns={columns}
         data={borrowers || []}
-        isLoading={isLoading}
       />
-
-      <NewBorrowerModal
-        open={isNewBorrowerModalOpen}
-        onOpenChange={setIsNewBorrowerModalOpen}
-      />
-    </>
+    </PageLayout>
   )
 } 
