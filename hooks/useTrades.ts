@@ -2,11 +2,12 @@
 
 import { useCallback } from 'react'
 import useSWR from 'swr'
+import { z } from 'zod'
+import { getTradeHistory, type TradeHistoryItem } from '@/server/actions/trade/getTradeHistory'
+import { bookTrade } from '@/server/actions/trade/bookTrade'
+import { getTradeComments, type TradeComment } from '@/server/actions/trade/getTradeComments'
+import { addTradeComment } from '@/server/actions/trade/addTradeComment'
 import { withErrorHandling } from '@/lib/error-handling'
-import { getTradeHistory, type Trade } from '@/app/actions/getTradeHistory'
-import { bookTrade } from '@/app/actions/bookTrade'
-import { getTradeComments, type TradeComment } from '@/app/actions/getTradeComments'
-import { addTradeComment } from '@/app/actions/addTradeComment'
 
 export interface BookTradeInput {
   loanId: string
@@ -19,7 +20,7 @@ export interface BookTradeInput {
 }
 
 export function useTrades() {
-  const { data: trades, error, isLoading, mutate } = useSWR<Trade[]>(
+  const { data: trades, error, isLoading, mutate } = useSWR<TradeHistoryItem[]>(
     'trades',
     () => withErrorHandling(
       'fetch trades',

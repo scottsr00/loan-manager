@@ -14,7 +14,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Loader2 } from 'lucide-react'
-import type { Trade } from '@/app/actions/getTradeHistory'
+import type { Trade } from '@/server/actions/trade/getTradeHistory'
 
 interface TradeDetailsModalProps {
   trade: Trade | null
@@ -69,7 +69,7 @@ export function TradeDetailsModal({
               </div>
               <div>
                 <h4 className="text-sm font-medium mb-1">Counterparty</h4>
-                <p className="text-sm text-muted-foreground">{trade.counterparty}</p>
+                <p className="text-sm text-muted-foreground">{trade.counterparty.legalName}</p>
               </div>
               <div>
                 <h4 className="text-sm font-medium mb-1">Status</h4>

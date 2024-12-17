@@ -1,4 +1,4 @@
-import { LoanPositionsInventoryComponent } from '@/components/LoanPositionsInventory'
+import { LoanPositionsHierarchy } from '@/components/LoanPositionsHierarchy'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function PositionsPage() {
@@ -9,7 +9,7 @@ export default function PositionsPage() {
         <CardDescription>View and manage your loan positions</CardDescription>
       </CardHeader>
       <CardContent>
-        <LoanPositionsInventoryComponent />
+        <LoanPositionsHierarchy />
       </CardContent>
     </Card>
   )

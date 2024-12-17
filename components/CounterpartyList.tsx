@@ -72,10 +72,10 @@ export function CounterpartyList() {
                   }}
                 >
                   <TableCell>{counterparty.legalName}</TableCell>
-                  <TableCell>{counterparty.counterpartyType.name}</TableCell>
+                  <TableCell>{counterparty.type.name}</TableCell>
                   <TableCell>
-                    <Badge variant={counterparty.kycStatus === 'Approved' ? 'success' : 'warning'}>
-                      {counterparty.kycStatus}
+                    <Badge variant={counterparty.status === 'ACTIVE' ? 'success' : 'warning'}>
+                      {counterparty.status}
                     </Badge>
                   </TableCell>
                   <TableCell>

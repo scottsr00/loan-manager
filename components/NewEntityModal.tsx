@@ -19,8 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createEntity } from '@/app/actions/createEntity'
-import { getEntityTypes, type EntityType } from '@/app/actions/getEntityTypes'
+import { createEntity } from '@/server/actions/entity'
+import { getEntityTypes, type EntityType } from '@/server/actions/entity'
 import { DatePicker } from '@/components/ui/date-picker'
 
 export function NewEntityModal({

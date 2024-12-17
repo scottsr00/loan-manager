@@ -8,8 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { PlusCircle, MinusCircle, Calculator, InfoIcon } from 'lucide-react'
-import { calculateLoanCashFlows } from '@/app/actions/calculateLoanCashFlows'
-import { getSofrRate } from '@/app/actions/getSofrRate'
+import { calculateLoanCashFlows } from '@/server/actions/loan/calculateLoanCashFlows'
+import { getSofrRate } from '@/server/actions/loan/getSofrRate'
 import {
   Select,
   SelectContent,
@@ -23,6 +23,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { formatCurrency } from '@/lib/utils'
+import { Info } from 'lucide-react'
 
 interface BaseRate {
   name: string

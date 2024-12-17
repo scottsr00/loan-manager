@@ -1,121 +1,134 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Borrower } from "./columns"
-import { useSWRConfig } from "swr"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { useBorrowers } from '@/hooks/useBorrowers'
+} from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { format } from 'date-fns'
+import { useState, useEffect, useRef } from 'react'
+import type { Borrower } from '@/types/borrower'
 
-type BorrowerDetailsModalProps = {
-  borrower: Borrower
+interface BorrowerDetailsModalProps {
+  borrower: Borrower | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function BorrowerDetailsModal({
-  borrower,
-  open,
-  onOpenChange,
-}: BorrowerDetailsModalProps) {
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const { mutate } = useSWRConfig()
-  const { remove } = useBorrowers()
+export function BorrowerDetailsModal({ borrower, open, onOpenChange }: BorrowerDetailsModalProps) {
+  if (!borrower) return null
 
-  const handleDelete = async () => {
-    try {
-      setIsDeleting(true)
-      await remove(borrower.id)
-      onOpenChange(false)
-    } catch (error) {
-      console.error("Error deleting borrower:", error)
-    } finally {
-      setIsDeleting(false)
-      setIsDeleteDialogOpen(false)
+  const [canScroll, setCanScroll] = useState(false)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const checkScroll = () => {
+      if (contentRef.current) {
+        const { scrollHeight, clientHeight } = contentRef.current
+        setCanScroll(scrollHeight > clientHeight)
+      }
     }
-  }
+
+    checkScroll()
+    window.addEventListener('resize', checkScroll)
+    return () => window.removeEventListener('resize', checkScroll)
+  }, [borrower])
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Borrower Details</DialogTitle>
-            <DialogDescription>
-              View and manage borrower information
-            </DialogDescription>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center justify-between">
+            <span>{borrower.name}</span>
+            <div className="flex gap-2">
+              <Badge variant={borrower.kycStatus === 'COMPLETED' ? 'default' : 'secondary'}>
+                KYC: {borrower.kycStatus}
+              </Badge>
+              <Badge variant={borrower.onboardingStatus === 'COMPLETED' ? 'default' : 'secondary'}>
+                {borrower.onboardingStatus}
+              </Badge>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+        <div className="relative">
+          <ScrollArea 
+            className="h-[calc(80vh-8rem)] pr-4"
+            ref={contentRef}
+          >
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h4 className="font-medium">Basic Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground">Industry</Label>
+                    <div>{borrower.industry}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Jurisdiction</Label>
+                    <div>{borrower.jurisdiction}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Tax ID</Label>
+                    <div>{borrower.taxId}</div>
+                  </div>
+                </div>
+              </div>
 
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-medium">Name</h4>
-              <p className="text-sm text-muted-foreground">{borrower.name}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium">Tax ID</h4>
-              <p className="text-sm text-muted-foreground">{borrower.taxId}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium">Jurisdiction</h4>
-              <p className="text-sm text-muted-foreground">
-                {borrower.jurisdiction}
-              </p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium">Industry</h4>
-              <p className="text-sm text-muted-foreground">{borrower.industry}</p>
-            </div>
+              <Separator />
 
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="destructive"
-                onClick={() => setIsDeleteDialogOpen(true)}
-              >
-                Delete Borrower
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+              {/* Risk & Compliance */}
+              <div className="space-y-4">
+                <h4 className="font-medium">Risk & Compliance</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  {borrower.creditRating && (
+                    <div>
+                      <Label className="text-muted-foreground">Credit Rating</Label>
+                      <div>{borrower.creditRating}</div>
+                    </div>
+                  )}
+                  {borrower.ratingAgency && (
+                    <div>
+                      <Label className="text-muted-foreground">Rating Agency</Label>
+                      <div>{borrower.ratingAgency}</div>
+                    </div>
+                  )}
+                  <div>
+                    <Label className="text-muted-foreground">KYC Status</Label>
+                    <div>{borrower.kycStatus}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Onboarding Status</Label>
+                    <div>{borrower.onboardingStatus}</div>
+                  </div>
+                </div>
+              </div>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              borrower and all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+              <Separator />
+
+              {/* Metadata */}
+              <div className="space-y-4">
+                <h4 className="font-medium">Metadata</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground">Created</Label>
+                    <div>{format(new Date(borrower.createdAt), 'PPP')}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <ScrollBar />
+          </ScrollArea>
+          {canScroll && (
+            <div className="absolute bottom-0 left-0 right-4 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 } 

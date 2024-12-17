@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useBorrowers } from '@/hooks/useBorrowers'
-import { getBorrowerEntities } from '@/app/actions/getBorrowerEntities'
+import { getBorrowerEntities } from '@/server/actions/borrower/getBorrowerEntities'
 import { useEffect } from 'react'
 
 const formSchema = z.object({

@@ -1,39 +1,54 @@
-export interface Counterparty {
+export type CounterpartyType = {
+  id: string
+  name: string
+  description?: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type CounterpartyAddress = {
+  id: string
+  counterpartyId: string
+  type: string
+  street1: string
+  street2?: string | null
+  city: string
+  state?: string | null
+  postalCode?: string | null
+  country: string
+  isPrimary: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type CounterpartyContact = {
+  id: string
+  counterpartyId: string
+  type: string
+  firstName: string
+  lastName: string
+  title?: string | null
+  email?: string | null
+  phone?: string | null
+  isPrimary: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type Counterparty = {
   id: string
   legalName: string
-  parentName?: string
-  ultParentName?: string
-  counterpartyType: {
-    id: string
-    name: string
-  }
-  kycStatus: string
-  onboardingStatus: string
-  registrationNumber?: string
-  taxId?: string
-  website?: string
-  description?: string
-  addresses: Array<{
-    id: string
-    type: string
-    street1: string
-    street2?: string
-    city: string
-    state?: string
-    postalCode?: string
-    country: string
-    isPrimary: boolean
-  }>
-  contacts: Array<{
-    id: string
-    type: string
-    firstName: string
-    lastName: string
-    title?: string
-    email?: string
-    phone?: string
-    isPrimary: boolean
-  }>
+  dba?: string | null
+  registrationNumber?: string | null
+  taxId?: string | null
+  typeId: string
+  type: CounterpartyType
+  status: string
+  incorporationDate?: Date | null
+  website?: string | null
+  description?: string | null
+  addresses: CounterpartyAddress[]
+  contacts: CounterpartyContact[]
   createdAt: Date
   updatedAt: Date
 } 

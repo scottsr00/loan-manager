@@ -7,9 +7,11 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ChevronDown, ChevronRight, Search, Shield, ShieldAlert } from 'lucide-react'
-import { getInventory, type LoanPosition } from '@/app/actions/getInventory'
-import { getTradeHistory, type Trade } from '@/app/actions/getTradeHistory'
+import { getInventory, type LoanPosition } from '@/server/actions/loan/getInventory'
+import { getTradeHistory, type TradeHistoryItem } from '@/server/actions/trade/getTradeHistory'
 import { NewLoanModal } from './NewLoanModal'
+import { Button } from '@/components/ui/button'
+import { Info, Loader2 } from 'lucide-react'
 
 interface ExpandedState {
   [key: string]: boolean;
@@ -37,7 +39,7 @@ interface LoanPositionWithTrades extends LoanPosition {
 
 export function LoanPositionsInventoryComponent() {
   const [positions, setPositions] = useState<LoanPosition[]>([])
-  const [trades, setTrades] = useState<Trade[]>([])
+  const [trades, setTrades] = useState<TradeHistoryItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({})

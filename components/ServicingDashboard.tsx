@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ServicingActivity, getServicingActivities } from '@/app/actions/getServicingActivities'
-import { addServicingActivity } from '@/app/actions/addServicingActivity'
-import { getAvailableLoans } from '@/app/actions/getAvailableLoans'
+import { type ServicingActivity, getServicingActivities } from '@/server/actions/loan/getServicingActivities'
+import { addServicingActivity } from '@/server/actions/loan/addServicingActivity'
+import { getAvailableLoans } from '@/server/actions/loan/getAvailableLoans'
 import { Button } from "@/components/ui/button"
 import {
   Dialog,

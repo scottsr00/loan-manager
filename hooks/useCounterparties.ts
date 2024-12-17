@@ -3,9 +3,9 @@
 import { useCallback } from 'react'
 import useSWR from 'swr'
 import type { Counterparty } from '@/types/counterparty'
-import { getCounterparties } from '@/app/actions/getCounterparties'
-import { createCounterparty } from '@/app/actions/createCounterparty'
-import { deleteCounterparty } from '@/app/actions/deleteCounterparty'
+import { getCounterparties } from '@/server/actions/counterparty/getCounterparties'
+import { createCounterparty } from '@/server/actions/counterparty/createCounterparty'
+import { deleteCounterparty } from '@/server/actions/counterparty/deleteCounterparty'
 import { withErrorHandling } from '@/lib/error-handling'
 
 interface CreateCounterpartyInput {

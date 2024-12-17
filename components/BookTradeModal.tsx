@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -33,7 +33,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { CalendarIcon, Loader2 } from "lucide-react"
 import { format } from "date-fns"
-import { getAvailableLoans } from '@/app/actions/getAvailableLoans'
+import { getAvailableLoans } from '@/server/actions/loan'
 import type { BookTradeInput } from '@/hooks/useTrades'
 
 const formSchema = z.object({

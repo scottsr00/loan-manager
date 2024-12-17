@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { createLoan } from '@/server/actions/loan/createLoan'
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -21,7 +22,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PlusCircle, MinusCircle } from 'lucide-react'
-import { createLoan } from '@/app/actions/createLoan'
 
 interface NewLoanModalProps {
   onLoanCreated: () => void

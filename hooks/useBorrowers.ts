@@ -3,9 +3,9 @@
 import { useCallback } from 'react'
 import useSWR from 'swr'
 import type { Borrower } from '@/types/borrower'
-import { getBorrowers } from '@/app/actions/getBorrowers'
-import { createBorrower, type CreateBorrowerInput } from '@/app/actions/createBorrower'
-import { deleteBorrower } from '@/app/actions/deleteBorrower'
+import { getBorrowers } from '@/server/actions/borrower/getBorrowers'
+import { deleteBorrower } from '@/server/actions/borrower/deleteBorrower'
+import { createBorrower, type CreateBorrowerInput } from '@/server/actions/borrower/createBorrower'
 import { withErrorHandling } from '@/lib/error-handling'
 import { toast } from 'sonner'
 

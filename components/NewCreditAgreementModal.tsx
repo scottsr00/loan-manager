@@ -1,11 +1,25 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { toast } from 'sonner'
+import { createCreditAgreement } from '@/server/actions/loan/createCreditAgreement'
+import { type CreditAgreementWithRelations } from '@/server/actions/loan/types'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { getEntities, type EntityWithRelations } from '@/server/actions/entity'
+import { DatePicker } from '@/components/ui/date-picker'
+import { FacilityFormDialog } from './FacilityFormDialog'
 import {
   Form,
   FormControl,
@@ -14,14 +28,19 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { createCreditAgreement } from '@/app/actions/createCreditAgreement'
-import { CreditAgreementWithRelations } from '@/app/actions/getCreditAgreements'
-import { toast } from 'sonner'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { FacilityFormDialog } from '@/components/FacilityFormDialog'
-import { getEntities, EntityWithRelations } from '@/app/actions/getEntities'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 
 // Helper component for required field label
 function RequiredLabel({ children }: { children: React.ReactNode }) {

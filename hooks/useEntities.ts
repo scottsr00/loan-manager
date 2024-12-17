@@ -11,7 +11,7 @@ import {
   createEntity,
   updateEntity,
   deleteEntity,
-} from '@/app/actions/entityActions'
+} from '@/server/actions/entity'
 
 export function useEntities() {
   const { data, error, isLoading, mutate } = useSWR<EntityWithRelations[]>(

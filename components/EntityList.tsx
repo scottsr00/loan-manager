@@ -11,7 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { EntityWithRelations } from '@/app/actions/getEntities'
+import { EntityWithRelations } from '@/server/actions/entity'
 import { EntityDetailsModal } from './EntityDetailsModal'
 
 export function EntityList({ entities }: { entities: EntityWithRelations[] }) {

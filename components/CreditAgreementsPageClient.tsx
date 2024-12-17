@@ -1,36 +1,41 @@
 'use client'
 
 import { useState } from 'react'
-import { CreditAgreementWithRelations } from '@/app/actions/getCreditAgreements'
-import { CreditAgreementDetailsModal } from '@/components/CreditAgreementDetailsModal'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { ScrollText, Plus } from 'lucide-react'
+import { ScrollText } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatCurrency } from '@/lib/utils'
 import { NewCreditAgreementModal } from '@/components/NewCreditAgreementModal'
+import { CreditAgreementDetailsModal } from '@/components/CreditAgreementDetailsModal'
+import { useCreditAgreements } from '@/hooks/useCreditAgreements'
+import { CreditAgreement, Borrower, Lender, Facility } from '@prisma/client'
 
-interface CreditAgreementsPageClientProps {
-  creditAgreements: {
-    creditAgreements: CreditAgreementWithRelations[]
-    error?: string
-  }
+type CreditAgreementWithRelations = CreditAgreement & {
+  borrower: Borrower;
+  lender: Lender;
+  facilities: Facility[];
 }
 
-export function CreditAgreementsPageClient({
-  creditAgreements: creditAgreementsData
-}: CreditAgreementsPageClientProps) {
+export function CreditAgreementsPageClient() {
   const [selectedCreditAgreement, setSelectedCreditAgreement] = useState<CreditAgreementWithRelations | null>(null)
-  const [creditAgreements, setCreditAgreements] = useState(creditAgreementsData.creditAgreements)
+  const { creditAgreements, isLoading, isError, mutate } = useCreditAgreements()
 
-  const handleCreditAgreementCreated = (newCreditAgreement: CreditAgreementWithRelations) => {
-    setCreditAgreements(prev => [newCreditAgreement, ...prev])
+  const handleCreditAgreementCreated = () => {
+    mutate()
   }
 
-  if (creditAgreementsData.error) {
+  if (isError) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-destructive">Error: {creditAgreementsData.error}</p>
+        <p className="text-destructive">Error: Failed to load credit agreements</p>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-muted-foreground">Loading credit agreements...</p>
       </div>
     )
   }
@@ -41,7 +46,7 @@ export function CreditAgreementsPageClient({
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Credit Agreements</h2>
           <p className="text-muted-foreground">
-            Manage your credit agreements and facilities
+            Manage your credit agreements
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -49,7 +54,7 @@ export function CreditAgreementsPageClient({
         </div>
       </div>
 
-      {creditAgreementsData.creditAgreements.length === 0 ? (
+      {creditAgreements.length === 0 ? (
         <div className="flex h-[450px] shrink-0 items-center justify-center rounded-md border border-dashed">
           <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
             <ScrollText className="h-10 w-10 text-muted-foreground" />
@@ -62,7 +67,7 @@ export function CreditAgreementsPageClient({
         </div>
       ) : (
         <div className="grid gap-6">
-          {creditAgreementsData.creditAgreements.map((agreement) => (
+          {creditAgreements.map((agreement) => (
             <div
               key={agreement.id}
               className="rounded-lg border bg-card p-4 hover:bg-accent/50 cursor-pointer transition-colors"
@@ -71,32 +76,50 @@ export function CreditAgreementsPageClient({
               <div className="grid gap-1">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <h3 className="font-semibold">{agreement.agent.legalName}</h3>
+                    <h3 className="font-semibold">{agreement.agreementName}</h3>
                     <Badge variant={agreement.status === 'ACTIVE' ? 'success' : 'secondary'}>
                       {agreement.status}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    ID: {agreement.id}
-                  </p>
+                  <Badge variant="outline">{agreement.agreementNumber}</Badge>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm font-medium">Borrower</p>
-                    <p className="text-sm text-muted-foreground">{agreement.borrower.entity.legalName}</p>
+                    <p className="text-sm text-muted-foreground">{agreement.borrower.name}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="outline" className="text-xs">
-                        {agreement.borrower.creditRating || 'No Rating'}
+                        {agreement.borrower.type}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
-                        KYC: {agreement.borrower.kycStatus}
+                        Status: {agreement.borrower.status}
                       </Badge>
                     </div>
                   </div>
                   <div>
+                    <p className="text-sm font-medium">Lender</p>
+                    <p className="text-sm text-muted-foreground">{agreement.lender.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-xs">
+                        {agreement.lender.type}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Amount</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatCurrency(agreement.amount)} {agreement.currency}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Rate: {agreement.interestRate}%
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div>
                     <p className="text-sm font-medium">Start Date</p>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(agreement.effectiveDate), 'PP')}
+                      {format(new Date(agreement.startDate), 'PP')}
                     </p>
                   </div>
                   <div>
@@ -104,30 +127,6 @@ export function CreditAgreementsPageClient({
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(agreement.maturityDate), 'PP')}
                     </p>
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <p className="text-sm font-medium mb-1">Facilities ({agreement.facilities.length})</p>
-                  <div className="flex flex-wrap gap-2">
-                    {agreement.facilities.map((facility) => (
-                      <Badge key={facility.id} variant="outline">
-                        {facility.facilityType} - {formatCurrency(facility.commitmentAmount)}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <p className="text-sm font-medium mb-1">Covenants ({agreement.borrower.covenants.length})</p>
-                  <div className="flex flex-wrap gap-2">
-                    {agreement.borrower.covenants.map((covenant) => (
-                      <Badge 
-                        key={covenant.id} 
-                        variant={covenant.status === 'COMPLIANT' ? 'success' : 'destructive'}
-                        className="text-xs"
-                      >
-                        {covenant.description}
-                      </Badge>
-                    ))}
                   </div>
                 </div>
               </div>

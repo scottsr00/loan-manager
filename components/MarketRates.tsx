@@ -1,20 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { getHistoricalRates } from '@/server/actions/loan/getHistoricalRates'
+import { Button } from '@/components/ui/button'
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from 'recharts'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { getHistoricalRates } from '@/app/actions/getHistoricalRates'
-import { Info } from 'lucide-react'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { formatCurrency } from '@/lib/utils'
+import { Info, Loader2 } from 'lucide-react'
 import {
   Tooltip as UITooltip,
   TooltipContent,

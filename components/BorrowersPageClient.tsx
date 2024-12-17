@@ -5,9 +5,11 @@ import { Plus } from 'lucide-react'
 import { DataTable } from '@/components/ui/data-table'
 import { columns } from '@/components/borrowers/columns'
 import { NewBorrowerModal } from '@/components/borrowers/NewBorrowerModal'
+import { BorrowerDetailsModal } from '@/components/borrowers/BorrowerDetailsModal'
 import { useBorrowers } from '@/hooks/useBorrowers'
 import { PageLayout, PageHeader } from '@/components/PageLayout'
-import type { Borrower } from '@/components/borrowers/columns'
+import type { Borrower } from '@/types/borrower'
+import { useState } from 'react'
 
 export function BorrowersPageClient() {
   const {
@@ -17,8 +19,16 @@ export function BorrowersPageClient() {
     mutate
   } = useBorrowers()
 
+  const [selectedBorrower, setSelectedBorrower] = useState<Borrower | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+
   const handleBorrowerCreated = async () => {
     await mutate()
+  }
+
+  const handleRowClick = (borrower: Borrower) => {
+    setSelectedBorrower(borrower)
+    setDetailsOpen(true)
   }
 
   const action = (
@@ -46,6 +56,13 @@ export function BorrowersPageClient() {
       <DataTable
         columns={columns}
         data={borrowers || []}
+        onRowClick={handleRowClick}
+      />
+
+      <BorrowerDetailsModal
+        borrower={selectedBorrower}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
       />
     </PageLayout>
   )

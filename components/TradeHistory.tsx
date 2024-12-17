@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTrades } from '@/hooks/useTrades'
-import { calculateCarry } from '@/app/actions/calculateCarry'
+import { calculateCarry } from '@/server/actions/trade'
 import { Button } from "@/components/ui/button"
 import { TradeDetailsModal } from './TradeDetailsModal'
 import { BookTradeModal } from './BookTradeModal'
@@ -17,7 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from '@/lib/utils'
 import { Info, Loader2 } from 'lucide-react'
-import type { Trade } from '@/app/actions/getTradeHistory'
+import type { Trade } from '@/server/actions/trade/getTradeHistory'
 
 export function TradeHistory() {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null)
@@ -87,7 +87,7 @@ export function TradeHistory() {
                 </TableCell>
                 <TableCell>{formatCurrency(trade.quantity)}</TableCell>
                 <TableCell>{trade.price.toFixed(2)}%</TableCell>
-                <TableCell>{trade.counterparty}</TableCell>
+                <TableCell>{trade.counterparty.legalName}</TableCell>
                 <TableCell>{new Date(trade.tradeDate).toLocaleDateString()}</TableCell>
                 <TableCell>{new Date(trade.expectedSettlementDate).toLocaleDateString()}</TableCell>
                 <TableCell>

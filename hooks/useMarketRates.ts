@@ -1,7 +1,7 @@
 'use client'
 
 import useSWR from 'swr'
-import { getSofrRate } from '@/app/actions/getSofrRate'
+import { getSofrRate } from '@/server/actions/loan'
 import { withErrorHandling } from '@/lib/error-handling'
 
 export interface BaseRate {

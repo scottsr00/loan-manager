@@ -1,15 +1,16 @@
 'use client'
 
-import { format } from 'date-fns'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { EntityWithRelations } from '@/app/actions/getEntities'
+import { Label } from '@/components/ui/label'
+import { EntityWithRelations } from '@/server/actions/entity'
+import { format } from 'date-fns'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'

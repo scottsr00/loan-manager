@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { CreditAgreementWithRelations } from '@/app/actions/getCreditAgreements'
+import { CreditAgreementWithRelations } from '@/server/actions/loan/getCreditAgreements'
 import { CreditAgreementDetailsModal } from '@/components/CreditAgreementDetailsModal'
 import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/utils'

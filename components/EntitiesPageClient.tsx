@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { EntityList } from './EntityList'
 import { NewEntityModal } from './NewEntityModal'
-import { EntityWithRelations } from '@/app/actions/getEntities'
+import { EntityWithRelations } from '@/server/actions/entity'
 
 export function EntitiesPageClient({ entities }: { entities: EntityWithRelations[] }) {
   const router = useRouter()
