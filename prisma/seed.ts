@@ -3,31 +3,27 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  // Clean up existing data in reverse order of dependencies
+  // Clean up existing data in correct dependency order
   await prisma.tradeHistoricalBalance.deleteMany()
-  await prisma.tradeComment.deleteMany()
   await prisma.trade.deleteMany()
-  await prisma.loanPosition.deleteMany()
+  await prisma.servicingAssignment.deleteMany()
+  await prisma.servicingTeamMember.deleteMany()
+  await prisma.servicingRole.deleteMany()
+  await prisma.servicingActivity.deleteMany()
   await prisma.repaymentSchedule.deleteMany()
+  await prisma.loanPosition.deleteMany()
   await prisma.loan.deleteMany()
   await prisma.facilityPosition.deleteMany()
   await prisma.facilitySublimit.deleteMany()
   await prisma.facility.deleteMany()
   await prisma.creditAgreement.deleteMany()
-  await prisma.counterpartyContact.deleteMany()
-  await prisma.counterpartyAddress.deleteMany()
-  await prisma.counterparty.deleteMany()
-  await prisma.counterpartyType.deleteMany()
+  await prisma.lender.deleteMany()
   await prisma.borrowerAuditLog.deleteMany()
   await prisma.borrowerRequiredDocument.deleteMany()
   await prisma.borrowerCovenant.deleteMany()
   await prisma.borrowerFinancialStatement.deleteMany()
   await prisma.borrower.deleteMany()
-  await prisma.entityContact.deleteMany()
-  await prisma.entityAddress.deleteMany()
   await prisma.entity.deleteMany()
-  await prisma.entityType.deleteMany()
-  await prisma.lender.deleteMany()
 
   // Create entity types
   const corporateType = await prisma.entityType.create({
@@ -184,15 +180,48 @@ async function main() {
       facilityName: 'Term Loan A',
       facilityType: 'TERM_LOAN',
       creditAgreementId: creditAgreement.id,
-      commitmentAmount: 30000000,
-      availableAmount: 30000000,
+      commitmentAmount: 50000000,
+      availableAmount: 50000000,
       startDate: new Date(),
-      maturityDate: new Date('2028-12-31'),
+      maturityDate: new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000),
       interestType: 'FLOATING',
       baseRate: 'SOFR',
       margin: 2.5,
       status: 'ACTIVE'
     }
+  })
+
+  // Create servicing activities
+  const now = new Date()
+  await prisma.servicingActivity.createMany({
+    data: [
+      {
+        facilityId: facility.id,
+        activityType: 'INTEREST_PAYMENT',
+        dueDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        amount: 125000, // Example interest amount
+        description: 'Monthly interest payment',
+        status: 'PENDING'
+      },
+      {
+        facilityId: facility.id,
+        activityType: 'PRINCIPAL_PAYMENT',
+        dueDate: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000), // 90 days from now
+        amount: 1250000, // Example principal payment
+        description: 'Quarterly principal amortization',
+        status: 'PENDING'
+      },
+      {
+        facilityId: facility.id,
+        activityType: 'INTEREST_PAYMENT',
+        dueDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+        amount: 125000,
+        description: 'Monthly interest payment',
+        status: 'COMPLETED',
+        completedAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), // Completed 2 days ago
+        completedBy: 'system'
+      }
+    ]
   })
 
   // Create facility position
@@ -301,6 +330,97 @@ async function main() {
       balance: 5000000
     }
   })
+
+  // Create servicing roles
+  const roles = await Promise.all([
+    prisma.servicingRole.create({
+      data: {
+        name: 'Loan Administrator',
+        description: 'Manages loan servicing activities and team assignments',
+        permissions: JSON.stringify(['MANAGE_TEAM', 'MANAGE_ACTIVITIES', 'MANAGE_ASSIGNMENTS'])
+      }
+    }),
+    prisma.servicingRole.create({
+      data: {
+        name: 'Portfolio Manager',
+        description: 'Oversees loan portfolio and risk management',
+        permissions: JSON.stringify(['VIEW_PORTFOLIO', 'MANAGE_ACTIVITIES'])
+      }
+    }),
+    prisma.servicingRole.create({
+      data: {
+        name: 'Servicing Specialist',
+        description: 'Handles day-to-day servicing activities',
+        permissions: JSON.stringify(['VIEW_ACTIVITIES', 'UPDATE_ACTIVITIES'])
+      }
+    })
+  ])
+
+  // Create team members
+  const teamMembers = await Promise.all([
+    prisma.servicingTeamMember.create({
+      data: {
+        name: 'John Smith',
+        email: 'john.smith@example.com',
+        roleId: roles[0].id, // Loan Administrator
+        status: 'ACTIVE'
+      }
+    }),
+    prisma.servicingTeamMember.create({
+      data: {
+        name: 'Sarah Johnson',
+        email: 'sarah.johnson@example.com',
+        roleId: roles[1].id, // Portfolio Manager
+        status: 'ACTIVE'
+      }
+    }),
+    prisma.servicingTeamMember.create({
+      data: {
+        name: 'Michael Chen',
+        email: 'michael.chen@example.com',
+        roleId: roles[2].id, // Servicing Specialist
+        status: 'ACTIVE'
+      }
+    })
+  ])
+
+  // Get all facilities for assignments
+  const allFacilities = await prisma.facility.findMany({
+    take: 2
+  })
+
+  if (allFacilities.length >= 2) {
+    // Create servicing assignments
+    await Promise.all([
+      prisma.servicingAssignment.create({
+        data: {
+          teamMemberId: teamMembers[0].id,
+          facilityId: allFacilities[0].id,
+          assignmentType: 'PRIMARY_AGENT',
+          startDate: new Date(),
+          status: 'ACTIVE'
+        }
+      }),
+      prisma.servicingAssignment.create({
+        data: {
+          teamMemberId: teamMembers[1].id,
+          facilityId: allFacilities[0].id,
+          assignmentType: 'BACKUP_AGENT',
+          startDate: new Date(),
+          status: 'ACTIVE'
+        }
+      }),
+      prisma.servicingAssignment.create({
+        data: {
+          teamMemberId: teamMembers[2].id,
+          facilityId: allFacilities[1].id,
+          assignmentType: 'PRIMARY_AGENT',
+          startDate: new Date(),
+          status: 'ACTIVE'
+        }
+      })
+    ])
+  }
 }
 
 main()

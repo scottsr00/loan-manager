@@ -17,13 +17,13 @@ export async function getServicingActivities(params: ServicingActivityParams = {
       activityType,
       startDate,
       endDate,
-      assignedTo
+      facilityId
     } = params
 
     const where = {
-      ...(status && { status }),
-      ...(activityType && { activityType }),
-      ...(assignedTo && { assignedTo }),
+      ...(status && status !== 'all' && { status }),
+      ...(activityType && activityType !== 'all' && { activityType }),
+      ...(facilityId && facilityId !== 'all' && { facilityId }),
       ...(startDate && endDate && {
         dueDate: {
           gte: startDate,
@@ -36,11 +36,15 @@ export async function getServicingActivities(params: ServicingActivityParams = {
       prisma.servicingActivity.findMany({
         where,
         include: {
-          loan: {
+          facility: {
             select: {
-              dealName: true,
-              currentBalance: true,
-              agentBank: true
+              facilityName: true,
+              facilityType: true,
+              creditAgreement: {
+                select: {
+                  agreementName: true
+                }
+              }
             }
           }
         },

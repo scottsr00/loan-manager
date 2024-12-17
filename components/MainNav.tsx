@@ -16,7 +16,8 @@ import {
   FileText,
   ScrollText,
   Files,
-  Building
+  Building,
+  Users2
 } from 'lucide-react'
 
 const menuItems = [
@@ -74,6 +75,11 @@ const menuItems = [
     title: "Borrowers",
     href: "/borrowers",
     icon: Building
+  },
+  {
+    title: "Team Management",
+    href: "/team",
+    icon: Users2
   },
   {
     title: "Settings",

@@ -194,6 +194,8 @@ model Facility {
   description       String?
   facilityPositions FacilityPosition[]
   sublimits         FacilitySublimit[]
+  servicingActivities ServicingActivity[]
+  servicingAssignments ServicingAssignment[]
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -454,4 +456,70 @@ model EntityContact {
   updatedAt   DateTime  @updatedAt
 
   @@index([entityId])
+}
+
+model ServicingActivity {
+  id              String    @id @default(cuid())
+  facilityId      String
+  facility        Facility  @relation(fields: [facilityId], references: [id])
+  
+  // Activity Type & Details
+  activityType    String    // INTEREST_PAYMENT, PRINCIPAL_PAYMENT, UNSCHEDULED_PAYMENT
+  dueDate         DateTime
+  amount          Float
+  description     String?
+  
+  // Status & Completion
+  status          String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, OVERDUE
+  completedAt     DateTime?
+  completedBy     String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([facilityId])
+  @@index([dueDate])
+  @@index([status])
+}
+
+model ServicingRole {
+  id                String    @id @default(cuid())
+  name              String    @unique
+  description       String
+  permissions       String    // JSON string of permissions
+  teamMembers       ServicingTeamMember[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model ServicingTeamMember {
+  id                String    @id @default(cuid())
+  name              String
+  email             String    @unique
+  roleId            String
+  role              ServicingRole @relation(fields: [roleId], references: [id])
+  status            String    @default("ACTIVE")  // ACTIVE, INACTIVE, ON_LEAVE
+  assignments       ServicingAssignment[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([roleId])
+}
+
+model ServicingAssignment {
+  id                String    @id @default(cuid())
+  teamMemberId      String
+  teamMember        ServicingTeamMember @relation(fields: [teamMemberId], references: [id])
+  facilityId        String
+  facility          Facility @relation(fields: [facilityId], references: [id])
+  assignmentType    String    // PRIMARY_AGENT, BACKUP_AGENT, SPECIALIST
+  startDate         DateTime
+  endDate           DateTime?
+  status            String    @default("ACTIVE")  // ACTIVE, COMPLETED, TRANSFERRED
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([teamMemberId])
+  @@index([facilityId])
 }

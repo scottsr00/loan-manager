@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { type ServicingActivity, getServicingActivities } from '@/server/actions/loan/getServicingActivities'
 import { addServicingActivity } from '@/server/actions/loan/addServicingActivity'
-import { getAvailableLoans } from '@/server/actions/loan/getAvailableLoans'
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -36,31 +35,35 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn, formatCurrency } from "@/lib/utils"
 import { CalendarIcon, Loader2 } from "lucide-react"
 import { format } from "date-fns"
+import { getFacilities } from '@/server/actions/loan/getFacilities'
 
 export function ServicingDashboard() {
   const [activities, setActivities] = useState<ServicingActivity[]>([])
-  const [loans, setLoans] = useState<{ id: string; dealName: string }[]>([])
+  const [facilities, setFacilities] = useState<{
+    id: string;
+    facilityName: string;
+    facilityType: string;
+    creditAgreement: { agreementName: string }
+  }[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState({
-    status: '',
-    priority: '',
-    activityType: '',
-    loanId: ''
+    status: null as string | null,
+    activityType: null as string | null,
+    facilityId: null as string | null,
+    startDate: null as Date | null,
+    endDate: null as Date | null
   })
 
   // New activity form state
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [newActivity, setNewActivity] = useState({
-    loanId: '',
+    facilityId: '',
     activityType: '',
-    status: 'Pending',
+    status: 'PENDING',
     dueDate: new Date(),
     description: '',
     amount: '',
-    rateChange: '',
-    assignedTo: '',
-    priority: 'Medium'
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -69,7 +72,7 @@ export function ServicingDashboard() {
     setError(null)
     try {
       const data = await getServicingActivities(filters)
-      setActivities(data)
+      setActivities(data.activities)
     } catch (err) {
       setError('Failed to load servicing activities')
       console.error(err)
@@ -78,18 +81,18 @@ export function ServicingDashboard() {
     }
   }
 
-  const loadLoans = async () => {
+  const loadFacilities = async () => {
     try {
-      const data = await getAvailableLoans()
-      setLoans(data)
+      const data = await getFacilities()
+      setFacilities(data)
     } catch (err) {
-      console.error('Error loading loans:', err)
+      console.error('Error loading facilities:', err)
     }
   }
 
   useEffect(() => {
     loadActivities()
-    loadLoans()
+    loadFacilities()
   }, [])
 
   useEffect(() => {
@@ -101,20 +104,16 @@ export function ServicingDashboard() {
     try {
       await addServicingActivity({
         ...newActivity,
-        amount: newActivity.amount ? parseFloat(newActivity.amount) : undefined,
-        rateChange: newActivity.rateChange ? parseFloat(newActivity.rateChange) : undefined
+        amount: newActivity.amount ? parseFloat(newActivity.amount) : 0,
       })
       setIsDialogOpen(false)
       setNewActivity({
-        loanId: '',
+        facilityId: '',
         activityType: '',
-        status: 'Pending',
+        status: 'PENDING',
         dueDate: new Date(),
         description: '',
         amount: '',
-        rateChange: '',
-        assignedTo: '',
-        priority: 'Medium'
       })
       loadActivities()
     } catch (err) {
@@ -125,10 +124,11 @@ export function ServicingDashboard() {
   }
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "success" | "destructive"> = {
-      'Pending': 'default',
-      'Completed': 'success',
-      'Failed': 'destructive'
+    const variants: Record<string, "default" | "success" | "destructive" | "warning"> = {
+      'PENDING': 'default',
+      'IN_PROGRESS': 'warning',
+      'COMPLETED': 'success',
+      'OVERDUE': 'destructive'
     }
     return <Badge variant={variants[status] || 'default'}>{status}</Badge>
   }
@@ -147,50 +147,75 @@ export function ServicingDashboard() {
       <div className="flex justify-between items-center">
         <div className="flex gap-2">
           <Select
-            value={filters.status}
+            value={filters.status || undefined}
             onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
           >
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
-              <SelectItem value="Pending">Pending</SelectItem>
-              <SelectItem value="Completed">Completed</SelectItem>
-              <SelectItem value="Failed">Failed</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="PENDING">Pending</SelectItem>
+              <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+              <SelectItem value="COMPLETED">Completed</SelectItem>
+              <SelectItem value="OVERDUE">Overdue</SelectItem>
             </SelectContent>
           </Select>
 
           <Select
-            value={filters.priority}
-            onValueChange={(value) => setFilters(prev => ({ ...prev, priority: value }))}
-          >
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Filter by priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Priorities</SelectItem>
-              <SelectItem value="High">High</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="Low">Low</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={filters.activityType}
+            value={filters.activityType || undefined}
             onValueChange={(value) => setFilters(prev => ({ ...prev, activityType: value }))}
           >
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Types</SelectItem>
-              <SelectItem value="Payment">Payment</SelectItem>
-              <SelectItem value="Rate Change">Rate Change</SelectItem>
-              <SelectItem value="Amendment">Amendment</SelectItem>
-              <SelectItem value="Notice">Notice</SelectItem>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="INTEREST_PAYMENT">Interest Payment</SelectItem>
+              <SelectItem value="PRINCIPAL_PAYMENT">Principal Payment</SelectItem>
+              <SelectItem value="UNSCHEDULED_PAYMENT">Unscheduled Payment</SelectItem>
             </SelectContent>
           </Select>
+
+          <div className="flex gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-[150px] justify-start text-left font-normal",
+                  !filters.startDate && "text-muted-foreground"
+                )}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filters.startDate ? format(filters.startDate, "PP") : <span>Start Date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={filters.startDate}
+                  onSelect={(date) => setFilters(prev => ({ ...prev, startDate: date }))}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-[150px] justify-start text-left font-normal",
+                  !filters.endDate && "text-muted-foreground"
+                )}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filters.endDate ? format(filters.endDate, "PP") : <span>End Date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={filters.endDate}
+                  onSelect={(date) => setFilters(prev => ({ ...prev, endDate: date }))}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -206,18 +231,18 @@ export function ServicingDashboard() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="loan">Loan</Label>
+                <Label htmlFor="facility">Facility</Label>
                 <Select
-                  value={newActivity.loanId}
-                  onValueChange={(value) => setNewActivity(prev => ({ ...prev, loanId: value }))}
+                  value={newActivity.facilityId}
+                  onValueChange={(value) => setNewActivity(prev => ({ ...prev, facilityId: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select loan" />
+                    <SelectValue placeholder="Select facility" />
                   </SelectTrigger>
                   <SelectContent>
-                    {loans.map((loan) => (
-                      <SelectItem key={loan.id} value={loan.id}>
-                        {loan.dealName}
+                    {facilities.map((facility) => (
+                      <SelectItem key={facility.id} value={facility.id}>
+                        {`${facility.facilityName} (${facility.creditAgreement.agreementName})`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -234,10 +259,9 @@ export function ServicingDashboard() {
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Payment">Payment</SelectItem>
-                    <SelectItem value="Rate Change">Rate Change</SelectItem>
-                    <SelectItem value="Amendment">Amendment</SelectItem>
-                    <SelectItem value="Notice">Notice</SelectItem>
+                    <SelectItem value="INTEREST_PAYMENT">Interest Payment</SelectItem>
+                    <SelectItem value="PRINCIPAL_PAYMENT">Principal Payment</SelectItem>
+                    <SelectItem value="UNSCHEDULED_PAYMENT">Unscheduled Payment</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -283,7 +307,7 @@ export function ServicingDashboard() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="amount">Amount (optional)</Label>
+                <Label htmlFor="amount">Amount</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -293,48 +317,9 @@ export function ServicingDashboard() {
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="rateChange">Rate Change % (optional)</Label>
-                <Input
-                  id="rateChange"
-                  type="number"
-                  step="0.01"
-                  value={newActivity.rateChange}
-                  onChange={(e) => setNewActivity(prev => ({ ...prev, rateChange: e.target.value }))}
-                  placeholder="Enter rate change"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="assignedTo">Assigned To (optional)</Label>
-                <Input
-                  id="assignedTo"
-                  value={newActivity.assignedTo}
-                  onChange={(e) => setNewActivity(prev => ({ ...prev, assignedTo: e.target.value }))}
-                  placeholder="Enter assignee"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="priority">Priority</Label>
-                <Select
-                  value={newActivity.priority}
-                  onValueChange={(value) => setNewActivity(prev => ({ ...prev, priority: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="High">High</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="Low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               <Button
                 onClick={handleAddActivity}
-                disabled={isSubmitting || !newActivity.loanId || !newActivity.activityType || !newActivity.description}
+                disabled={isSubmitting || !newActivity.facilityId || !newActivity.activityType}
               >
                 {isSubmitting ? (
                   <>
@@ -361,26 +346,25 @@ export function ServicingDashboard() {
           <TableHeader>
             <TableRow>
               <TableHead>Due Date</TableHead>
-              <TableHead>Loan</TableHead>
+              <TableHead>Facility</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Amount</TableHead>
-              <TableHead>Rate Change</TableHead>
-              <TableHead>Assigned To</TableHead>
-              <TableHead>Priority</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Completed By</TableHead>
+              <TableHead>Completed At</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8">
+                <TableCell colSpan={8} className="text-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                 </TableCell>
               </TableRow>
             ) : activities.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No servicing activities found
                 </TableCell>
               </TableRow>
@@ -388,14 +372,13 @@ export function ServicingDashboard() {
               activities.map((activity) => (
                 <TableRow key={activity.id}>
                   <TableCell>{format(new Date(activity.dueDate), "PP")}</TableCell>
-                  <TableCell>{activity.dealName}</TableCell>
+                  <TableCell>{activity.facility.facilityName}</TableCell>
                   <TableCell>{activity.activityType}</TableCell>
                   <TableCell className="max-w-[300px] truncate">{activity.description}</TableCell>
-                  <TableCell>{activity.amount ? formatCurrency(activity.amount) : '-'}</TableCell>
-                  <TableCell>{activity.rateChange ? `${activity.rateChange}%` : '-'}</TableCell>
-                  <TableCell>{activity.assignedTo || '-'}</TableCell>
-                  <TableCell>{getPriorityBadge(activity.priority)}</TableCell>
+                  <TableCell>{formatCurrency(activity.amount)}</TableCell>
                   <TableCell>{getStatusBadge(activity.status)}</TableCell>
+                  <TableCell>{activity.completedBy || '-'}</TableCell>
+                  <TableCell>{activity.completedAt ? format(new Date(activity.completedAt), "PP") : '-'}</TableCell>
                 </TableRow>
               ))
             )}
