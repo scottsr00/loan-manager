@@ -4,6 +4,7 @@ const prisma = new PrismaClient()
 
 async function main() {
   // Clean up existing data in correct dependency order
+  await prisma.tradeComment.deleteMany()
   await prisma.tradeHistoricalBalance.deleteMany()
   await prisma.trade.deleteMany()
   await prisma.servicingAssignment.deleteMany()
@@ -23,7 +24,14 @@ async function main() {
   await prisma.borrowerCovenant.deleteMany()
   await prisma.borrowerFinancialStatement.deleteMany()
   await prisma.borrower.deleteMany()
+  await prisma.entityAddress.deleteMany()
+  await prisma.entityContact.deleteMany()
   await prisma.entity.deleteMany()
+  await prisma.counterpartyAddress.deleteMany()
+  await prisma.counterpartyContact.deleteMany()
+  await prisma.counterparty.deleteMany()
+  await prisma.counterpartyType.deleteMany()
+  await prisma.entityType.deleteMany()
 
   // Create entity types
   const corporateType = await prisma.entityType.create({
@@ -301,35 +309,59 @@ async function main() {
     }
   })
 
-  // Create a trade
-  const trade = await prisma.trade.create({
-    data: {
-      facilityId: facility.id,
-      counterpartyId: counterparty.id,
-      tradeDate: new Date(),
-      settlementDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-      status: 'PENDING',
-      amount: 5000000,
-      price: 98.5
-    }
-  })
+  // Create additional trades
+  const tradeDates = [
+    new Date('2023-12-01'),
+    new Date('2023-12-05'),
+    new Date('2023-12-08'),
+    new Date('2023-12-12'),
+    new Date('2023-12-15'),
+    new Date('2023-12-18'),
+    new Date('2023-12-21'),
+    new Date('2023-12-26'),
+    new Date('2023-12-28'),
+    new Date('2024-01-02')
+  ]
 
-  // Create trade comment
-  await prisma.tradeComment.create({
-    data: {
-      tradeId: trade.id,
-      comment: 'Initial trade setup completed'
-    }
-  })
+  // Create trades
+  const additionalTrades = await Promise.all(
+    tradeDates.map(async (tradeDate) => {
+      const trade = await prisma.trade.create({
+        data: {
+          facilityId: facility.id,
+          counterpartyId: counterparty.id,
+          tradeDate,
+          settlementDate: new Date(tradeDate.getTime() + 2 * 24 * 60 * 60 * 1000), // T+2 settlement
+          status: 'COMPLETED',
+          amount: Math.floor(Math.random() * 1000000) + 500000, // Random amount between 500k and 1.5M
+          price: 95 + Math.random() * 10 // Random price between 95 and 105
+        }
+      })
 
-  // Create trade historical balance
-  await prisma.tradeHistoricalBalance.create({
-    data: {
-      tradeId: trade.id,
-      date: new Date(),
-      balance: 5000000
-    }
-  })
+      // Add trade comment
+      await prisma.tradeComment.create({
+        data: {
+          tradeId: trade.id,
+          comment: `Trade executed at ${trade.price.toFixed(2)}`,
+          createdAt: tradeDate
+        }
+      })
+
+      // Add historical balance
+      await prisma.tradeHistoricalBalance.create({
+        data: {
+          tradeId: trade.id,
+          date: trade.settlementDate,
+          balance: trade.amount,
+          createdAt: trade.settlementDate
+        }
+      })
+
+      return trade
+    })
+  )
+
+  console.log(`Created ${additionalTrades.length} additional trades`)
 
   // Create servicing roles
   const roles = await Promise.all([
