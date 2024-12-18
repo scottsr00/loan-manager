@@ -1,102 +1,94 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { EntityWithRelations } from '@/server/actions/entity'
 import { EntityDetailsModal } from './EntityDetailsModal'
+import { DataGrid } from '@/components/ui/data-grid'
+import { type ColDef } from 'ag-grid-community'
 
-export function EntityList({ entities }: { entities: EntityWithRelations[] }) {
-  const [selectedEntity, setSelectedEntity] = useState<EntityWithRelations | null>(null)
+interface EntityListProps {
+  entities: any[]
+}
+
+export function EntityList({ entities }: EntityListProps) {
+  const [selectedEntity, setSelectedEntity] = useState<any | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
+
+  const columnDefs = useMemo<ColDef[]>(() => [
+    {
+      field: 'legalName',
+      headerName: 'Legal Name',
+      width: 250,
+      valueFormatter: (params) => {
+        const dba = params.data.dba
+        return dba ? `${params.value} (DBA: ${dba})` : params.value
+      },
+    },
+    {
+      field: 'entityType.name',
+      headerName: 'Type',
+      width: 150,
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 120,
+      cellRenderer: (params: any) => (
+        <Badge variant={params.value === 'ACTIVE' ? 'success' : 'secondary'}>
+          {params.value}
+        </Badge>
+      ),
+    },
+    {
+      headerName: 'Primary Contact',
+      width: 200,
+      valueGetter: (params) => {
+        const primaryContact = params.data.contacts[0]
+        if (!primaryContact) return 'No primary contact'
+        const contactInfo = `${primaryContact.firstName} ${primaryContact.lastName}`
+        return primaryContact.title ? `${contactInfo}\n${primaryContact.title}` : contactInfo
+      },
+    },
+    {
+      headerName: 'Location',
+      width: 200,
+      valueGetter: (params) => {
+        const primaryAddress = params.data.addresses[0]
+        if (!primaryAddress) return 'No primary address'
+        return primaryAddress.state 
+          ? `${primaryAddress.city}, ${primaryAddress.state}, ${primaryAddress.country}`
+          : `${primaryAddress.city}, ${primaryAddress.country}`
+      },
+    },
+    {
+      field: 'createdAt',
+      headerName: 'Created',
+      width: 150,
+      valueFormatter: (params) => format(new Date(params.value), 'MMM d, yyyy'),
+      filter: 'agDateColumnFilter',
+    },
+  ], [])
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Legal Name</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Primary Contact</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead>Created</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {entities.map((entity) => {
-            const primaryAddress = entity.addresses[0]
-            const primaryContact = entity.contacts[0]
-            
-            return (
-              <TableRow 
-                key={entity.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => {
-                  setSelectedEntity(entity)
-                  setDetailsOpen(true)
-                }}
-              >
-                <TableCell className="font-medium">
-                  {entity.legalName}
-                  {entity.dba && (
-                    <div className="text-sm text-muted-foreground">
-                      DBA: {entity.dba}
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell>{entity.entityType.name}</TableCell>
-                <TableCell>
-                  <Badge variant={entity.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                    {entity.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {primaryContact ? (
-                    <div>
-                      <div>{`${primaryContact.firstName} ${primaryContact.lastName}`}</div>
-                      {primaryContact.title && (
-                        <div className="text-sm text-muted-foreground">
-                          {primaryContact.title}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">No primary contact</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {primaryAddress ? (
-                    <div>
-                      <div>{primaryAddress.city}</div>
-                      {primaryAddress.state && (
-                        <div className="text-sm text-muted-foreground">
-                          {primaryAddress.state}, {primaryAddress.country}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">No primary address</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {format(new Date(entity.createdAt), 'MMM d, yyyy')}
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
+      <DataGrid
+        rowData={entities}
+        columnDefs={columnDefs}
+        defaultColDef={{
+          sortable: true,
+          filter: true,
+          resizable: true,
+          floatingFilter: true,
+        }}
+        onRowClick={(data) => {
+          setSelectedEntity(data)
+          setDetailsOpen(true)
+        }}
+        domLayout="autoHeight"
+      />
 
-      <EntityDetailsModal 
+      <EntityDetailsModal
         entity={selectedEntity}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}

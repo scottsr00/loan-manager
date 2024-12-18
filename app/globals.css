@@ -94,3 +94,42 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* AG Grid Theme Overrides */
+.ag-theme-alpine {
+  --ag-background-color: var(--background);
+  --ag-foreground-color: var(--foreground);
+  --ag-border-color: var(--border);
+  --ag-header-background-color: var(--muted);
+  --ag-odd-row-background-color: var(--card);
+  --ag-header-foreground-color: var(--foreground);
+  --ag-cell-horizontal-border: var(--border);
+  --ag-input-border-color: var(--border);
+  --ag-input-focus-border-color: var(--ring);
+  --ag-alpine-active-color: var(--primary);
+  --ag-selected-row-background-color: var(--accent);
+  --ag-row-hover-color: var(--accent);
+  --ag-column-hover-color: var(--accent);
+  --ag-input-focus-box-shadow: 0 0 0 1px var(--ring);
+  --ag-invalid-color: var(--destructive);
+  font-family: inherit;
+}
+
+.ag-theme-alpine-dark {
+  --ag-background-color: var(--background);
+  --ag-foreground-color: var(--foreground);
+  --ag-border-color: var(--border);
+  --ag-header-background-color: var(--muted);
+  --ag-odd-row-background-color: var(--card);
+  --ag-header-foreground-color: var(--foreground);
+  --ag-cell-horizontal-border: var(--border);
+  --ag-input-border-color: var(--border);
+  --ag-input-focus-border-color: var(--ring);
+  --ag-alpine-active-color: var(--primary);
+  --ag-selected-row-background-color: var(--accent);
+  --ag-row-hover-color: var(--accent);
+  --ag-column-hover-color: var(--accent);
+  --ag-input-focus-box-shadow: 0 0 0 1px var(--ring);
+  --ag-invalid-color: var(--destructive);
+  font-family: inherit;
+}

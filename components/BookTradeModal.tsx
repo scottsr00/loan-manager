@@ -37,14 +37,15 @@ import { getAvailableLoans } from '@/server/actions/loan'
 import type { BookTradeInput } from '@/hooks/useTrades'
 
 const formSchema = z.object({
-  loanId: z.string().min(1, 'Loan is required'),
-  quantity: z.number().min(0.01, 'Quantity must be greater than 0'),
+  facilityId: z.string().min(1, 'Facility is required'),
+  amount: z.number().min(0.01, 'Amount must be greater than 0'),
   price: z.number().min(0.01, 'Price must be greater than 0'),
-  counterparty: z.string().min(1, 'Counterparty is required'),
+  counterpartyId: z.string().min(1, 'Counterparty is required'),
   tradeDate: z.date(),
-  expectedSettlementDate: z.date(),
-  tradeType: z.enum(['Buy', 'Sell'])
+  settlementDate: z.date()
 })
+
+type FormData = z.infer<typeof formSchema>
 
 interface BookTradeModalProps {
   open: boolean
@@ -57,34 +58,36 @@ export function BookTradeModal({
   onOpenChange,
   onTradeBooked
 }: BookTradeModalProps) {
+  const [availableLoans, setAvailableLoans] = useState<Array<{ id: string, name: string }>>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [availableLoans, setAvailableLoans] = useState<Array<{ id: string, dealName: string }>>([])
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      quantity: 0,
+      facilityId: '',
+      amount: 0,
       price: 0,
+      counterpartyId: '',
       tradeDate: new Date(),
-      expectedSettlementDate: new Date(),
-      tradeType: 'Buy'
+      settlementDate: new Date()
     }
   })
 
-  const loadLoans = async () => {
-    try {
+  useEffect(() => {
+    async function loadLoans() {
       const loans = await getAvailableLoans()
       setAvailableLoans(loans)
-    } catch (error) {
-      console.error('Error loading loans:', error)
     }
-  }
+    if (open) {
+      loadLoans()
+      form.reset()
+    }
+  }, [open, form])
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  const onSubmit = async (data: FormData) => {
     try {
       setIsLoading(true)
       await onTradeBooked(data)
-      form.reset()
       onOpenChange(false)
     } catch (error) {
       console.error('Error booking trade:', error)
@@ -97,9 +100,9 @@ export function BookTradeModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Book Trade</DialogTitle>
+          <DialogTitle>Book New Trade</DialogTitle>
           <DialogDescription>
-            Enter the details for the new trade
+            Enter the trade details below
           </DialogDescription>
         </DialogHeader>
 
@@ -107,24 +110,23 @@ export function BookTradeModal({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="loanId"
+              name="facilityId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Loan</FormLabel>
+                  <FormLabel>Facility</FormLabel>
                   <Select
-                    onOpenChange={() => loadLoans()}
                     onValueChange={field.onChange}
-                    value={field.value}
+                    defaultValue={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a loan" />
+                        <SelectValue placeholder="Select a facility" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {availableLoans.map((loan) => (
                         <SelectItem key={loan.id} value={loan.id}>
-                          {loan.dealName}
+                          {loan.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -136,41 +138,16 @@ export function BookTradeModal({
 
             <FormField
               control={form.control}
-              name="tradeType"
+              name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Trade Type</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select trade type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Buy">Buy</SelectItem>
-                      <SelectItem value="Sell">Sell</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quantity</FormLabel>
+                  <FormLabel>Amount</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       step="0.01"
-                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                      value={field.value}
+                      {...field}
+                      onChange={e => field.onChange(parseFloat(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage />
@@ -188,8 +165,8 @@ export function BookTradeModal({
                     <Input
                       type="number"
                       step="0.01"
-                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                      value={field.value}
+                      {...field}
+                      onChange={e => field.onChange(parseFloat(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage />
@@ -199,13 +176,23 @@ export function BookTradeModal({
 
             <FormField
               control={form.control}
-              name="counterparty"
+              name="counterpartyId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Counterparty</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a counterparty" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="1">Trading Bank Ltd</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -221,7 +208,7 @@ export function BookTradeModal({
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
-                          variant="outline"
+                          variant={"outline"}
                           className={cn(
                             "w-full pl-3 text-left font-normal",
                             !field.value && "text-muted-foreground"
@@ -255,7 +242,7 @@ export function BookTradeModal({
 
             <FormField
               control={form.control}
-              name="expectedSettlementDate"
+              name="settlementDate"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Settlement Date</FormLabel>
@@ -263,7 +250,7 @@ export function BookTradeModal({
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
-                          variant="outline"
+                          variant={"outline"}
                           className={cn(
                             "w-full pl-3 text-left font-normal",
                             !field.value && "text-muted-foreground"
@@ -295,18 +282,16 @@ export function BookTradeModal({
               )}
             />
 
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Booking Trade...
-                  </>
-                ) : (
-                  'Book Trade'
-                )}
-              </Button>
-            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Booking Trade...
+                </>
+              ) : (
+                'Book Trade'
+              )}
+            </Button>
           </form>
         </Form>
       </DialogContent>

@@ -1,95 +1,101 @@
 'use client'
 
-import { useState } from 'react'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { useState, useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { CreditAgreementWithRelations } from '@/server/actions/loan/getCreditAgreements'
-import { CreditAgreementDetailsModal } from '@/components/CreditAgreementDetailsModal'
-import { useRouter } from 'next/navigation'
+import { DataGrid } from '@/components/ui/data-grid'
+import { type ColDef } from 'ag-grid-community'
+import { CreditAgreementDetailsModal } from './CreditAgreementDetailsModal'
 import { formatCurrency } from '@/lib/utils'
+import { format } from 'date-fns'
 
 interface CreditAgreementListProps {
-  creditAgreements: CreditAgreementWithRelations[]
+  creditAgreements: any[]
 }
 
-export function CreditAgreementList({ creditAgreements: initialCreditAgreements }: CreditAgreementListProps) {
-  const [creditAgreements, setCreditAgreements] = useState(initialCreditAgreements)
-  const [selectedCreditAgreement, setSelectedCreditAgreement] = useState<CreditAgreementWithRelations | null>(null)
-  const router = useRouter()
+export function CreditAgreementList({ creditAgreements }: CreditAgreementListProps) {
+  const [selectedCreditAgreement, setSelectedCreditAgreement] = useState<any | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
 
-  const handleDelete = (deletedCreditAgreement: CreditAgreementWithRelations) => {
-    setCreditAgreements(prev => prev.filter(ca => ca.id !== deletedCreditAgreement.id))
-    router.refresh()
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return 'bg-green-500'
-      case 'terminated':
-        return 'bg-red-500'
-      case 'defaulted':
-        return 'bg-red-500'
-      case 'matured':
-        return 'bg-yellow-500'
-      default:
-        return 'bg-gray-500'
-    }
-  }
+  const columnDefs = useMemo<ColDef[]>(() => [
+    {
+      field: 'agreementName',
+      headerName: 'Agreement Name',
+      width: 200,
+    },
+    {
+      field: 'agreementNumber',
+      headerName: 'Agreement Number',
+      width: 150,
+    },
+    {
+      field: 'borrower.name',
+      headerName: 'Borrower',
+      width: 200,
+    },
+    {
+      field: 'amount',
+      headerName: 'Amount',
+      width: 150,
+      valueFormatter: (params) => formatCurrency(params.value),
+    },
+    {
+      field: 'currency',
+      headerName: 'Currency',
+      width: 100,
+    },
+    {
+      field: 'interestRate',
+      headerName: 'Interest Rate',
+      width: 120,
+      valueFormatter: (params) => `${params.value}%`,
+    },
+    {
+      field: 'startDate',
+      headerName: 'Start Date',
+      width: 150,
+      valueFormatter: (params) => format(new Date(params.value), 'MMM d, yyyy'),
+    },
+    {
+      field: 'maturityDate',
+      headerName: 'Maturity Date',
+      width: 150,
+      valueFormatter: (params) => format(new Date(params.value), 'MMM d, yyyy'),
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 120,
+      cellRenderer: (params: any) => (
+        <Badge variant={params.value === 'ACTIVE' ? 'success' : 'secondary'}>
+          {params.value}
+        </Badge>
+      ),
+    },
+  ], [])
 
   return (
-    <div className="space-y-4">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Agreement Name</TableHead>
-            <TableHead>Agreement Number</TableHead>
-            <TableHead>Borrower</TableHead>
-            <TableHead>Agent Bank</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Total Amount</TableHead>
-            <TableHead>Facilities</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {creditAgreements.map((creditAgreement) => (
-            <TableRow
-              key={creditAgreement.id}
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => setSelectedCreditAgreement(creditAgreement)}
-            >
-              <TableCell className="font-medium">{creditAgreement.agreementName}</TableCell>
-              <TableCell>{creditAgreement.agreementNumber}</TableCell>
-              <TableCell>{creditAgreement.borrower.legalName}</TableCell>
-              <TableCell>{creditAgreement.agent.legalName}</TableCell>
-              <TableCell>
-                <Badge className={getStatusColor(creditAgreement.status)}>
-                  {creditAgreement.status}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                {formatCurrency(creditAgreement.totalAmount, creditAgreement.currency)}
-              </TableCell>
-              <TableCell>
-                {creditAgreement.facilities.length} facilities
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <>
+      <DataGrid
+        rowData={creditAgreements}
+        columnDefs={columnDefs}
+        defaultColDef={{
+          sortable: true,
+          filter: true,
+          resizable: true,
+          floatingFilter: true,
+        }}
+        onRowClick={(data) => {
+          setSelectedCreditAgreement(data)
+          setDetailsOpen(true)
+        }}
+        domLayout="autoHeight"
+      />
 
       <CreditAgreementDetailsModal
         creditAgreement={selectedCreditAgreement}
-        onClose={() => setSelectedCreditAgreement(null)}
-        onDelete={handleDelete}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
       />
-    </div>
+    </>
   )
 } 

@@ -309,59 +309,62 @@ async function main() {
     }
   })
 
-  // Create additional trades
-  const tradeDates = [
-    new Date('2023-12-01'),
-    new Date('2023-12-05'),
-    new Date('2023-12-08'),
-    new Date('2023-12-12'),
-    new Date('2023-12-15'),
-    new Date('2023-12-18'),
-    new Date('2023-12-21'),
-    new Date('2023-12-26'),
-    new Date('2023-12-28'),
-    new Date('2024-01-02')
-  ]
-
   // Create trades
-  const additionalTrades = await Promise.all(
-    tradeDates.map(async (tradeDate) => {
+  const startDate = new Date('2023-12-01')
+  const endDate = new Date('2024-01-31')
+  const dateRange = endDate.getTime() - startDate.getTime()
+
+  const trades = await Promise.all(
+    Array.from({ length: 1000 }, async (_, i) => {
+      // Generate trade date between start and end dates
+      const tradeDate = new Date(startDate.getTime() + Math.random() * dateRange)
+      
+      // Settlement date is T+2
+      const settlementDate = new Date(tradeDate)
+      settlementDate.setDate(tradeDate.getDate() + 2)
+
+      // Generate amount between $500k and $5M with more realistic distribution
+      const amount = Math.floor((500000 + Math.random() * 4500000) * 100) / 100
+
+      // Generate price between 95 and 105 with decimal points
+      const price = 95 + (Math.random() * 10)
+      const roundedPrice = Math.round(price * 100) / 100
+
       const trade = await prisma.trade.create({
         data: {
-          facilityId: facility.id,
-          counterpartyId: counterparty.id,
           tradeDate,
-          settlementDate: new Date(tradeDate.getTime() + 2 * 24 * 60 * 60 * 1000), // T+2 settlement
-          status: 'COMPLETED',
-          amount: Math.floor(Math.random() * 1000000) + 500000, // Random amount between 500k and 1.5M
-          price: 95 + Math.random() * 10 // Random price between 95 and 105
+          settlementDate,
+          amount,
+          price: roundedPrice,
+          status: Math.random() > 0.1 ? 'SETTLED' : 'PENDING', // 90% settled, 10% pending
+          counterpartyId: counterparty.id,
+          facilityId: facility.id,
+          comments: {
+            create: {
+              comment: `Trade ${amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} at ${roundedPrice}%`,
+              createdAt: tradeDate
+            }
+          },
+          historicalBalances: {
+            create: {
+              balance: amount,
+              date: settlementDate,
+              createdAt: settlementDate
+            }
+          }
         }
       })
 
-      // Add trade comment
-      await prisma.tradeComment.create({
-        data: {
-          tradeId: trade.id,
-          comment: `Trade executed at ${trade.price.toFixed(2)}`,
-          createdAt: tradeDate
-        }
-      })
-
-      // Add historical balance
-      await prisma.tradeHistoricalBalance.create({
-        data: {
-          tradeId: trade.id,
-          date: trade.settlementDate,
-          balance: trade.amount,
-          createdAt: trade.settlementDate
-        }
-      })
+      // Log progress every 100 trades
+      if ((i + 1) % 100 === 0) {
+        console.log(`Created ${i + 1} trades`)
+      }
 
       return trade
     })
   )
 
-  console.log(`Created ${additionalTrades.length} additional trades`)
+  console.log(`Created ${trades.length} trades`)
 
   // Create servicing roles
   const roles = await Promise.all([

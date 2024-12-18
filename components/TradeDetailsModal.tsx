@@ -50,18 +50,12 @@ export function TradeDetailsModal({
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <h4 className="text-sm font-medium mb-1">Deal Name</h4>
-                <p className="text-sm text-muted-foreground">{trade.dealName}</p>
+                <h4 className="text-sm font-medium mb-1">Facility ID</h4>
+                <p className="text-sm text-muted-foreground">{trade.facilityId}</p>
               </div>
               <div>
-                <h4 className="text-sm font-medium mb-1">Trade Type</h4>
-                <Badge variant={trade.tradeType === 'Buy' ? 'default' : 'secondary'}>
-                  {trade.tradeType}
-                </Badge>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium mb-1">Quantity</h4>
-                <p className="text-sm text-muted-foreground">{formatCurrency(trade.quantity)}</p>
+                <h4 className="text-sm font-medium mb-1">Amount</h4>
+                <p className="text-sm text-muted-foreground">{formatCurrency(trade.amount)}</p>
               </div>
               <div>
                 <h4 className="text-sm font-medium mb-1">Price</h4>
@@ -73,7 +67,7 @@ export function TradeDetailsModal({
               </div>
               <div>
                 <h4 className="text-sm font-medium mb-1">Status</h4>
-                <Badge variant={trade.status === 'Completed' ? 'success' : 'warning'}>
+                <Badge variant={trade.status === 'SETTLED' ? 'success' : 'warning'}>
                   {trade.status}
                 </Badge>
               </div>
@@ -86,17 +80,9 @@ export function TradeDetailsModal({
               <div>
                 <h4 className="text-sm font-medium mb-1">Settlement Date</h4>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(trade.expectedSettlementDate).toLocaleDateString()}
+                  {new Date(trade.settlementDate).toLocaleDateString()}
                 </p>
               </div>
-              {trade.costOfCarryAccrued > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Cost of Carry</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {formatCurrency(trade.costOfCarryAccrued)}
-                  </p>
-                </div>
-              )}
             </div>
 
             <div className="space-y-4">
@@ -130,12 +116,12 @@ export function TradeDetailsModal({
                   comments.map((comment) => (
                     <div key={comment.id} className="border rounded-lg p-3">
                       <div className="flex justify-between items-start mb-2">
-                        <span className="text-sm font-medium">{comment.author}</span>
+                        <span className="text-sm font-medium">System</span>
                         <span className="text-xs text-muted-foreground">
                           {new Date(comment.createdAt).toLocaleString()}
                         </span>
                       </div>
-                      <p className="text-sm">{comment.content}</p>
+                      <p className="text-sm">{comment.comment}</p>
                     </div>
                   ))
                 )}

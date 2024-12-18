@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { type ServicingActivity, getServicingActivities } from '@/server/actions/loan/getServicingActivities'
 import { addServicingActivity } from '@/server/actions/loan/addServicingActivity'
 import { Button } from "@/components/ui/button"
@@ -21,14 +21,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -36,9 +28,14 @@ import { cn, formatCurrency } from "@/lib/utils"
 import { CalendarIcon, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { getFacilities } from '@/server/actions/loan/getFacilities'
+import { DataGrid } from '@/components/ui/data-grid'
+import { ColDef } from 'ag-grid-community'
 
 export function ServicingDashboard() {
   const [activities, setActivities] = useState<ServicingActivity[]>([])
+  const [selectedActivity, setSelectedActivity] = useState<ServicingActivity | null>(null)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [isAddActivityOpen, setIsAddActivityOpen] = useState(false)
   const [facilities, setFacilities] = useState<{
     id: string;
     facilityName: string;
@@ -133,14 +130,55 @@ export function ServicingDashboard() {
     return <Badge variant={variants[status] || 'default'}>{status}</Badge>
   }
 
-  const getPriorityBadge = (priority: string) => {
-    const variants: Record<string, "destructive" | "default" | "secondary"> = {
-      'High': 'destructive',
-      'Medium': 'default',
-      'Low': 'secondary'
-    }
-    return <Badge variant={variants[priority] || 'default'}>{priority}</Badge>
-  }
+  const columnDefs = useMemo<ColDef[]>(() => [
+    {
+      field: 'dueDate',
+      headerName: 'Due Date',
+      valueFormatter: (params) => format(new Date(params.value), "PP"),
+      filter: 'agDateColumnFilter',
+      width: 150,
+    },
+    {
+      field: 'facility.facilityName',
+      headerName: 'Facility',
+      width: 200,
+    },
+    {
+      field: 'activityType',
+      headerName: 'Type',
+      width: 150,
+    },
+    {
+      field: 'description',
+      headerName: 'Description',
+      width: 300,
+    },
+    {
+      field: 'amount',
+      headerName: 'Amount',
+      valueFormatter: (params) => formatCurrency(params.value),
+      filter: 'agNumberColumnFilter',
+      width: 150,
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      cellRenderer: (params: any) => getStatusBadge(params.value),
+      width: 150,
+    },
+    {
+      field: 'completedBy',
+      headerName: 'Completed By',
+      width: 150,
+    },
+    {
+      field: 'completedAt',
+      headerName: 'Completed At',
+      valueFormatter: (params) => params.value ? format(new Date(params.value), "PP") : '-',
+      filter: 'agDateColumnFilter',
+      width: 150,
+    },
+  ], [])
 
   return (
     <div className="space-y-4">
@@ -341,50 +379,70 @@ export function ServicingDashboard() {
         </div>
       )}
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Due Date</TableHead>
-              <TableHead>Facility</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Completed By</TableHead>
-              <TableHead>Completed At</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                </TableCell>
-              </TableRow>
-            ) : activities.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  No servicing activities found
-                </TableCell>
-              </TableRow>
-            ) : (
-              activities.map((activity) => (
-                <TableRow key={activity.id}>
-                  <TableCell>{format(new Date(activity.dueDate), "PP")}</TableCell>
-                  <TableCell>{activity.facility.facilityName}</TableCell>
-                  <TableCell>{activity.activityType}</TableCell>
-                  <TableCell className="max-w-[300px] truncate">{activity.description}</TableCell>
-                  <TableCell>{formatCurrency(activity.amount)}</TableCell>
-                  <TableCell>{getStatusBadge(activity.status)}</TableCell>
-                  <TableCell>{activity.completedBy || '-'}</TableCell>
-                  <TableCell>{activity.completedAt ? format(new Date(activity.completedAt), "PP") : '-'}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataGrid
+        rowData={activities}
+        columnDefs={columnDefs}
+        defaultColDef={{
+          sortable: true,
+          filter: true,
+          resizable: true,
+          floatingFilter: true,
+        }}
+        onRowClick={(data) => {
+          setSelectedActivity(data)
+          setIsDetailsOpen(true)
+        }}
+      />
+
+      {selectedActivity && (
+        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Activity Details</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4">
+              <div>
+                <Label>Facility</Label>
+                <div className="text-sm">{selectedActivity.facility.facilityName}</div>
+              </div>
+              <div>
+                <Label>Type</Label>
+                <div className="text-sm">{selectedActivity.activityType}</div>
+              </div>
+              <div>
+                <Label>Due Date</Label>
+                <div className="text-sm">{format(new Date(selectedActivity.dueDate), "PPP")}</div>
+              </div>
+              <div>
+                <Label>Amount</Label>
+                <div className="text-sm">{formatCurrency(selectedActivity.amount)}</div>
+              </div>
+              <div>
+                <Label>Description</Label>
+                <div className="text-sm">{selectedActivity.description}</div>
+              </div>
+              <div>
+                <Label>Status</Label>
+                <div className="text-sm">{selectedActivity.status}</div>
+              </div>
+              {selectedActivity.completedBy && (
+                <>
+                  <div>
+                    <Label>Completed By</Label>
+                    <div className="text-sm">{selectedActivity.completedBy}</div>
+                  </div>
+                  <div>
+                    <Label>Completed At</Label>
+                    <div className="text-sm">
+                      {selectedActivity.completedAt ? format(new Date(selectedActivity.completedAt), "PPP") : '-'}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 } 

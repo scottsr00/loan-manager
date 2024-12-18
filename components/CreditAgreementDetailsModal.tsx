@@ -14,20 +14,20 @@ type CreditAgreementWithRelations = CreditAgreement & {
 }
 
 interface CreditAgreementDetailsModalProps {
-  creditAgreement: CreditAgreementWithRelations | null
-  isOpen: boolean
-  onClose: () => void
+  creditAgreement: any | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 export function CreditAgreementDetailsModal({
   creditAgreement,
-  isOpen,
-  onClose,
+  open,
+  onOpenChange,
 }: CreditAgreementDetailsModalProps) {
   if (!creditAgreement) return null
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">{creditAgreement.agreementName}</DialogTitle>

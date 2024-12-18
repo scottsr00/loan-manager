@@ -1,116 +1,94 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { CounterpartyDetailsModal } from './CounterpartyDetailsModal'
-import { useCounterparties } from '@/hooks/useCounterparties'
-import { Loader2 } from 'lucide-react'
-import type { Counterparty } from '@/types/counterparty'
+import { DataGrid } from '@/components/ui/data-grid'
+import { type ColDef } from 'ag-grid-community'
 
-export function CounterpartyList() {
-  const [selectedCounterparty, setSelectedCounterparty] = useState<Counterparty | null>(null)
+interface CounterpartyListProps {
+  counterparties: any[]
+}
+
+export function CounterpartyList({ counterparties }: CounterpartyListProps) {
+  const [selectedCounterparty, setSelectedCounterparty] = useState<any | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const { counterparties, isLoading, isError } = useCounterparties()
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
-  if (isError) {
-    return (
-      <div className="text-center p-8 text-destructive">
-        Error loading counterparties. Please try again later.
-      </div>
-    )
-  }
+  const columnDefs = useMemo<ColDef[]>(() => [
+    {
+      field: 'legalName',
+      headerName: 'Legal Name',
+      width: 250,
+      valueFormatter: (params) => {
+        const dba = params.data.dba
+        return dba ? `${params.value} (DBA: ${dba})` : params.value
+      },
+    },
+    {
+      field: 'type.name',
+      headerName: 'Type',
+      width: 150,
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 120,
+      cellRenderer: (params: any) => (
+        <Badge variant={params.value === 'ACTIVE' ? 'success' : 'secondary'}>
+          {params.value}
+        </Badge>
+      ),
+    },
+    {
+      headerName: 'Primary Contact',
+      width: 200,
+      valueGetter: (params) => {
+        const primaryContact = params.data.contacts[0]
+        if (!primaryContact) return 'No primary contact'
+        const contactInfo = `${primaryContact.firstName} ${primaryContact.lastName}`
+        return primaryContact.title ? `${contactInfo}\n${primaryContact.title}` : contactInfo
+      },
+    },
+    {
+      headerName: 'Location',
+      width: 200,
+      valueGetter: (params) => {
+        const primaryAddress = params.data.addresses[0]
+        if (!primaryAddress) return 'No primary address'
+        return primaryAddress.state 
+          ? `${primaryAddress.city}, ${primaryAddress.state}, ${primaryAddress.country}`
+          : `${primaryAddress.city}, ${primaryAddress.country}`
+      },
+    },
+    {
+      field: 'createdAt',
+      headerName: 'Created',
+      width: 150,
+      valueFormatter: (params) => format(new Date(params.value), 'MMM d, yyyy'),
+      filter: 'agDateColumnFilter',
+    },
+  ], [])
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Legal Name</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Primary Contact</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead>Created</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {!counterparties?.length ? (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground">
-                No counterparties found
-              </TableCell>
-            </TableRow>
-          ) : (
-            counterparties.map((counterparty) => {
-              const primaryContact = counterparty.contacts.find(c => c.isPrimary)
-              const primaryAddress = counterparty.addresses.find(a => a.isPrimary)
-              
-              return (
-                <TableRow 
-                  key={counterparty.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => {
-                    setSelectedCounterparty(counterparty)
-                    setDetailsOpen(true)
-                  }}
-                >
-                  <TableCell>{counterparty.legalName}</TableCell>
-                  <TableCell>{counterparty.type.name}</TableCell>
-                  <TableCell>
-                    <Badge variant={counterparty.status === 'ACTIVE' ? 'success' : 'warning'}>
-                      {counterparty.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {primaryContact ? (
-                      <div className="text-sm">
-                        <div>{`${primaryContact.firstName} ${primaryContact.lastName}`}</div>
-                        {primaryContact.email && (
-                          <div className="text-muted-foreground">{primaryContact.email}</div>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">No primary contact</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {primaryAddress ? (
-                      <div className="text-sm">
-                        <div>{primaryAddress.city}</div>
-                        <div className="text-muted-foreground">{primaryAddress.country}</div>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">No primary address</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(counterparty.createdAt), 'MMM d, yyyy')}
-                  </TableCell>
-                </TableRow>
-              )
-            })
-          )}
-        </TableBody>
-      </Table>
+      <DataGrid
+        rowData={counterparties}
+        columnDefs={columnDefs}
+        defaultColDef={{
+          sortable: true,
+          filter: true,
+          resizable: true,
+          floatingFilter: true,
+        }}
+        onRowClick={(data) => {
+          setSelectedCounterparty(data)
+          setDetailsOpen(true)
+        }}
+        domLayout="autoHeight"
+      />
 
-      <CounterpartyDetailsModal 
+      <CounterpartyDetailsModal
         counterparty={selectedCounterparty}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
