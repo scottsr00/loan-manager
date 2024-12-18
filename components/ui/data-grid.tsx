@@ -36,22 +36,27 @@ export function DataGrid({
     ...defaultColDef
   }), [defaultColDef])
 
+  const handleRowClick = useCallback((params: any) => {
+    if (onRowClick) {
+      onRowClick(params.data)
+    }
+  }, [onRowClick])
+
   const gridOptionsMemo = useMemo<GridOptions>(() => ({
     pagination: true,
     paginationAutoPageSize: true,
-    rowSelection: { type: 'single' },
+    rowSelection: 'single',
     rowClass: onRowClick ? 'cursor-pointer' : '',
-    onRowClicked: onRowClick ? (params) => onRowClick(params.data) : undefined,
+    onRowClicked: handleRowClick,
     ...gridOptions
-  }), [gridOptions, onRowClick])
+  }), [gridOptions, handleRowClick])
 
   const handleExportCsv = useCallback(() => {
     const params = {
       fileName: 'export.csv',
     }
-    const api = gridOptionsMemo.api
-    if (api) {
-      api.exportDataAsCsv(params)
+    if (gridOptionsMemo.api) {
+      gridOptionsMemo.api.exportDataAsCsv(params)
     }
   }, [gridOptionsMemo])
 

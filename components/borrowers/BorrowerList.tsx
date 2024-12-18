@@ -20,16 +20,17 @@ export function BorrowerList({ borrowers }: BorrowerListProps) {
       field: 'name',
       headerName: 'Name',
       width: 200,
+      pinned: 'left',
     },
     {
-      field: 'taxId',
-      headerName: 'Tax ID',
-      width: 150,
-    },
-    {
-      field: 'jurisdiction',
-      headerName: 'Jurisdiction',
-      width: 150,
+      field: 'businessType',
+      headerName: 'Type',
+      width: 120,
+      cellRenderer: (params: any) => (
+        <Badge variant="outline">
+          {params.value || 'CORPORATE'}
+        </Badge>
+      ),
     },
     {
       field: 'industry',
@@ -37,16 +38,85 @@ export function BorrowerList({ borrowers }: BorrowerListProps) {
       width: 150,
     },
     {
-      field: 'onboardingStatus',
+      field: 'taxId',
+      headerName: 'Tax ID',
+      width: 130,
+    },
+    {
+      field: 'jurisdiction',
+      headerName: 'Jurisdiction',
+      width: 130,
+    },
+    {
+      field: 'status',
       headerName: 'Status',
       width: 120,
       cellRenderer: (params: any) => (
+        <Badge variant={params.value === 'ACTIVE' ? 'default' : 'secondary'}>
+          {params.value || 'ACTIVE'}
+        </Badge>
+      ),
+    },
+    {
+      field: 'riskRating',
+      headerName: 'Risk Rating',
+      width: 120,
+      cellRenderer: (params: any) => params.value ? (
+        <Badge variant={
+          params.value.includes('HIGH') ? 'destructive' :
+          params.value.includes('MEDIUM') ? 'warning' : 'default'
+        }>
+          {params.value}
+        </Badge>
+      ) : '-',
+    },
+    {
+      field: 'creditRating',
+      headerName: 'Credit Rating',
+      width: 120,
+    },
+    {
+      field: 'kycStatus',
+      headerName: 'KYC',
+      width: 120,
+      cellRenderer: (params: any) => (
         <Badge variant={params.value === 'COMPLETED' ? 'default' : 'secondary'}>
-          {params.value || '-'}
+          {params.value}
+        </Badge>
+      ),
+    },
+    {
+      field: 'amlStatus',
+      headerName: 'AML',
+      width: 120,
+      cellRenderer: (params: any) => (
+        <Badge variant={
+          params.value === 'CLEARED' ? 'default' :
+          params.value === 'FLAGGED' ? 'destructive' : 'secondary'
+        }>
+          {params.value}
+        </Badge>
+      ),
+    },
+    {
+      field: 'sanctionsStatus',
+      headerName: 'Sanctions',
+      width: 120,
+      cellRenderer: (params: any) => (
+        <Badge variant={
+          params.value === 'CLEARED' ? 'default' :
+          params.value === 'FLAGGED' ? 'destructive' : 'secondary'
+        }>
+          {params.value}
         </Badge>
       ),
     },
   ], [])
+
+  const handleRowClick = (data: Borrower) => {
+    setSelectedBorrower(data)
+    setDetailsOpen(true)
+  }
 
   return (
     <>
@@ -59,10 +129,7 @@ export function BorrowerList({ borrowers }: BorrowerListProps) {
           resizable: true,
           floatingFilter: true,
         }}
-        onRowClick={(data) => {
-          setSelectedBorrower(data)
-          setDetailsOpen(true)
-        }}
+        onRowClick={handleRowClick}
         domLayout="autoHeight"
       />
 

@@ -14,7 +14,7 @@ export default async function AnalyticsPage() {
         <CardDescription>Overview of loan portfolio and trading activity</CardDescription>
       </CardHeader>
       <CardContent>
-        <Analytics data={analytics} />
+        <Analytics data={analytics as any} />
       </CardContent>
     </Card>
   )

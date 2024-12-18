@@ -47,7 +47,12 @@ export async function getBorrowers(): Promise<Borrower[]> {
       onboardingStatus: borrower.onboardingStatus,
       kycStatus: borrower.kycStatus,
       entityId: borrower.entityId,
-      createdAt: borrower.createdAt
+      createdAt: borrower.createdAt,
+      businessType: borrower.businessType,
+      status: borrower.status,
+      riskRating: borrower.riskRating,
+      amlStatus: borrower.amlStatus,
+      sanctionsStatus: borrower.sanctionsStatus
     }))
   } catch (error) {
     console.error('Error in getBorrowers:', error)

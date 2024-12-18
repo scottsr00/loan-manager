@@ -55,11 +55,8 @@ export function BorrowerDetailsModal({ borrower, open, onOpenChange }: BorrowerD
             </div>
           </DialogTitle>
         </DialogHeader>
-        <div className="relative">
-          <ScrollArea 
-            className="h-[calc(80vh-8rem)] pr-4"
-            ref={contentRef}
-          >
+        <div className="relative" ref={contentRef}>
+          <ScrollArea className="h-[calc(80vh-8rem)] pr-4">
             <div className="space-y-6">
               {/* Basic Information */}
               <div className="space-y-4">

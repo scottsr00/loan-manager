@@ -59,7 +59,7 @@ export function Analytics({ data }: AnalyticsProps) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card className="col-span-4">
+      <Card className="col-span-4" key="total-commitments">
         <CardHeader>
           <CardTitle>Total Commitments Over Time</CardTitle>
         </CardHeader>
@@ -75,7 +75,7 @@ export function Analytics({ data }: AnalyticsProps) {
         </CardContent>
       </Card>
 
-      <Card className="col-span-2">
+      <Card className="col-span-2" key="facilities-by-type">
         <CardHeader>
           <CardTitle>Facilities by Type</CardTitle>
         </CardHeader>
@@ -90,7 +90,7 @@ export function Analytics({ data }: AnalyticsProps) {
         </CardContent>
       </Card>
 
-      <Card className="col-span-2">
+      <Card className="col-span-2" key="commitments-by-borrower">
         <CardHeader>
           <CardTitle>Commitments by Borrower</CardTitle>
         </CardHeader>
@@ -105,14 +105,14 @@ export function Analytics({ data }: AnalyticsProps) {
         </CardContent>
       </Card>
 
-      <Card className="col-span-4">
+      <Card className="col-span-4" key="credit-metrics">
         <CardHeader>
           <CardTitle>Credit Metrics by Borrower</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-8">
             {creditMetricsData.map((borrower) => (
-              <div key={borrower.name} className="space-y-2">
+              <div key={`${borrower.name}-metrics`} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Title>{borrower.name}</Title>
                   <Subtitle className="text-tremor-content">
@@ -133,7 +133,7 @@ export function Analytics({ data }: AnalyticsProps) {
         </CardContent>
       </Card>
 
-      <Card className="col-span-4">
+      <Card className="col-span-4" key="projected-interest">
         <CardHeader>
           <CardTitle>Projected Interest Income</CardTitle>
         </CardHeader>

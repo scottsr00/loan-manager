@@ -23,4 +23,9 @@ export interface Borrower {
   kycStatus: string
   entityId: string
   createdAt: Date
+  businessType: string
+  status: string
+  riskRating: string | null
+  amlStatus: string
+  sanctionsStatus: string
 } 
