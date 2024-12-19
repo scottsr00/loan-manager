@@ -132,51 +132,54 @@ export function ServicingDashboard() {
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'dueDate',
-      headerName: 'Due Date',
-      valueFormatter: (params) => format(new Date(params.value), "PP"),
-      filter: 'agDateColumnFilter',
-      width: 150,
-    },
-    {
       field: 'facility.facilityName',
       headerName: 'Facility',
-      width: 200,
+      flex: 1,
+      valueGetter: params => {
+        const facility = params.data?.facility;
+        return facility ? `${facility.facilityName} (${facility.creditAgreement?.agreementName || 'N/A'})` : 'N/A';
+      }
     },
     {
       field: 'activityType',
       headerName: 'Type',
-      width: 150,
+      flex: 1,
+      valueFormatter: params => {
+        const types: Record<string, string> = {
+          'INTEREST_PAYMENT': 'Interest Payment',
+          'PRINCIPAL_PAYMENT': 'Principal Payment',
+          'UNSCHEDULED_PAYMENT': 'Unscheduled Payment'
+        };
+        return types[params.value] || params.value;
+      }
     },
     {
-      field: 'description',
-      headerName: 'Description',
-      width: 300,
+      field: 'dueDate',
+      headerName: 'Due Date',
+      flex: 1,
+      valueFormatter: params => {
+        if (!params.value) return '';
+        try {
+          return format(new Date(params.value), 'PPP');
+        } catch (error) {
+          console.error('Error formatting date:', error);
+          return 'Invalid date';
+        }
+      },
+      filter: 'agDateColumnFilter',
     },
     {
       field: 'amount',
       headerName: 'Amount',
-      valueFormatter: (params) => formatCurrency(params.value),
+      flex: 1,
+      valueFormatter: params => formatCurrency(params.value),
       filter: 'agNumberColumnFilter',
-      width: 150,
     },
     {
       field: 'status',
       headerName: 'Status',
+      flex: 1,
       cellRenderer: (params: any) => getStatusBadge(params.value),
-      width: 150,
-    },
-    {
-      field: 'completedBy',
-      headerName: 'Completed By',
-      width: 150,
-    },
-    {
-      field: 'completedAt',
-      headerName: 'Completed At',
-      valueFormatter: (params) => params.value ? format(new Date(params.value), "PP") : '-',
-      filter: 'agDateColumnFilter',
-      width: 150,
     },
   ], [])
 
@@ -388,8 +391,8 @@ export function ServicingDashboard() {
           resizable: true,
           floatingFilter: true,
         }}
-        onRowClick={(data) => {
-          setSelectedActivity(data)
+        onRowClick={(params) => {
+          setSelectedActivity(params.data)
           setIsDetailsOpen(true)
         }}
       />
@@ -403,15 +406,43 @@ export function ServicingDashboard() {
             <div className="grid gap-4">
               <div>
                 <Label>Facility</Label>
-                <div className="text-sm">{selectedActivity.facility.facilityName}</div>
+                <div className="text-sm">
+                  {selectedActivity.facility ? (
+                    <>
+                      {selectedActivity.facility.facilityName}
+                      {selectedActivity.facility.creditAgreement && (
+                        <span className="text-muted-foreground ml-1">
+                          ({selectedActivity.facility.creditAgreement.agreementName})
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    'N/A'
+                  )}
+                </div>
               </div>
               <div>
                 <Label>Type</Label>
-                <div className="text-sm">{selectedActivity.activityType}</div>
+                <div className="text-sm">
+                  {(() => {
+                    const types: Record<string, string> = {
+                      'INTEREST_PAYMENT': 'Interest Payment',
+                      'PRINCIPAL_PAYMENT': 'Principal Payment',
+                      'UNSCHEDULED_PAYMENT': 'Unscheduled Payment'
+                    };
+                    return types[selectedActivity.activityType] || selectedActivity.activityType;
+                  })()}
+                </div>
               </div>
               <div>
                 <Label>Due Date</Label>
-                <div className="text-sm">{format(new Date(selectedActivity.dueDate), "PPP")}</div>
+                <div className="text-sm">
+                  {selectedActivity.dueDate ? (
+                    format(new Date(selectedActivity.dueDate), "PPP")
+                  ) : (
+                    'No date specified'
+                  )}
+                </div>
               </div>
               <div>
                 <Label>Amount</Label>
@@ -419,22 +450,26 @@ export function ServicingDashboard() {
               </div>
               <div>
                 <Label>Description</Label>
-                <div className="text-sm">{selectedActivity.description}</div>
+                <div className="text-sm">{selectedActivity.description || 'No description'}</div>
               </div>
               <div>
                 <Label>Status</Label>
-                <div className="text-sm">{selectedActivity.status}</div>
+                <div className="text-sm">{getStatusBadge(selectedActivity.status)}</div>
               </div>
-              {selectedActivity.completedBy && (
+              {selectedActivity.completedAt && (
                 <>
                   <div>
                     <Label>Completed By</Label>
-                    <div className="text-sm">{selectedActivity.completedBy}</div>
+                    <div className="text-sm">{selectedActivity.completedBy || '-'}</div>
                   </div>
                   <div>
                     <Label>Completed At</Label>
                     <div className="text-sm">
-                      {selectedActivity.completedAt ? format(new Date(selectedActivity.completedAt), "PPP") : '-'}
+                      {selectedActivity.completedAt ? (
+                        format(new Date(selectedActivity.completedAt), "PPP")
+                      ) : (
+                        '-'
+                      )}
                     </div>
                   </div>
                 </>

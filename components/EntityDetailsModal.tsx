@@ -4,12 +4,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Entity } from '@prisma/client'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface EntityDetailsModalProps {
   entity: Entity & {
     entityType: { name: string }
-    addresses: Array<{ streetAddress: string; city: string; state: string; postalCode: string }>
-    contacts: Array<{ name: string; email: string; phone: string }>
+    addresses: Array<{ streetAddress: string; city: string; state: string; postalCode: string; country: string }>
+    contacts: Array<{ firstName: string; lastName: string; title?: string; email: string; phone: string }>
   }
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -18,8 +19,8 @@ interface EntityDetailsModalProps {
 export function EntityDetailsModal({ entity, open, onOpenChange }: EntityDetailsModalProps) {
   if (!entity) return null
 
-  const primaryAddress = entity.addresses[0]
-  const primaryContact = entity.contacts[0]
+  const primaryAddress = entity.addresses?.[0]
+  const primaryContact = entity.contacts?.[0]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -27,7 +28,7 @@ export function EntityDetailsModal({ entity, open, onOpenChange }: EntityDetails
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>{entity.legalName}</span>
-            <Badge variant={entity.status === 'ACTIVE' ? 'default' : 'secondary'}>
+            <Badge variant={entity.status === 'ACTIVE' ? 'success' : 'secondary'}>
               {entity.status}
             </Badge>
           </DialogTitle>
@@ -40,7 +41,7 @@ export function EntityDetailsModal({ entity, open, onOpenChange }: EntityDetails
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-muted-foreground">Entity Type</Label>
-                  <div>{entity.entityType.name}</div>
+                  <div>{entity.entityType?.name || 'N/A'}</div>
                 </div>
                 {entity.dba && (
                   <div>
@@ -78,11 +79,15 @@ export function EntityDetailsModal({ entity, open, onOpenChange }: EntityDetails
                   </div>
                   <div>
                     <Label className="text-muted-foreground">State</Label>
-                    <div>{primaryAddress.state}</div>
+                    <div>{primaryAddress.state || 'N/A'}</div>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Postal Code</Label>
                     <div>{primaryAddress.postalCode}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Country</Label>
+                    <div>{primaryAddress.country}</div>
                   </div>
                 </div>
               </div>
@@ -95,8 +100,14 @@ export function EntityDetailsModal({ entity, open, onOpenChange }: EntityDetails
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-muted-foreground">Name</Label>
-                    <div>{primaryContact.name}</div>
+                    <div>{`${primaryContact.firstName} ${primaryContact.lastName}`}</div>
                   </div>
+                  {primaryContact.title && (
+                    <div>
+                      <Label className="text-muted-foreground">Title</Label>
+                      <div>{primaryContact.title}</div>
+                    </div>
+                  )}
                   <div>
                     <Label className="text-muted-foreground">Email</Label>
                     <div>{primaryContact.email}</div>

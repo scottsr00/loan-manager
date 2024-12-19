@@ -10,13 +10,13 @@ import { addTradeComment } from '@/server/actions/trade/addTradeComment'
 import { withErrorHandling } from '@/lib/error-handling'
 
 export interface BookTradeInput {
-  loanId: string
-  quantity: number
+  facilityId: string
+  amount: number
   price: number
-  counterparty: string
+  counterpartyId: string
   tradeDate: Date
-  expectedSettlementDate: Date
-  tradeType: 'Buy' | 'Sell'
+  settlementDate: Date
+  status: 'PENDING' | 'SETTLED'
 }
 
 export function useTrades() {
@@ -51,7 +51,7 @@ export function useTrades() {
   }
 }
 
-export function useTradeComments(tradeId: number) {
+export function useTradeComments(tradeId: string) {
   const { data: comments, error, isLoading, mutate } = useSWR<TradeComment[]>(
     tradeId ? `trade-comments-${tradeId}` : null,
     () => withErrorHandling(

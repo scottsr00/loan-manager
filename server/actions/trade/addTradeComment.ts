@@ -1,12 +1,12 @@
 'use server'
 
-import { db } from '@/server/db'
-import type { TradeComment } from './getTradeComments'
+import { prisma } from '@/server/db/client'
+import { type TradeComment } from '@/server/types'
 
-export async function addTradeComment(tradeId: number, content: string): Promise<TradeComment> {
+export async function addTradeComment(tradeId: string, content: string): Promise<TradeComment> {
   try {
     // Verify trade exists
-    const trade = await db.trade.findUnique({
+    const trade = await prisma.trade.findUnique({
       where: { id: tradeId }
     })
 
@@ -14,14 +14,20 @@ export async function addTradeComment(tradeId: number, content: string): Promise
       throw new Error('Trade not found')
     }
 
-    const comment = await db.tradeComment.create({
+    const comment = await prisma.tradeComment.create({
       data: {
         tradeId,
-        content
+        comment: content
       }
     })
 
-    return comment
+    return {
+      id: comment.id,
+      tradeId: comment.tradeId,
+      comment: comment.comment,
+      createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt
+    }
   } catch (error) {
     console.error('Error adding trade comment:', error)
     throw new Error('Failed to add trade comment')

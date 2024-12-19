@@ -6,7 +6,11 @@ export async function getCreditAgreements() {
   try {
     const creditAgreements = await db.creditAgreement.findMany({
       include: {
-        borrower: true,
+        borrower: {
+          include: {
+            entity: true
+          }
+        },
         lender: true,
         facilities: {
           include: {

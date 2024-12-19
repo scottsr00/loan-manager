@@ -81,8 +81,8 @@ export function EntityList({ entities }: EntityListProps) {
           resizable: true,
           floatingFilter: true,
         }}
-        onRowClick={(data) => {
-          setSelectedEntity(data)
+        onRowClick={(params) => {
+          setSelectedEntity(params.data)
           setDetailsOpen(true)
         }}
         domLayout="autoHeight"

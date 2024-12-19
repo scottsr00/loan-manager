@@ -5,13 +5,19 @@ import { prisma } from '@/server/db/client'
 export async function getFacilities() {
   try {
     const facilities = await prisma.facility.findMany({
-      select: {
-        id: true,
-        facilityName: true,
-        facilityType: true,
+      include: {
         creditAgreement: {
           select: {
-            agreementName: true
+            agreementName: true,
+            borrower: {
+              select: {
+                entity: {
+                  select: {
+                    legalName: true
+                  }
+                }
+              }
+            }
           }
         }
       },

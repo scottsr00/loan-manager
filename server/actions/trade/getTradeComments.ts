@@ -1,27 +1,26 @@
 'use server'
 
-import { db } from '@/server/db'
+import { prisma } from '@/server/db/client'
+import { type TradeComment } from '@/server/types'
 
-export interface TradeComment {
-  id: number
-  tradeId: number
-  content: string
-  createdAt: Date
-  updatedAt: Date
-}
-
-export async function getTradeComments(tradeId: number): Promise<TradeComment[]> {
+export async function getTradeComments(tradeId: string): Promise<TradeComment[]> {
   try {
-    const comments = await db.tradeComment.findMany({
+    const comments = await prisma.tradeComment.findMany({
       where: {
-        tradeId: tradeId
+        tradeId
       },
       orderBy: {
         createdAt: 'desc'
       }
     })
 
-    return comments
+    return comments.map(comment => ({
+      id: comment.id,
+      tradeId: comment.tradeId,
+      comment: comment.comment,
+      createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt
+    }))
   } catch (error) {
     console.error('Error fetching trade comments:', error)
     throw new Error('Failed to fetch trade comments')

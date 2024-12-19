@@ -9,20 +9,23 @@ import { DataGrid } from './ui/data-grid'
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
-import type { Trade } from '@/server/actions/trade/getTradeHistory'
+import type { TradeHistoryItem } from '@/server/types'
 import type { ColDef } from 'ag-grid-community'
 
 export function TradeHistory() {
   const { trades, isLoading, isError, book } = useTrades()
-  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null)
+  const [selectedTrade, setSelectedTrade] = useState<TradeHistoryItem | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [isBookTradeOpen, setIsBookTradeOpen] = useState(false)
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'facilityId',
+      field: 'facility.creditAgreement.agreementName',
       headerName: 'Deal Name',
       flex: 1,
+      valueGetter: (params) => {
+        return params.data?.facility?.creditAgreement?.agreementName || 'N/A'
+      }
     },
     {
       field: 'amount',
@@ -42,6 +45,9 @@ export function TradeHistory() {
       field: 'counterparty.legalName',
       headerName: 'Counterparty',
       flex: 1,
+      valueGetter: (params) => {
+        return params.data?.counterparty?.legalName || 'N/A'
+      }
     },
     {
       field: 'tradeDate',
@@ -99,6 +105,7 @@ export function TradeHistory() {
           params.api.sizeColumnsToFit()
         }}
         onRowClick={(data) => {
+          console.log('Row clicked, data:', data)
           setSelectedTrade(data)
           setIsDetailsOpen(true)
         }}

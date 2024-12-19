@@ -4,10 +4,19 @@ import { z } from 'zod'
 // Base Prisma Types with Relations
 export type TradeWithRelations = Prisma.TradeGetPayload<{
   include: {
-    loan: {
+    facility: {
+      include: {
+        creditAgreement: {
+          select: {
+            agreementName: true
+            amount: true
+          }
+        }
+      }
+    }
+    counterparty: {
       select: {
-        dealName: true
-        currentBalance: true
+        legalName: true
       }
     }
     historicalBalances: true
@@ -17,26 +26,22 @@ export type TradeWithRelations = Prisma.TradeGetPayload<{
 
 // Input Validation Schemas
 export const tradeInputSchema = z.object({
-  loanId: z.string().min(1, 'Loan ID is required'),
-  quantity: z.number().positive('Quantity must be positive'),
+  facilityId: z.string().min(1, 'Facility ID is required'),
+  amount: z.number().positive('Amount must be positive'),
   price: z.number().positive('Price must be positive'),
-  counterparty: z.string().min(1, 'Counterparty is required'),
+  counterpartyId: z.string().min(1, 'Counterparty is required'),
   tradeDate: z.date(),
-  expectedSettlementDate: z.date(),
-  accruedInterest: z.number(),
-  status: z.enum(['Open', 'Completed']),
-  tradeType: z.enum(['Buy', 'Sell']),
-  costOfCarryAccrued: z.number().default(0),
-  lastCarryCalculation: z.date().optional()
+  settlementDate: z.date(),
+  status: z.enum(['PENDING', 'SETTLED']),
 })
 
 export const tradeCommentSchema = z.object({
-  tradeId: z.number().positive('Trade ID is required'),
-  content: z.string().min(1, 'Comment content is required')
+  tradeId: z.string().min(1, 'Trade ID is required'),
+  comment: z.string().min(1, 'Comment content is required')
 })
 
 export const tradeHistoricalBalanceSchema = z.object({
-  date: z.string().min(1, 'Date is required'),
+  date: z.date(),
   balance: z.number()
 })
 
@@ -47,9 +52,27 @@ export type TradeHistoricalBalance = z.infer<typeof tradeHistoricalBalanceSchema
 
 // Response Types
 export interface TradeHistoryItem extends TradeWithRelations {
+  id: string
+  facilityId: string
+  facility: {
+    id: string
+    creditAgreement: {
+      agreementName: string
+      amount: number
+    }
+  }
   counterparty: {
     legalName: string
   }
+  amount: number
+  price: number
+  tradeDate: Date
+  settlementDate: Date
+  status: string
+  comments: TradeComment[]
+  historicalBalances: TradeHistoricalBalance[]
+  createdAt: Date
+  updatedAt: Date
 }
 
 // Full Trade Type matching Prisma schema

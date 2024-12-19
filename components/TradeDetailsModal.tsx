@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTradeComments } from '@/hooks/useTrades'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from "@/components/ui/button"
@@ -14,10 +14,10 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Loader2 } from 'lucide-react'
-import type { Trade } from '@/server/actions/trade/getTradeHistory'
+import type { TradeHistoryItem } from '@/server/types'
 
 interface TradeDetailsModalProps {
-  trade: Trade | null
+  trade: TradeHistoryItem | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -28,10 +28,16 @@ export function TradeDetailsModal({
   onOpenChange,
 }: TradeDetailsModalProps) {
   const [newComment, setNewComment] = useState('')
-  const { comments, isLoading, isError, addComment } = useTradeComments(trade?.id || 0)
+  const { comments, isLoading, isError, addComment } = useTradeComments(trade?.id || '')
+
+  useEffect(() => {
+    if (trade) {
+      console.log('Trade in modal:', trade)
+    }
+  }, [trade])
 
   const handleAddComment = async () => {
-    if (!newComment.trim()) return
+    if (!newComment.trim() || !trade?.id) return
     await addComment(newComment)
     setNewComment('')
   }
@@ -50,20 +56,28 @@ export function TradeDetailsModal({
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <h4 className="text-sm font-medium mb-1">Facility ID</h4>
-                <p className="text-sm text-muted-foreground">{trade.facilityId}</p>
+                <h4 className="text-sm font-medium mb-1">Facility</h4>
+                <p className="text-sm text-muted-foreground">
+                  {trade.facility?.creditAgreement?.agreementName || 'N/A'}
+                </p>
               </div>
               <div>
                 <h4 className="text-sm font-medium mb-1">Amount</h4>
-                <p className="text-sm text-muted-foreground">{formatCurrency(trade.amount)}</p>
+                <p className="text-sm text-muted-foreground">
+                  {typeof trade.amount === 'number' ? formatCurrency(trade.amount) : 'N/A'}
+                </p>
               </div>
               <div>
                 <h4 className="text-sm font-medium mb-1">Price</h4>
-                <p className="text-sm text-muted-foreground">{trade.price.toFixed(2)}%</p>
+                <p className="text-sm text-muted-foreground">
+                  {typeof trade.price === 'number' ? `${trade.price.toFixed(2)}%` : 'N/A'}
+                </p>
               </div>
               <div>
                 <h4 className="text-sm font-medium mb-1">Counterparty</h4>
-                <p className="text-sm text-muted-foreground">{trade.counterparty.legalName}</p>
+                <p className="text-sm text-muted-foreground">
+                  {trade.counterparty?.legalName || 'N/A'}
+                </p>
               </div>
               <div>
                 <h4 className="text-sm font-medium mb-1">Status</h4>
@@ -74,13 +88,13 @@ export function TradeDetailsModal({
               <div>
                 <h4 className="text-sm font-medium mb-1">Trade Date</h4>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(trade.tradeDate).toLocaleDateString()}
+                  {trade.tradeDate ? new Date(trade.tradeDate).toLocaleDateString() : 'N/A'}
                 </p>
               </div>
               <div>
                 <h4 className="text-sm font-medium mb-1">Settlement Date</h4>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(trade.settlementDate).toLocaleDateString()}
+                  {trade.settlementDate ? new Date(trade.settlementDate).toLocaleDateString() : 'N/A'}
                 </p>
               </div>
             </div>

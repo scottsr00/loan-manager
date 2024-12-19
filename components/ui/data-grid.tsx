@@ -10,13 +10,15 @@ import { ColDef, GridOptions, GridReadyEvent } from 'ag-grid-community'
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
 interface DataGridProps {
-  rowData: unknown[]
+  rowData: any[]
   columnDefs: ColDef[]
   defaultColDef?: ColDef
   gridOptions?: GridOptions
   onGridReady?: (event: GridReadyEvent) => void
   className?: string
   onRowClick?: (data: any) => void
+  masterDetail?: boolean
+  detailCellRenderer?: any
 }
 
 export function DataGrid({
@@ -26,7 +28,9 @@ export function DataGrid({
   gridOptions,
   onGridReady,
   className = 'h-[600px] w-full',
-  onRowClick
+  onRowClick,
+  masterDetail,
+  detailCellRenderer
 }: DataGridProps) {
   const defaultColDefMemo = useMemo<ColDef>(() => ({
     sortable: true,
@@ -38,18 +42,19 @@ export function DataGrid({
 
   const handleRowClick = useCallback((params: any) => {
     if (onRowClick) {
-      onRowClick(params.data)
+      onRowClick(params)
     }
   }, [onRowClick])
 
   const gridOptionsMemo = useMemo<GridOptions>(() => ({
     pagination: true,
     paginationAutoPageSize: true,
-    rowSelection: 'single',
     rowClass: onRowClick ? 'cursor-pointer' : '',
     onRowClicked: handleRowClick,
+    masterDetail: masterDetail,
+    detailCellRenderer: detailCellRenderer,
     ...gridOptions
-  }), [gridOptions, handleRowClick])
+  }), [gridOptions, handleRowClick, masterDetail, detailCellRenderer])
 
   const handleExportCsv = useCallback(() => {
     const params = {
@@ -77,6 +82,13 @@ export function DataGrid({
           defaultColDef={defaultColDefMemo}
           gridOptions={gridOptionsMemo}
           onGridReady={onGridReady}
+          onRowClicked={(event) => {
+            console.log('Row clicked in DataGrid, data:', event.data)
+            if (onRowClick) {
+              onRowClick(event.data)
+            }
+          }}
+          suppressRowClickSelection={true}
         />
       </div>
     </div>
