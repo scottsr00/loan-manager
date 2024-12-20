@@ -3,13 +3,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { type ServicingActivity, getServicingActivities } from '@/server/actions/loan/getServicingActivities'
 import { addServicingActivity } from '@/server/actions/loan/addServicingActivity'
+import { updateServicingActivity } from '@/server/actions/loan/updateServicingActivity'
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   Select,
@@ -29,21 +29,38 @@ import { CalendarIcon, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { getFacilities } from '@/server/actions/loan/getFacilities'
 import { DataGrid } from '@/components/ui/data-grid'
-import { ColDef } from 'ag-grid-community'
+import { ColDef, ICellRendererParams } from 'ag-grid-community'
+import { useServicing } from '@/hooks/useServicing'
+
+interface ServicingActivityType {
+  id: string
+  facilityId: string
+  activityType: string
+  status: string
+  dueDate: Date
+  description: string
+  amount: number
+  completedAt?: Date | null
+  completedBy?: string | null
+  facility: {
+    facilityName: string
+    creditAgreement: {
+      agreementName: string
+    }
+  }
+}
 
 export function ServicingDashboard() {
-  const [activities, setActivities] = useState<ServicingActivity[]>([])
-  const [selectedActivity, setSelectedActivity] = useState<ServicingActivity | null>(null)
+  const [activities, setActivities] = useState<ServicingActivityType[]>([])
+  const [selectedActivity, setSelectedActivity] = useState<ServicingActivityType | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-  const [isAddActivityOpen, setIsAddActivityOpen] = useState(false)
   const [facilities, setFacilities] = useState<{
     id: string;
     facilityName: string;
-    facilityType: string;
     creditAgreement: { agreementName: string }
   }[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isUpdating, setIsUpdating] = useState(false)
   const [filters, setFilters] = useState({
     status: null as string | null,
     activityType: null as string | null,
@@ -64,17 +81,22 @@ export function ServicingDashboard() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const { processPaydown } = useServicing()
+
   const loadActivities = async () => {
-    setIsLoading(true)
     setError(null)
     try {
-      const data = await getServicingActivities(filters)
+      const data = await getServicingActivities({
+        status: filters.status || undefined,
+        activityType: filters.activityType || undefined,
+        facilityId: filters.facilityId || undefined,
+        startDate: filters.startDate || undefined,
+        endDate: filters.endDate || undefined
+      })
       setActivities(data.activities)
     } catch (err) {
       setError('Failed to load servicing activities')
       console.error(err)
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -120,14 +142,63 @@ export function ServicingDashboard() {
     }
   }
 
+  const handleUpdateStatus = async (newStatus: string) => {
+    if (!selectedActivity) return
+
+    setIsUpdating(true)
+    try {
+      await updateServicingActivity({
+        id: selectedActivity.id,
+        status: newStatus,
+        completedBy: 'Current User' // TODO: Replace with actual user
+      })
+      await loadActivities()
+      setIsDetailsOpen(false) // Close the modal after successful update
+    } catch (err) {
+      console.error('Error updating activity status:', err)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "success" | "destructive" | "warning"> = {
+    const variants = {
       'PENDING': 'default',
-      'IN_PROGRESS': 'warning',
+      'IN_PROGRESS': 'secondary',
       'COMPLETED': 'success',
       'OVERDUE': 'destructive'
+    } as const
+    return <Badge variant={variants[status as keyof typeof variants] || 'default'}>{status}</Badge>
+  }
+
+  const handleComplete = async (activity: any) => {
+    try {
+      setIsUpdating(true)
+      
+      // Process the paydown if it's a payment activity
+      if (['PRINCIPAL_PAYMENT', 'INTEREST_PAYMENT', 'UNSCHEDULED_PAYMENT'].includes(activity.activityType)) {
+        await processPaydown({
+          loanId: activity.loan?.id,
+          facilityId: activity.facilityId,
+          amount: activity.amount,
+          paymentDate: new Date(),
+          description: activity.description
+        })
+      }
+
+      // Update the activity status
+      await updateServicingActivity({
+        id: activity.id,
+        status: 'COMPLETED',
+        completedBy: 'Current User'
+      })
+
+      await loadActivities()
+    } catch (err) {
+      console.error('Error completing activity:', err)
+    } finally {
+      setIsUpdating(false)
     }
-    return <Badge variant={variants[status] || 'default'}>{status}</Badge>
   }
 
   const columnDefs = useMemo<ColDef[]>(() => [
@@ -179,9 +250,47 @@ export function ServicingDashboard() {
       field: 'status',
       headerName: 'Status',
       flex: 1,
-      cellRenderer: (params: any) => getStatusBadge(params.value),
+      cellRenderer: (params: { value: string }) => getStatusBadge(params.value),
     },
-  ], [])
+    {
+      headerName: 'Actions',
+      field: 'actions',
+      flex: 1,
+      sortable: false,
+      filter: false,
+      cellRenderer: (params: ICellRendererParams) => {
+        if (params.data.status === 'COMPLETED') {
+          return <Badge variant="success">Completed</Badge>;
+        }
+        return (
+          <div onClick={(e) => {
+            e.stopPropagation();
+            handleComplete(params.data);
+          }}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Complete'
+              )}
+            </Button>
+          </div>
+        );
+      }
+    }
+  ], [isUpdating, loadActivities])
+
+  const handleRowClick = (params: { data: ServicingActivityType }) => {
+    setSelectedActivity(params.data)
+    setIsDetailsOpen(true)
+  }
 
   return (
     <div className="space-y-4">
@@ -231,8 +340,8 @@ export function ServicingDashboard() {
               <PopoverContent className="w-auto p-0">
                 <Calendar
                   mode="single"
-                  selected={filters.startDate}
-                  onSelect={(date) => setFilters(prev => ({ ...prev, startDate: date }))}
+                  selected={filters.startDate || undefined}
+                  onSelect={(date) => setFilters(prev => ({ ...prev, startDate: date || null }))}
                   initialFocus
                 />
               </PopoverContent>
@@ -250,8 +359,8 @@ export function ServicingDashboard() {
               <PopoverContent className="w-auto p-0">
                 <Calendar
                   mode="single"
-                  selected={filters.endDate}
-                  onSelect={(date) => setFilters(prev => ({ ...prev, endDate: date }))}
+                  selected={filters.endDate || undefined}
+                  onSelect={(date) => setFilters(prev => ({ ...prev, endDate: date || null }))}
                   initialFocus
                 />
               </PopoverContent>
@@ -260,12 +369,10 @@ export function ServicingDashboard() {
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <span className="text-lg mr-2">+</span>
-              Add Activity
-            </Button>
-          </DialogTrigger>
+          <Button onClick={() => setIsDialogOpen(true)}>
+            <span className="text-lg mr-2">+</span>
+            Add Activity
+          </Button>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Add Servicing Activity</DialogTitle>
@@ -391,21 +498,19 @@ export function ServicingDashboard() {
           resizable: true,
           floatingFilter: true,
         }}
-        onRowClick={(params) => {
-          setSelectedActivity(params.data)
-          setIsDetailsOpen(true)
-        }}
+        onRowClick={handleRowClick}
+        suppressRowClickSelection={true}
       />
 
-      {selectedActivity && (
-        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Activity Details</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4">
-              <div>
-                <Label>Facility</Label>
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="min-h-[600px] max-h-[80vh] w-full max-w-4xl overflow-y-auto">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle>Activity Details</DialogTitle>
+          </DialogHeader>
+          {selectedActivity && (
+            <div className="grid gap-6 py-6 px-6">
+              <div className="grid gap-3">
+                <Label className="text-base font-semibold">Facility</Label>
                 <div className="text-sm">
                   {selectedActivity.facility ? (
                     <>
@@ -421,8 +526,9 @@ export function ServicingDashboard() {
                   )}
                 </div>
               </div>
-              <div>
-                <Label>Type</Label>
+
+              <div className="grid gap-3">
+                <Label className="text-base font-semibold">Type</Label>
                 <div className="text-sm">
                   {(() => {
                     const types: Record<string, string> = {
@@ -434,8 +540,9 @@ export function ServicingDashboard() {
                   })()}
                 </div>
               </div>
-              <div>
-                <Label>Due Date</Label>
+
+              <div className="grid gap-3">
+                <Label className="text-base font-semibold">Due Date</Label>
                 <div className="text-sm">
                   {selectedActivity.dueDate ? (
                     format(new Date(selectedActivity.dueDate), "PPP")
@@ -444,26 +551,48 @@ export function ServicingDashboard() {
                   )}
                 </div>
               </div>
-              <div>
-                <Label>Amount</Label>
+
+              <div className="grid gap-3">
+                <Label className="text-base font-semibold">Amount</Label>
                 <div className="text-sm">{formatCurrency(selectedActivity.amount)}</div>
               </div>
-              <div>
-                <Label>Description</Label>
+
+              <div className="grid gap-3">
+                <Label className="text-base font-semibold">Description</Label>
                 <div className="text-sm">{selectedActivity.description || 'No description'}</div>
               </div>
-              <div>
-                <Label>Status</Label>
-                <div className="text-sm">{getStatusBadge(selectedActivity.status)}</div>
+
+              <div className="grid gap-3">
+                <Label className="text-base font-semibold">Status</Label>
+                <div className="flex items-center gap-4">
+                  <div className="text-sm">{getStatusBadge(selectedActivity.status)}</div>
+                  {selectedActivity.status !== 'COMPLETED' && (
+                    <Select
+                      value={selectedActivity.status}
+                      onValueChange={handleUpdateStatus}
+                      disabled={isUpdating}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Update status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PENDING">Mark as Pending</SelectItem>
+                        <SelectItem value="IN_PROGRESS">Mark as In Progress</SelectItem>
+                        <SelectItem value="COMPLETED">Mark as Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
               </div>
+
               {selectedActivity.completedAt && (
-                <>
-                  <div>
-                    <Label>Completed By</Label>
+                <div className="grid gap-6">
+                  <div className="grid gap-3">
+                    <Label className="text-base font-semibold">Completed By</Label>
                     <div className="text-sm">{selectedActivity.completedBy || '-'}</div>
                   </div>
-                  <div>
-                    <Label>Completed At</Label>
+                  <div className="grid gap-3">
+                    <Label className="text-base font-semibold">Completed At</Label>
                     <div className="text-sm">
                       {selectedActivity.completedAt ? (
                         format(new Date(selectedActivity.completedAt), "PPP")
@@ -472,12 +601,12 @@ export function ServicingDashboard() {
                       )}
                     </div>
                   </div>
-                </>
+                </div>
               )}
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

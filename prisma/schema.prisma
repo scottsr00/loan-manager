@@ -169,6 +169,7 @@ model CreditAgreement {
   description      String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  transactionHistory TransactionHistory[]
 
   @@index([borrowerId])
   @@index([lenderId])
@@ -198,6 +199,7 @@ model Facility {
   servicingAssignments ServicingAssignment[]
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  transactionHistory TransactionHistory[]
 
   @@index([creditAgreementId])
 }
@@ -249,6 +251,7 @@ model Loan {
   repaymentSchedule RepaymentSchedule[]
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  transactionHistory TransactionHistory[]
 
   @@index([facilityId])
 }
@@ -300,6 +303,7 @@ model Trade {
   historicalBalances TradeHistoricalBalance[]
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
+  transactionHistory TransactionHistory[]
 
   @@index([facilityId])
   @@index([counterpartyId])
@@ -476,6 +480,7 @@ model ServicingActivity {
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  transactionHistory TransactionHistory[]
 
   @@index([facilityId])
   @@index([dueDate])
@@ -522,4 +527,40 @@ model ServicingAssignment {
 
   @@index([teamMemberId])
   @@index([facilityId])
+}
+
+model TransactionHistory {
+  id            String    @id @default(cuid())
+  eventType     String    // PAYDOWN, RATE_RESET, TRADE_SETTLEMENT, etc.
+  facilityId    String
+  facility      Facility  @relation(fields: [facilityId], references: [id])
+  
+  // Related entities
+  creditAgreementId String?
+  creditAgreement   CreditAgreement? @relation(fields: [creditAgreementId], references: [id])
+  loanId           String?
+  loan             Loan?    @relation(fields: [loanId], references: [id])
+  tradeId          String?
+  trade            Trade?   @relation(fields: [tradeId], references: [id])
+  servicingActivityId String?
+  servicingActivity ServicingActivity? @relation(fields: [servicingActivityId], references: [id])
+  
+  // Change details
+  balanceChange   Float?    // Change in loan balance
+  lenderShare     Float?    // Change in lender share
+  description     String    // Detailed description of the change
+  
+  // Timing
+  effectiveDate   DateTime  // When the change takes effect
+  processedBy     String    // User who processed the change
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([facilityId])
+  @@index([creditAgreementId])
+  @@index([loanId])
+  @@index([tradeId])
+  @@index([servicingActivityId])
+  @@index([eventType])
+  @@index([effectiveDate])
 }

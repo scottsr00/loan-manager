@@ -456,6 +456,61 @@ async function main() {
       })
     ])
   }
+
+  // Create some sample transaction history records
+  console.log('Creating sample transaction history...')
+  
+  const facilities = await prisma.facility.findMany({
+    include: {
+      creditAgreement: true,
+      loans: {
+        take: 1
+      }
+    }
+  })
+
+  for (const facility of facilities) {
+    // Sample paydown transaction
+    await prisma.transactionHistory.create({
+      data: {
+        eventType: 'PAYDOWN',
+        facilityId: facility.id,
+        creditAgreementId: facility.creditAgreementId,
+        loanId: facility.loans[0]?.id,
+        balanceChange: -50000,
+        description: 'Scheduled principal payment',
+        effectiveDate: new Date(),
+        processedBy: 'System'
+      }
+    })
+
+    // Sample rate reset transaction
+    await prisma.transactionHistory.create({
+      data: {
+        eventType: 'RATE_RESET',
+        facilityId: facility.id,
+        creditAgreementId: facility.creditAgreementId,
+        description: 'Quarterly rate reset - SOFR + 2.50%',
+        effectiveDate: new Date(),
+        processedBy: 'System'
+      }
+    })
+
+    // Sample commitment change transaction
+    await prisma.transactionHistory.create({
+      data: {
+        eventType: 'COMMITMENT_CHANGE',
+        facilityId: facility.id,
+        creditAgreementId: facility.creditAgreementId,
+        balanceChange: 1000000,
+        description: 'Facility commitment increase',
+        effectiveDate: new Date(),
+        processedBy: 'System'
+      }
+    })
+  }
+
+  console.log('Seeding completed successfully')
 }
 
 main()

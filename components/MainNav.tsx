@@ -47,6 +47,11 @@ const menuItems = [
     icon: FileText
   },
   {
+    title: "Transactions",
+    href: "/transactions",
+    icon: ScrollText
+  },
+  {
     title: "Analytics",
     href: "/analytics",
     icon: PieChart

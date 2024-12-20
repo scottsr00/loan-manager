@@ -1,29 +1,23 @@
 'use server'
 
 import { prisma } from '@/server/db/client'
-import { type ServicingActivity, type ServicingActivityParams } from '@/server/types'
 
-export async function getServicingActivities(params: ServicingActivityParams = {}): Promise<{
-  activities: ServicingActivity[]
-  total: number
-  page: number
-  pageSize: number
-}> {
+interface GetServicingActivitiesParams {
+  status?: string
+  activityType?: string
+  facilityId?: string
+  startDate?: Date
+  endDate?: Date
+}
+
+export async function getServicingActivities(params: GetServicingActivitiesParams = {}) {
   try {
-    const {
-      page = 1,
-      pageSize = 10,
-      status,
-      activityType,
-      startDate,
-      endDate,
-      facilityId
-    } = params
+    const { status, activityType, facilityId, startDate, endDate } = params
 
     const where = {
-      ...(status && status !== 'all' && { status }),
-      ...(activityType && activityType !== 'all' && { activityType }),
-      ...(facilityId && facilityId !== 'all' && { facilityId }),
+      ...(status && { status }),
+      ...(activityType && { activityType }),
+      ...(facilityId && { facilityId }),
       ...(startDate && endDate && {
         dueDate: {
           gte: startDate,
@@ -32,36 +26,31 @@ export async function getServicingActivities(params: ServicingActivityParams = {
       })
     }
 
-    const [activities, total] = await Promise.all([
-      prisma.servicingActivity.findMany({
-        where,
-        include: {
-          facility: {
-            select: {
-              facilityName: true,
-              facilityType: true,
-              creditAgreement: {
-                select: {
-                  agreementName: true
-                }
-              }
+    const activities = await prisma.servicingActivity.findMany({
+      where,
+      include: {
+        facility: {
+          include: {
+            creditAgreement: true,
+            loans: {
+              where: {
+                status: 'ACTIVE'
+              },
+              take: 1
             }
           }
-        },
-        orderBy: {
-          dueDate: 'asc'
-        },
-        skip: (page - 1) * pageSize,
-        take: pageSize
-      }),
-      prisma.servicingActivity.count({ where })
-    ])
+        }
+      },
+      orderBy: {
+        dueDate: 'desc'
+      }
+    })
 
     return {
-      activities,
-      total,
-      page,
-      pageSize
+      activities: activities.map(activity => ({
+        ...activity,
+        loan: activity.facility.loans[0] || null
+      }))
     }
   } catch (error) {
     console.error('Error in getServicingActivities:', error)

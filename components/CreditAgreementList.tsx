@@ -152,10 +152,13 @@ export function CreditAgreementList({ creditAgreements }: CreditAgreementListPro
   ], [])
 
   const handleRowClick = (params: any) => {
+    if (!params.data) return;
+    
     if (expandedAgreement?.id === params.data.id) {
-      setExpandedAgreement(null)
+      setExpandedAgreement(null);
     } else {
-      setExpandedAgreement(params.data)
+      setExpandedAgreement(params.data);
+      setDetailsOpen(true);
     }
   }
 
