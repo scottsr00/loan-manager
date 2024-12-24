@@ -2,218 +2,104 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+function generateCompanyName(index: number, type: string): string {
+  const prefixes = ['Global', 'Advanced', 'Premier', 'Elite', 'Strategic', 'Dynamic', 'Innovative', 'Pacific', 'Atlantic', 'United']
+  const suffixes = ['Solutions', 'Partners', 'Group', 'Corporation', 'Associates', 'International', 'Ventures', 'Holdings', 'Capital', 'Enterprises']
+  
+  const prefix = prefixes[index % prefixes.length]
+  const suffix = suffixes[Math.floor(index / prefixes.length) % suffixes.length]
+  return `${prefix} ${type} ${suffix}`
+}
+
+function generateAddress(isPrimary: boolean = false) {
+  const types = ['LEGAL', 'MAILING', 'PHYSICAL']
+  const cities = ['New York', 'London', 'Tokyo', 'Singapore', 'Hong Kong', 'Dubai', 'Sydney', 'Toronto']
+  const states = ['NY', 'CA', 'TX', 'FL', 'IL', null]
+  const countries = ['USA', 'UK', 'Japan', 'Singapore', 'China', 'UAE', 'Australia', 'Canada']
+
+  const cityIndex = Math.floor(Math.random() * cities.length)
+
+  return {
+    type: types[Math.floor(Math.random() * types.length)],
+    street1: `${Math.floor(Math.random() * 999) + 1} Main St`,
+    street2: Math.random() > 0.7 ? `Suite ${Math.floor(Math.random() * 100) + 1}` : null,
+    city: cities[cityIndex],
+    state: states[cityIndex],
+    postalCode: `${Math.floor(Math.random() * 90000) + 10000}`,
+    country: countries[cityIndex],
+    isPrimary,
+  }
+}
+
+function generateContact(isPrimary: boolean = false) {
+  const types = ['PRIMARY', 'BILLING', 'LEGAL', 'TECHNICAL']
+  const firstNames = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Emma', 'James', 'Emily']
+  const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis']
+  const titles = ['CEO', 'CFO', 'CTO', 'Director', 'Manager', null]
+
+  return {
+    type: types[Math.floor(Math.random() * types.length)],
+    firstName: firstNames[Math.floor(Math.random() * firstNames.length)],
+    lastName: lastNames[Math.floor(Math.random() * lastNames.length)],
+    title: titles[Math.floor(Math.random() * titles.length)],
+    email: Math.random() > 0.2 ? `contact${Math.floor(Math.random() * 100)}@example.com` : null,
+    phone: Math.random() > 0.2 ? `+1-555-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}` : null,
+    isPrimary,
+  }
+}
+
 async function main() {
-  // Clean up existing data in the correct order
-  await prisma.transactionHistory.deleteMany()
-  await prisma.loanPosition.deleteMany()
-  await prisma.loan.deleteMany()
-  await prisma.facilityPosition.deleteMany()
-  await prisma.facility.deleteMany()
-  await prisma.creditAgreement.deleteMany()
+  // First, clear existing data
   await prisma.trade.deleteMany()
+  await prisma.counterpartyContact.deleteMany()
+  await prisma.counterpartyAddress.deleteMany()
   await prisma.counterparty.deleteMany()
-  await prisma.borrower.deleteMany()
-  await prisma.lender.deleteMany()
-  await prisma.beneficialOwner.deleteMany()
-  await prisma.contact.deleteMany()
-  await prisma.address.deleteMany()
-  await prisma.entity.deleteMany()
+  await prisma.counterpartyType.deleteMany()
 
-  // Create entities
-  const borrowerEntity = await prisma.entity.create({
-    data: {
-      legalName: 'Acme Corporation',
-      dba: 'Acme Corp',
-      registrationNumber: 'REG123456',
-      taxId: '123-45-6789',
-      dateOfIncorporation: new Date('2010-01-01'),
-      governmentId: 'GOV-ID-123',
-      governmentIdType: 'EIN',
-      governmentIdExpiry: new Date('2025-01-01'),
-      primaryContactName: 'John Smith',
-      primaryContactEmail: 'john.smith@acme.com',
-      primaryContactPhone: '+1-555-0123',
-      status: 'ACTIVE',
-      addresses: {
-        create: [{
-          type: 'LEGAL',
-          street1: '123 Main St',
-          city: 'New York',
-          state: 'NY',
-          postalCode: '10001',
-          country: 'USA',
-          isPrimary: true
-        }]
+  // Create counterparty types
+  const counterpartyTypes = [
+    { name: 'Bank', description: 'Financial institution' },
+    { name: 'Insurance', description: 'Insurance provider' },
+    { name: 'Investment', description: 'Investment management company' },
+    { name: 'Corporate', description: 'Non-financial corporation' },
+    { name: 'Government', description: 'Government entity' },
+    { name: 'Non-Profit', description: 'Non-profit organization' },
+  ]
+
+  const createdTypes = []
+  for (const type of counterpartyTypes) {
+    const created = await prisma.counterpartyType.create({
+      data: type
+    })
+    createdTypes.push(created)
+  }
+
+  // Create 100 counterparties with addresses and contacts
+  for (let i = 0; i < 100; i++) {
+    const typeIndex = i % createdTypes.length
+    const type = createdTypes[typeIndex]
+    const status = i % 5 === 0 ? 'INACTIVE' : i % 7 === 0 ? 'PENDING' : 'ACTIVE'
+
+    await prisma.counterparty.create({
+      data: {
+        name: generateCompanyName(i, type.name),
+        typeId: type.id,
+        status,
+        addresses: {
+          create: [
+            generateAddress(true), // Primary address
+            ...(Math.random() > 0.5 ? [generateAddress()] : []), // 50% chance of second address
+          ],
+        },
+        contacts: {
+          create: [
+            generateContact(true), // Primary contact
+            ...(Math.random() > 0.5 ? [generateContact()] : []), // 50% chance of second contact
+          ],
+        },
       },
-      contacts: {
-        create: [{
-          type: 'PRIMARY',
-          firstName: 'John',
-          lastName: 'Smith',
-          title: 'CEO',
-          email: 'john.smith@acme.com',
-          phone: '+1-555-0123',
-          isPrimary: true
-        }]
-      },
-      beneficialOwners: {
-        create: [{
-          name: 'John Smith',
-          dateOfBirth: new Date('1970-01-01'),
-          nationality: 'USA',
-          ownershipPercentage: 100,
-          controlType: 'DIRECT',
-          verificationStatus: 'VERIFIED'
-        }]
-      }
-    }
-  })
-
-  const lenderEntity = await prisma.entity.create({
-    data: {
-      legalName: 'Sample Bank',
-      dba: 'SBank',
-      registrationNumber: 'REG789012',
-      taxId: '987-65-4321',
-      dateOfIncorporation: new Date('1990-01-01'),
-      governmentId: 'GOV-ID-456',
-      governmentIdType: 'EIN',
-      governmentIdExpiry: new Date('2025-01-01'),
-      primaryContactName: 'Jane Doe',
-      primaryContactEmail: 'jane.doe@sbank.com',
-      primaryContactPhone: '+1-555-4567',
-      status: 'ACTIVE',
-      addresses: {
-        create: [{
-          type: 'LEGAL',
-          street1: '456 Wall St',
-          city: 'New York',
-          state: 'NY',
-          postalCode: '10005',
-          country: 'USA',
-          isPrimary: true
-        }]
-      },
-      contacts: {
-        create: [{
-          type: 'PRIMARY',
-          firstName: 'Jane',
-          lastName: 'Doe',
-          title: 'Managing Director',
-          email: 'jane.doe@sbank.com',
-          phone: '+1-555-4567',
-          isPrimary: true
-        }]
-      }
-    }
-  })
-
-  // Create borrower
-  const borrower = await prisma.borrower.create({
-    data: {
-      entityId: borrowerEntity.id,
-      industrySegment: 'Technology',
-      businessType: 'CORPORATE',
-      creditRating: 'BBB+',
-      ratingAgency: 'S&P',
-      riskRating: 'Medium',
-      onboardingStatus: 'COMPLETED',
-      kycStatus: 'APPROVED'
-    }
-  })
-
-  // Create lender
-  const lender = await prisma.lender.create({
-    data: {
-      entityId: lenderEntity.id,
-      status: 'ACTIVE',
-      onboardingDate: new Date()
-    }
-  })
-
-  // Create credit agreement
-  await prisma.creditAgreement.create({
-    data: {
-      agreementNumber: 'CA-2024-001',
-      borrowerId: borrower.entityId,
-      lenderId: lender.entityId,
-      status: 'ACTIVE',
-      amount: 10000000,
-      currency: 'USD',
-      startDate: new Date('2024-01-01'),
-      maturityDate: new Date('2029-01-01'),
-      interestRate: 5.5,
-      description: 'Five-year term loan facility for working capital',
-      facilities: {
-        create: [
-          {
-            facilityName: 'Term Loan A',
-            facilityType: 'TERM_LOAN',
-            commitmentAmount: 6000000,
-            availableAmount: 3000000,
-            currency: 'USD',
-            startDate: new Date('2024-01-01'),
-            maturityDate: new Date('2029-01-01'),
-            interestType: 'FLOATING',
-            baseRate: 'SOFR',
-            margin: 3.5,
-            description: 'Senior secured term loan',
-            loans: {
-              create: [
-                {
-                  amount: 3000000,
-                  outstandingAmount: 3000000,
-                  currency: 'USD',
-                  status: 'ACTIVE',
-                  positions: {
-                    create: [
-                      {
-                        lenderId: lender.id,
-                        amount: 3000000,
-                        status: 'ACTIVE'
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-          },
-          {
-            facilityName: 'Revolving Credit Facility',
-            facilityType: 'REVOLVER',
-            commitmentAmount: 4000000,
-            availableAmount: 3000000,
-            currency: 'USD',
-            startDate: new Date('2024-01-01'),
-            maturityDate: new Date('2029-01-01'),
-            interestType: 'FLOATING',
-            baseRate: 'SOFR',
-            margin: 4.0,
-            description: 'Working capital revolving facility',
-            loans: {
-              create: [
-                {
-                  amount: 1000000,
-                  outstandingAmount: 1000000,
-                  currency: 'USD',
-                  status: 'ACTIVE',
-                  positions: {
-                    create: [
-                      {
-                        lenderId: lender.id,
-                        amount: 1000000,
-                        status: 'ACTIVE'
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-          }
-        ]
-      }
-    }
-  })
+    })
+  }
 
   console.log('Seed data created successfully')
 }

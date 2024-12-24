@@ -6,24 +6,29 @@ import { Badge } from '@/components/ui/badge'
 import { CounterpartyDetailsModal } from './CounterpartyDetailsModal'
 import { DataGrid } from '@/components/ui/data-grid'
 import { type ColDef } from 'ag-grid-community'
+import { type Counterparty, type CounterpartyAddress, type CounterpartyContact } from '@prisma/client'
+
+type CounterpartyWithRelations = Counterparty & {
+  type: {
+    name: string
+  }
+  addresses: CounterpartyAddress[]
+  contacts: CounterpartyContact[]
+}
 
 interface CounterpartyListProps {
-  counterparties: any[]
+  counterparties: CounterpartyWithRelations[]
 }
 
 export function CounterpartyList({ counterparties }: CounterpartyListProps) {
-  const [selectedCounterparty, setSelectedCounterparty] = useState<any | null>(null)
+  const [selectedCounterparty, setSelectedCounterparty] = useState<CounterpartyWithRelations | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'legalName',
-      headerName: 'Legal Name',
+      field: 'name',
+      headerName: 'Name',
       width: 250,
-      valueFormatter: (params) => {
-        const dba = params.data.dba
-        return dba ? `${params.value} (DBA: ${dba})` : params.value
-      },
     },
     {
       field: 'type.name',
@@ -44,17 +49,16 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
       headerName: 'Primary Contact',
       width: 200,
       valueGetter: (params) => {
-        const primaryContact = params.data.contacts[0]
+        const primaryContact = params.data.contacts.find((c: CounterpartyContact) => c.isPrimary)
         if (!primaryContact) return 'No primary contact'
-        const contactInfo = `${primaryContact.firstName} ${primaryContact.lastName}`
-        return primaryContact.title ? `${contactInfo}\n${primaryContact.title}` : contactInfo
+        return `${primaryContact.firstName} ${primaryContact.lastName}`
       },
     },
     {
-      headerName: 'Location',
+      headerName: 'Primary Address',
       width: 200,
       valueGetter: (params) => {
-        const primaryAddress = params.data.addresses[0]
+        const primaryAddress = params.data.addresses.find((a: CounterpartyAddress) => a.isPrimary)
         if (!primaryAddress) return 'No primary address'
         return primaryAddress.state 
           ? `${primaryAddress.city}, ${primaryAddress.state}, ${primaryAddress.country}`
@@ -85,7 +89,6 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
           setSelectedCounterparty(data)
           setDetailsOpen(true)
         }}
-        domLayout="autoHeight"
       />
 
       <CounterpartyDetailsModal

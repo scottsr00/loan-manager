@@ -1,7 +1,15 @@
 'use server'
 
 import { db } from '@/server/db'
-import { type CounterpartyWithRelations } from '@/server/types/counterparty'
+import { type Counterparty, type CounterpartyAddress, type CounterpartyContact } from '@prisma/client'
+
+type CounterpartyWithRelations = Counterparty & {
+  type: {
+    name: string
+  }
+  addresses: CounterpartyAddress[]
+  contacts: CounterpartyContact[]
+}
 
 export async function getCounterparties(): Promise<CounterpartyWithRelations[]> {
   try {
@@ -16,7 +24,7 @@ export async function getCounterparties(): Promise<CounterpartyWithRelations[]> 
       },
     })
 
-    return counterparties as CounterpartyWithRelations[]
+    return counterparties
   } catch (error) {
     console.error('Error in getCounterparties:', error)
     throw new Error('Failed to fetch counterparties')

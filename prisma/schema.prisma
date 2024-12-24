@@ -305,11 +305,60 @@ model ServicingAssignment {
 }
 
 model Counterparty {
-  id        String   @id @default(cuid())
-  name      String
-  type      String
-  status    String   @default("ACTIVE")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  trades    Trade[]
+  id             String               @id @default(cuid())
+  name           String
+  typeId         String
+  type           CounterpartyType     @relation(fields: [typeId], references: [id])
+  status         String               @default("ACTIVE")
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  trades         Trade[]
+  addresses      CounterpartyAddress[]
+  contacts       CounterpartyContact[]
+
+  @@index([typeId])
+}
+
+model CounterpartyType {
+  id             String        @id @default(cuid())
+  name           String        @unique
+  description    String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  counterparties Counterparty[]
+}
+
+model CounterpartyAddress {
+  id             String      @id @default(cuid())
+  counterpartyId String
+  counterparty   Counterparty @relation(fields: [counterpartyId], references: [id])
+  type           String      // e.g., "LEGAL", "MAILING", "PHYSICAL"
+  street1        String
+  street2        String?
+  city           String
+  state          String?
+  postalCode     String?
+  country        String
+  isPrimary      Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([counterpartyId])
+}
+
+model CounterpartyContact {
+  id             String      @id @default(cuid())
+  counterpartyId String
+  counterparty   Counterparty @relation(fields: [counterpartyId], references: [id])
+  type           String      // e.g., "PRIMARY", "BILLING", "LEGAL"
+  firstName      String
+  lastName       String
+  title          String?
+  email          String?
+  phone          String?
+  isPrimary      Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([counterpartyId])
 }

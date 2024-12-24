@@ -9,35 +9,9 @@ import { deleteCounterparty } from '@/server/actions/counterparty/deleteCounterp
 import { withErrorHandling } from '@/lib/error-handling'
 
 interface CreateCounterpartyInput {
-  legalName: string
-  parentName?: string
-  ultParentName?: string
-  counterpartyTypeId: string
-  kycStatus: string
-  onboardingStatus: string
-  registrationNumber?: string
-  taxId?: string
-  website?: string
-  description?: string
-  address: {
-    type: string
-    street1: string
-    street2?: string
-    city: string
-    state?: string
-    postalCode?: string
-    country: string
-    isPrimary: boolean
-  }
-  contact: {
-    type: string
-    firstName: string
-    lastName: string
-    title?: string
-    email?: string
-    phone?: string
-    isPrimary: boolean
-  }
+  name: string
+  typeId: string
+  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING'
 }
 
 export function useCounterparties() {

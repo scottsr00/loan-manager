@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DataGrid } from '@/components/ui/data-grid'
-import { type ColDef, type ICellRendererParams } from 'ag-grid-community'
+import { type ColDef, type ICellRendererParams, type GridOptions } from 'ag-grid-community'
 import { CreditAgreementDetailsModal } from './CreditAgreementDetailsModal'
 import { formatCurrency } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -149,33 +149,46 @@ export function CreditAgreementList({ creditAgreements, onUpdate }: CreditAgreem
   const handleRowClick = (params: { data: CreditAgreementWithRelations }) => {
     if (!params.data) return;
     
-    if (expandedAgreement?.id === params.data.id) {
-      setExpandedAgreement(null);
-    } else {
-      setExpandedAgreement(params.data);
-      setDetailsOpen(true);
-    }
+    // Toggle expanded state for the clicked agreement
+    setExpandedAgreement(prevExpanded => 
+      prevExpanded?.id === params.data.id ? null : params.data
+    );
   }
+
+  const gridOptions = useMemo<GridOptions>(() => ({
+    getRowClass: (params: { data: CreditAgreementWithRelations }) => {
+      if (!params.data) return '';
+      return params.data.id === expandedAgreement?.id ? 'bg-accent/50' : '';
+    }
+  }), [expandedAgreement?.id])
 
   return (
     <div className="space-y-4">
-      <DataGrid
-        rowData={creditAgreements}
-        columnDefs={columnDefs}
-        defaultColDef={{
-          sortable: true,
-          filter: true,
-          resizable: true,
-          floatingFilter: true,
-        }}
-        onRowClick={handleRowClick}
-      />
+      <div className={expandedAgreement ? 'opacity-90' : ''}>
+        <DataGrid
+          rowData={creditAgreements}
+          columnDefs={columnDefs}
+          defaultColDef={{
+            sortable: true,
+            filter: true,
+            resizable: true,
+            floatingFilter: true,
+          }}
+          onRowClick={handleRowClick}
+          gridOptions={gridOptions}
+        />
+      </div>
 
       {expandedAgreement && (
-        <div className="mt-4 border rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-4">
-            Facilities for {expandedAgreement.agreementNumber}
-          </h3>
+        <div className="mt-4 border rounded-lg p-4 bg-background shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">
+              Facilities for {expandedAgreement.agreementNumber}
+            </h3>
+            <Badge variant="outline">
+              {expandedAgreement.facilities.length} {expandedAgreement.facilities.length === 1 ? 'Facility' : 'Facilities'}
+            </Badge>
+          </div>
           <DataGrid
             rowData={expandedAgreement.facilities || []}
             columnDefs={facilityColumnDefs}
@@ -184,6 +197,7 @@ export function CreditAgreementList({ creditAgreements, onUpdate }: CreditAgreem
               filter: true,
               resizable: true,
             }}
+            className="min-h-[200px]"
           />
         </div>
       )}
