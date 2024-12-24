@@ -8,7 +8,7 @@ interface GetTransactionsParams {
   loanId?: string
   tradeId?: string
   servicingActivityId?: string
-  eventType?: string
+  type?: string
   startDate?: Date
   endDate?: Date
 }
@@ -21,7 +21,7 @@ export async function getTransactions(params: GetTransactionsParams = {}) {
       loanId,
       tradeId,
       servicingActivityId,
-      eventType,
+      type,
       startDate,
       endDate
     } = params
@@ -32,7 +32,7 @@ export async function getTransactions(params: GetTransactionsParams = {}) {
       ...(loanId && { loanId }),
       ...(tradeId && { tradeId }),
       ...(servicingActivityId && { servicingActivityId }),
-      ...(eventType && { eventType }),
+      ...(type && { type }),
       ...(startDate && endDate && {
         effectiveDate: {
           gte: startDate,
@@ -44,37 +44,31 @@ export async function getTransactions(params: GetTransactionsParams = {}) {
     const transactions = await prisma.transactionHistory.findMany({
       where,
       include: {
-        facility: {
+        creditAgreement: {
           select: {
-            facilityName: true,
-            creditAgreement: {
-              select: {
-                agreementName: true
-              }
-            }
+            agreementNumber: true
           }
         },
         loan: {
           select: {
-            drawdownNumber: true,
             amount: true
           }
         },
         trade: {
           select: {
-            tradeDate: true,
-            amount: true
+            amount: true,
+            price: true
           }
         },
         servicingActivity: {
           select: {
             activityType: true,
-            amount: true
+            description: true
           }
         }
       },
       orderBy: {
-        effectiveDate: 'desc'
+        createdAt: 'desc'
       }
     })
 

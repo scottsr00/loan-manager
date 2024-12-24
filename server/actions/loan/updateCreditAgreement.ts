@@ -1,32 +1,16 @@
 'use server'
 
-import { db } from '@/server/db'
-import { type CreditAgreementWithRelations } from '@/server/types'
+import { prisma } from '@/server/db/client'
+import { type UpdateCreditAgreementInput } from '@/server/types/credit-agreement'
 
-interface UpdateCreditAgreementInput {
-  id: string
-  agreementName: string
-  agreementNumber: string
-  borrowerId: string
-  status: string
-  amount: number
-  currency: string
-  startDate: Date
-  maturityDate: Date
-  interestRate: number
-  description?: string
-}
-
-export async function updateCreditAgreement(
-  data: UpdateCreditAgreementInput
-): Promise<CreditAgreementWithRelations> {
+export async function updateCreditAgreement(data: UpdateCreditAgreementInput) {
   try {
-    const creditAgreement = await db.creditAgreement.update({
-      where: { id: data.id },
+    const updatedCreditAgreement = await prisma.creditAgreement.update({
+      where: {
+        id: data.id,
+      },
       data: {
-        agreementName: data.agreementName,
         agreementNumber: data.agreementNumber,
-        borrowerId: data.borrowerId,
         status: data.status,
         amount: data.amount,
         currency: data.currency,
@@ -34,21 +18,42 @@ export async function updateCreditAgreement(
         maturityDate: data.maturityDate,
         interestRate: data.interestRate,
         description: data.description,
+        borrowerId: data.borrowerId,
       },
       include: {
         borrower: {
           include: {
-            entity: true
-          }
+            borrower: true,
+          },
         },
-        lender: true,
-        facilities: true
-      }
+        lender: {
+          include: {
+            lender: true,
+          },
+        },
+        facilities: {
+          include: {
+            trades: {
+              include: {
+                counterparty: true,
+              },
+            },
+          },
+        },
+        transactions: true,
+      },
     })
 
-    return creditAgreement
+    if (!updatedCreditAgreement) {
+      throw new Error('Failed to update credit agreement')
+    }
+
+    return updatedCreditAgreement
   } catch (error) {
-    console.error('Error updating credit agreement:', error)
-    throw new Error('Failed to update credit agreement')
+    console.error('Error updating credit agreement:', error instanceof Error ? error.message : 'Unknown error')
+    if (error instanceof Error) {
+      throw new Error(`Failed to update credit agreement: ${error.message}`)
+    }
+    throw new Error('Failed to update credit agreement: Unknown error')
   }
 } 

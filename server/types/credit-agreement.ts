@@ -1,19 +1,45 @@
-import { type Prisma, type CreditAgreement as PrismaCreditAgreement } from '@prisma/client'
+import { type CreditAgreement, type Entity, type Facility, type TransactionHistory } from '@prisma/client'
 import { z } from 'zod'
 
 // Base Prisma Types with Relations
-export type CreditAgreementWithRelations = Prisma.CreditAgreementGetPayload<{
-  include: {
-    borrower: true
-    lender: true
-    facilities: true
-    trades: {
-      include: {
-        counterparty: true
-      }
-    }
+export type CreditAgreementWithRelations = CreditAgreement & {
+  borrower: Entity & {
+    borrower: {
+      id: string
+      status: string
+      createdAt: Date
+      updatedAt: Date
+      entityId: string
+      onboardingDate: Date
+    } | null
   }
-}>
+  lender: Entity & {
+    lender: {
+      id: string
+      status: string
+      createdAt: Date
+      updatedAt: Date
+      entityId: string
+      onboardingDate: Date
+    } | null
+  }
+  facilities: (Facility & {
+    trades: {
+      id: string
+      facilityId: string
+      counterpartyId: string
+      tradeDate: Date
+      settlementDate: Date
+      amount: number
+      price: number
+      status: string
+      createdAt: Date
+      updatedAt: Date
+      counterparty: Entity
+    }[]
+  })[]
+  transactions: TransactionHistory[]
+}
 
 // Input Validation Schemas
 export const facilityInputSchema = z.object({
@@ -30,7 +56,6 @@ export const facilityInputSchema = z.object({
 })
 
 export const creditAgreementInputSchema = z.object({
-  agreementName: z.string().min(1, 'Agreement name is required'),
   agreementNumber: z.string().min(1, 'Agreement number is required'),
   borrowerId: z.string().min(1, 'Borrower ID is required'),
   lenderId: z.string().min(1, 'Lender ID is required'),
@@ -43,6 +68,32 @@ export const creditAgreementInputSchema = z.object({
   description: z.string().optional(),
   facilities: z.array(facilityInputSchema).min(1, 'At least one facility is required'),
 })
+
+export const updateCreditAgreementSchema = {
+  id: String,
+  agreementNumber: String,
+  borrowerId: String,
+  status: String,
+  amount: Number,
+  currency: String,
+  startDate: Date,
+  maturityDate: Date,
+  interestRate: Number,
+  description: String,
+}
+
+export type UpdateCreditAgreementInput = {
+  id: string
+  agreementNumber: string
+  borrowerId: string
+  status: string
+  amount: number
+  currency: string
+  startDate: Date
+  maturityDate: Date
+  interestRate: number
+  description?: string | null
+}
 
 // Inferred Types from Schemas
 export type FacilityInput = z.infer<typeof facilityInputSchema>

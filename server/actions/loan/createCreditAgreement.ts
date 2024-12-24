@@ -1,7 +1,8 @@
 'use server'
 
 import { db } from '@/server/db'
-import { type CreditAgreementInput, type CreditAgreementWithRelations } from '@/server/types'
+import { type CreditAgreementInput, type CreditAgreementWithRelations, type FacilityInput } from '@/server/types/credit-agreement'
+import { Prisma } from '@prisma/client'
 
 export async function createCreditAgreement(
   data: CreditAgreementInput
@@ -9,18 +10,26 @@ export async function createCreditAgreement(
   try {
     const creditAgreement = await db.creditAgreement.create({
       data: {
-        agreementName: data.agreementName,
         agreementNumber: data.agreementNumber,
-        borrowerId: data.borrowerId,
-        agentBankId: data.agentBankId,
+        borrower: {
+          connect: {
+            id: data.borrowerId
+          }
+        },
+        lender: {
+          connect: {
+            id: data.lenderId
+          }
+        },
         status: data.status,
-        effectiveDate: data.effectiveDate,
-        maturityDate: data.maturityDate,
-        totalAmount: data.totalAmount,
+        amount: data.amount,
         currency: data.currency,
+        startDate: data.startDate,
+        maturityDate: data.maturityDate,
+        interestRate: data.interestRate,
         description: data.description,
         facilities: {
-          create: data.facilities.map(facility => ({
+          create: data.facilities.map((facility: FacilityInput) => ({
             facilityName: facility.facilityName,
             facilityType: facility.facilityType,
             commitmentAmount: facility.commitmentAmount,
@@ -33,19 +42,32 @@ export async function createCreditAgreement(
             description: facility.description,
           }))
         }
-      },
+      } satisfies Prisma.CreditAgreementCreateInput,
       include: {
-        facilities: true,
-        borrower: {
+        facilities: {
           include: {
-            entity: true
+            trades: {
+              include: {
+                counterparty: true
+              }
+            }
           }
         },
-        agent: true
+        borrower: {
+          include: {
+            borrower: true
+          }
+        },
+        lender: {
+          include: {
+            lender: true
+          }
+        },
+        transactions: true
       }
     })
 
-    return creditAgreement
+    return creditAgreement as CreditAgreementWithRelations
   } catch (error) {
     console.error('Error creating credit agreement:', error)
     throw new Error('Failed to create credit agreement')

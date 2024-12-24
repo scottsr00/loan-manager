@@ -9,7 +9,6 @@ export async function getBorrowers(): Promise<Borrower[]> {
       include: {
         entity: {
           include: {
-            entityType: true,
             addresses: {
               where: {
                 isPrimary: true
@@ -19,43 +18,26 @@ export async function getBorrowers(): Promise<Borrower[]> {
               where: {
                 isPrimary: true
               }
-            }
+            },
+            beneficialOwners: true
           }
-        },
-        requiredDocuments: true,
-        financialStatements: {
-          orderBy: {
-            statementDate: 'desc'
-          },
-          take: 1
-        },
-        covenants: true
+        }
       },
       orderBy: {
         createdAt: 'desc'
       }
     })
 
-    return borrowers.map(borrower => ({
-      id: borrower.id,
-      name: borrower.entity.legalName,
-      taxId: borrower.entity.taxId || '',
-      jurisdiction: borrower.entity.addresses[0]?.country || '',
-      industry: borrower.industrySegment || '',
-      creditRating: borrower.creditRating || '',
-      ratingAgency: borrower.ratingAgency || '',
-      onboardingStatus: borrower.onboardingStatus,
-      kycStatus: borrower.kycStatus,
-      entityId: borrower.entityId,
-      createdAt: borrower.createdAt,
-      businessType: borrower.businessType,
-      status: borrower.status,
-      riskRating: borrower.riskRating,
-      amlStatus: borrower.amlStatus,
-      sanctionsStatus: borrower.sanctionsStatus
-    }))
+    if (!borrowers) {
+      throw new Error('No borrowers found')
+    }
+
+    return borrowers
   } catch (error) {
     console.error('Error in getBorrowers:', error)
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch borrowers: ${error.message}`)
+    }
     throw new Error('Failed to fetch borrowers')
   }
 } 

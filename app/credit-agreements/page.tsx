@@ -4,7 +4,7 @@ import { CreditAgreementsPageClient } from '@/components/CreditAgreementsPageCli
 export const dynamic = 'force-dynamic'
 
 export default async function CreditAgreementsPage() {
-  const creditAgreements = await getCreditAgreements()
+  const initialCreditAgreements = await getCreditAgreements()
 
-  return <CreditAgreementsPageClient creditAgreements={creditAgreements} />
+  return <CreditAgreementsPageClient initialCreditAgreements={initialCreditAgreements} />
 } 

@@ -28,7 +28,7 @@ export async function getAnalytics() {
       totalTrades,
       recentTrades: recentTrades.map(trade => ({
         id: trade.id,
-        dealName: trade.loan.dealName,
+        dealName: trade.loan.facility.creditAgreement.agreementName,
         tradeType: trade.tradeType,
         quantity: trade.quantity,
         price: trade.price,

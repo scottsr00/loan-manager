@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { type ServicingActivity, getServicingActivities } from '@/server/actions/loan/getServicingActivities'
+import { getServicingActivities } from '@/server/actions/loan/getServicingActivities'
 import { addServicingActivity } from '@/server/actions/loan/addServicingActivity'
 import { updateServicingActivity } from '@/server/actions/loan/updateServicingActivity'
 import { Button } from "@/components/ui/button"
@@ -29,36 +29,44 @@ import { CalendarIcon, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { getFacilities } from '@/server/actions/loan/getFacilities'
 import { DataGrid } from '@/components/ui/data-grid'
-import { ColDef, ICellRendererParams } from 'ag-grid-community'
+import { ColDef } from 'ag-grid-community'
 import { useServicing } from '@/hooks/useServicing'
+import { ServicingActivityDetailsModal } from '@/components/ServicingActivityDetailsModal'
+
+interface Facility {
+  id: string
+  facilityName: string
+  creditAgreement: {
+    agreementName: string
+  }
+}
 
 interface ServicingActivityType {
   id: string
   facilityId: string
   activityType: string
   status: string
-  dueDate: Date
-  description: string
+  dueDate: Date | null
+  description: string | null
   amount: number
   completedAt?: Date | null
   completedBy?: string | null
-  facility: {
+  facility?: {
     facilityName: string
-    creditAgreement: {
+    creditAgreement?: {
       agreementName: string
     }
+  }
+  loan?: {
+    id: string
   }
 }
 
 export function ServicingDashboard() {
   const [activities, setActivities] = useState<ServicingActivityType[]>([])
+  const [facilities, setFacilities] = useState<Facility[]>([])
   const [selectedActivity, setSelectedActivity] = useState<ServicingActivityType | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-  const [facilities, setFacilities] = useState<{
-    id: string;
-    facilityName: string;
-    creditAgreement: { agreementName: string }
-  }[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
   const [filters, setFilters] = useState({
@@ -93,7 +101,7 @@ export function ServicingDashboard() {
         startDate: filters.startDate || undefined,
         endDate: filters.endDate || undefined
       })
-      setActivities(data.activities)
+      setActivities(data.activities as ServicingActivityType[])
     } catch (err) {
       setError('Failed to load servicing activities')
       console.error(err)
@@ -142,47 +150,18 @@ export function ServicingDashboard() {
     }
   }
 
-  const handleUpdateStatus = async (newStatus: string) => {
-    if (!selectedActivity) return
-
-    setIsUpdating(true)
-    try {
-      await updateServicingActivity({
-        id: selectedActivity.id,
-        status: newStatus,
-        completedBy: 'Current User' // TODO: Replace with actual user
-      })
-      await loadActivities()
-      setIsDetailsOpen(false) // Close the modal after successful update
-    } catch (err) {
-      console.error('Error updating activity status:', err)
-    } finally {
-      setIsUpdating(false)
-    }
-  }
-
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      'PENDING': 'default',
-      'IN_PROGRESS': 'secondary',
-      'COMPLETED': 'success',
-      'OVERDUE': 'destructive'
-    } as const
-    return <Badge variant={variants[status as keyof typeof variants] || 'default'}>{status}</Badge>
-  }
-
-  const handleComplete = async (activity: any) => {
+  const handleComplete = async (activity: ServicingActivityType) => {
     try {
       setIsUpdating(true)
       
       // Process the paydown if it's a payment activity
       if (['PRINCIPAL_PAYMENT', 'INTEREST_PAYMENT', 'UNSCHEDULED_PAYMENT'].includes(activity.activityType)) {
         await processPaydown({
-          loanId: activity.loan?.id,
+          loanId: activity.loan?.id || '',
           facilityId: activity.facilityId,
           amount: activity.amount,
           paymentDate: new Date(),
-          description: activity.description
+          description: activity.description || undefined
         })
       }
 
@@ -201,7 +180,7 @@ export function ServicingDashboard() {
     }
   }
 
-  const columnDefs = useMemo<ColDef[]>(() => [
+  const columnDefs = useMemo<ColDef<ServicingActivityType>[]>(() => [
     {
       field: 'facility.facilityName',
       headerName: 'Facility',
@@ -231,7 +210,7 @@ export function ServicingDashboard() {
       valueFormatter: params => {
         if (!params.value) return '';
         try {
-          return format(new Date(params.value), 'PPP');
+          return format(new Date(params.value), 'MMMM d, yyyy');
         } catch (error) {
           console.error('Error formatting date:', error);
           return 'Invalid date';
@@ -250,27 +229,43 @@ export function ServicingDashboard() {
       field: 'status',
       headerName: 'Status',
       flex: 1,
-      cellRenderer: (params: { value: string }) => getStatusBadge(params.value),
+      cellRenderer: (params: { value: string }) => {
+        const variants = {
+          'PENDING': 'default',
+          'IN_PROGRESS': 'secondary',
+          'COMPLETED': 'success',
+          'OVERDUE': 'destructive'
+        } as const;
+        return <Badge variant={variants[params.value as keyof typeof variants] || 'default'}>{params.value}</Badge>;
+      },
     },
     {
       headerName: 'Actions',
-      field: 'actions',
-      flex: 1,
+      width: 200,
       sortable: false,
       filter: false,
-      cellRenderer: (params: ICellRendererParams) => {
-        if (params.data.status === 'COMPLETED') {
-          return <Badge variant="success">Completed</Badge>;
-        }
-        return (
-          <div onClick={(e) => {
-            e.stopPropagation();
-            handleComplete(params.data);
-          }}>
+      cellRenderer: (params: { data: ServicingActivityType }) => (
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedActivity(params.data);
+              setIsDetailsOpen(true);
+            }}
+          >
+            Details
+          </Button>
+          {params.data.status !== 'COMPLETED' && (
             <Button
               size="sm"
               variant="outline"
               disabled={isUpdating}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleComplete(params.data);
+              }}
             >
               {isUpdating ? (
                 <>
@@ -281,16 +276,11 @@ export function ServicingDashboard() {
                 'Complete'
               )}
             </Button>
-          </div>
-        );
-      }
+          )}
+        </div>
+      )
     }
-  ], [isUpdating, loadActivities])
-
-  const handleRowClick = (params: { data: ServicingActivityType }) => {
-    setSelectedActivity(params.data)
-    setIsDetailsOpen(true)
-  }
+  ], [isUpdating])
 
   return (
     <div className="space-y-4">
@@ -334,7 +324,7 @@ export function ServicingDashboard() {
                   !filters.startDate && "text-muted-foreground"
                 )}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filters.startDate ? format(filters.startDate, "PP") : <span>Start Date</span>}
+                  {filters.startDate ? format(filters.startDate, "MMMM d, yyyy") : <span>Start Date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -353,7 +343,7 @@ export function ServicingDashboard() {
                   !filters.endDate && "text-muted-foreground"
                 )}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filters.endDate ? format(filters.endDate, "PP") : <span>End Date</span>}
+                  {filters.endDate ? format(filters.endDate, "MMMM d, yyyy") : <span>End Date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -426,7 +416,7 @@ export function ServicingDashboard() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newActivity.dueDate ? format(newActivity.dueDate, "PPP") : <span>Pick a date</span>}
+                      {newActivity.dueDate ? format(newActivity.dueDate, "MMMM d, yyyy") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -498,115 +488,19 @@ export function ServicingDashboard() {
           resizable: true,
           floatingFilter: true,
         }}
-        onRowClick={handleRowClick}
-        suppressRowClickSelection={true}
       />
 
-      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="min-h-[600px] max-h-[80vh] w-full max-w-4xl overflow-y-auto">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle>Activity Details</DialogTitle>
-          </DialogHeader>
-          {selectedActivity && (
-            <div className="grid gap-6 py-6 px-6">
-              <div className="grid gap-3">
-                <Label className="text-base font-semibold">Facility</Label>
-                <div className="text-sm">
-                  {selectedActivity.facility ? (
-                    <>
-                      {selectedActivity.facility.facilityName}
-                      {selectedActivity.facility.creditAgreement && (
-                        <span className="text-muted-foreground ml-1">
-                          ({selectedActivity.facility.creditAgreement.agreementName})
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    'N/A'
-                  )}
-                </div>
-              </div>
+      <ServicingActivityDetailsModal
+        activity={selectedActivity}
+        open={isDetailsOpen}
+        onOpenChange={setIsDetailsOpen}
+        onUpdate={loadActivities}
+      />
 
-              <div className="grid gap-3">
-                <Label className="text-base font-semibold">Type</Label>
-                <div className="text-sm">
-                  {(() => {
-                    const types: Record<string, string> = {
-                      'INTEREST_PAYMENT': 'Interest Payment',
-                      'PRINCIPAL_PAYMENT': 'Principal Payment',
-                      'UNSCHEDULED_PAYMENT': 'Unscheduled Payment'
-                    };
-                    return types[selectedActivity.activityType] || selectedActivity.activityType;
-                  })()}
-                </div>
-              </div>
-
-              <div className="grid gap-3">
-                <Label className="text-base font-semibold">Due Date</Label>
-                <div className="text-sm">
-                  {selectedActivity.dueDate ? (
-                    format(new Date(selectedActivity.dueDate), "PPP")
-                  ) : (
-                    'No date specified'
-                  )}
-                </div>
-              </div>
-
-              <div className="grid gap-3">
-                <Label className="text-base font-semibold">Amount</Label>
-                <div className="text-sm">{formatCurrency(selectedActivity.amount)}</div>
-              </div>
-
-              <div className="grid gap-3">
-                <Label className="text-base font-semibold">Description</Label>
-                <div className="text-sm">{selectedActivity.description || 'No description'}</div>
-              </div>
-
-              <div className="grid gap-3">
-                <Label className="text-base font-semibold">Status</Label>
-                <div className="flex items-center gap-4">
-                  <div className="text-sm">{getStatusBadge(selectedActivity.status)}</div>
-                  {selectedActivity.status !== 'COMPLETED' && (
-                    <Select
-                      value={selectedActivity.status}
-                      onValueChange={handleUpdateStatus}
-                      disabled={isUpdating}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Update status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PENDING">Mark as Pending</SelectItem>
-                        <SelectItem value="IN_PROGRESS">Mark as In Progress</SelectItem>
-                        <SelectItem value="COMPLETED">Mark as Completed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              </div>
-
-              {selectedActivity.completedAt && (
-                <div className="grid gap-6">
-                  <div className="grid gap-3">
-                    <Label className="text-base font-semibold">Completed By</Label>
-                    <div className="text-sm">{selectedActivity.completedBy || '-'}</div>
-                  </div>
-                  <div className="grid gap-3">
-                    <Label className="text-base font-semibold">Completed At</Label>
-                    <div className="text-sm">
-                      {selectedActivity.completedAt ? (
-                        format(new Date(selectedActivity.completedAt), "PPP")
-                      ) : (
-                        '-'
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <div className="hidden">
+        Debug: Modal should be {isDetailsOpen ? 'open' : 'closed'}, 
+        Activity: {selectedActivity?.id}
+      </div>
     </div>
   )
 } 

@@ -4,21 +4,21 @@ import { useState, useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DataGrid } from '@/components/ui/data-grid'
-import { type ColDef } from 'ag-grid-community'
+import { type ColDef, type ICellRendererParams } from 'ag-grid-community'
 import { CreditAgreementDetailsModal } from './CreditAgreementDetailsModal'
 import { formatCurrency } from '@/lib/utils'
 import { format } from 'date-fns'
-import { useCreditAgreements } from '@/hooks/useCreditAgreements'
+import { type CreditAgreementWithRelations } from '@/server/types/credit-agreement'
 
 interface CreditAgreementListProps {
-  creditAgreements: any[]
+  creditAgreements: CreditAgreementWithRelations[]
+  onUpdate?: () => void
 }
 
-export function CreditAgreementList({ creditAgreements }: CreditAgreementListProps) {
-  const [selectedCreditAgreement, setSelectedCreditAgreement] = useState<any | null>(null)
+export function CreditAgreementList({ creditAgreements, onUpdate }: CreditAgreementListProps) {
+  const [selectedCreditAgreement, setSelectedCreditAgreement] = useState<CreditAgreementWithRelations | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const [expandedAgreement, setExpandedAgreement] = useState<any | null>(null)
-  const { mutate } = useCreditAgreements()
+  const [expandedAgreement, setExpandedAgreement] = useState<CreditAgreementWithRelations | null>(null)
 
   const facilityColumnDefs = useMemo<ColDef[]>(() => [
     {
@@ -68,7 +68,7 @@ export function CreditAgreementList({ creditAgreements }: CreditAgreementListPro
       field: 'status',
       headerName: 'Status',
       width: 120,
-      cellRenderer: (params: any) => (
+      cellRenderer: (params: ICellRendererParams) => (
         <Badge variant={params.value === 'ACTIVE' ? 'success' : 'default'}>
           {params.value}
         </Badge>
@@ -78,17 +78,12 @@ export function CreditAgreementList({ creditAgreements }: CreditAgreementListPro
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'agreementName',
-      headerName: 'Agreement Name',
+      field: 'agreementNumber',
+      headerName: 'Agreement Number',
       width: 200,
     },
     {
-      field: 'agreementNumber',
-      headerName: 'Agreement Number',
-      width: 150,
-    },
-    {
-      field: 'borrower.entity.legalName',
+      field: 'borrower.legalName',
       headerName: 'Borrower',
       width: 200,
     },
@@ -125,7 +120,7 @@ export function CreditAgreementList({ creditAgreements }: CreditAgreementListPro
       field: 'status',
       headerName: 'Status',
       width: 120,
-      cellRenderer: (params: any) => (
+      cellRenderer: (params: ICellRendererParams) => (
         <Badge variant={params.value === 'ACTIVE' ? 'success' : 'secondary'}>
           {params.value}
         </Badge>
@@ -135,7 +130,7 @@ export function CreditAgreementList({ creditAgreements }: CreditAgreementListPro
       headerName: 'Actions',
       width: 120,
       pinned: 'right',
-      cellRenderer: (params: any) => (
+      cellRenderer: (params: ICellRendererParams) => (
         <Button
           variant="outline"
           size="sm"
@@ -151,7 +146,7 @@ export function CreditAgreementList({ creditAgreements }: CreditAgreementListPro
     },
   ], [])
 
-  const handleRowClick = (params: any) => {
+  const handleRowClick = (params: { data: CreditAgreementWithRelations }) => {
     if (!params.data) return;
     
     if (expandedAgreement?.id === params.data.id) {
@@ -179,7 +174,7 @@ export function CreditAgreementList({ creditAgreements }: CreditAgreementListPro
       {expandedAgreement && (
         <div className="mt-4 border rounded-lg p-4">
           <h3 className="text-lg font-semibold mb-4">
-            Facilities for {expandedAgreement.agreementName}
+            Facilities for {expandedAgreement.agreementNumber}
           </h3>
           <DataGrid
             rowData={expandedAgreement.facilities || []}
@@ -197,7 +192,7 @@ export function CreditAgreementList({ creditAgreements }: CreditAgreementListPro
         creditAgreement={selectedCreditAgreement}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
-        onUpdate={mutate}
+        onUpdate={onUpdate}
       />
     </div>
   )

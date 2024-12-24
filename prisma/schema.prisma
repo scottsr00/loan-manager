@@ -1,220 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+model Entity {
+  id                    String            @id @default(cuid())
+  legalName             String
+  dba                   String?
+  registrationNumber    String?
+  taxId                 String?
+  dateOfBirth           DateTime?
+  dateOfIncorporation   DateTime?
+  countryOfIncorporation String?
+  governmentId          String?
+  governmentIdType      String?
+  governmentIdExpiry    DateTime?
+  primaryContactName    String?
+  primaryContactEmail   String?
+  primaryContactPhone   String?
+  status                String            @default("ACTIVE")
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  addresses             Address[]
+  beneficialOwners      BeneficialOwner[]
+  borrower              Borrower?
+  contacts              Contact[]
+  lenderAgreements      CreditAgreement[] @relation("LenderCreditAgreements")
+  borrowerAgreements    CreditAgreement[] @relation("BorrowerCreditAgreements")
+  lender                Lender?
 }
 
-model Borrower {
-  id                String    @id @default(cuid())
-  entityId          String    @unique
-  entity            Entity    @relation(fields: [entityId], references: [id])
-  
-  // Business Information
-  industrySegment   String
-  businessType      String    @default("CORPORATE")  // CORPORATE, INDIVIDUAL, etc.
-  status           String    @default("ACTIVE")     // ACTIVE, INACTIVE, SUSPENDED
-  
-  // Risk & Compliance
-  riskRating       String?
-  creditRating     String?
-  ratingAgency     String?
-  onboardingStatus String    @default("PENDING")    // PENDING, IN_PROGRESS, COMPLETED
-  kycStatus        String    @default("PENDING")    // PENDING, IN_PROGRESS, COMPLETED, REJECTED
-  amlStatus        String    @default("PENDING")    // PENDING, CLEARED, FLAGGED
-  sanctionsStatus  String    @default("PENDING")    // PENDING, CLEARED, FLAGGED
-  
-  // Financial Tracking
-  financialStatements BorrowerFinancialStatement[]
-  covenants          BorrowerCovenant[]
-  
-  // Documentation
-  requiredDocuments  BorrowerRequiredDocument[]
-  
-  // Relationships
-  creditAgreements   CreditAgreement[]
-  
-  // Audit & History
-  auditLogs         BorrowerAuditLog[]
-  
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+model Address {
+  id         String   @id @default(cuid())
+  entityId   String
+  type       String
+  street1    String
+  street2    String?
+  city       String
+  state      String?
+  postalCode String?
+  country    String
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  entity     Entity   @relation(fields: [entityId], references: [id])
 
   @@index([entityId])
 }
 
-model BorrowerFinancialStatement {
-  id              String    @id @default(cuid())
-  borrowerId      String
-  borrower        Borrower  @relation(fields: [borrowerId], references: [id])
-  statementType   String    // ANNUAL, QUARTERLY, MONTHLY
-  statementDate   DateTime
-  fiscalYear      Int
-  fiscalPeriod    String    // Q1, Q2, Q3, Q4, ANNUAL
-  currency        String    @default("USD")
-  
-  // Key Financial Metrics
-  revenue         Float
-  ebitda          Float
-  netIncome       Float
-  totalAssets     Float
-  totalLiabilities Float
-  currentAssets   Float
-  currentLiabilities Float
-  cashFlow        Float
-  workingCapital  Float
-  
-  // Meta
-  status          String    @default("PENDING") // PENDING, VERIFIED, REJECTED
-  verifiedBy      String?
-  verifiedAt      DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+model Contact {
+  id        String   @id @default(cuid())
+  entityId  String
+  type      String
+  firstName String
+  lastName  String
+  title     String?
+  email     String?
+  phone     String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  entity    Entity   @relation(fields: [entityId], references: [id])
 
-  @@index([borrowerId])
-  @@index([statementDate])
+  @@index([entityId])
 }
 
-model BorrowerCovenant {
-  id              String    @id @default(cuid())
-  borrowerId      String
-  borrower        Borrower  @relation(fields: [borrowerId], references: [id])
-  covenantType    String    // FINANCIAL, OPERATIONAL, NEGATIVE
-  name            String
-  description     String
-  threshold       Float
-  frequency       String    // MONTHLY, QUARTERLY, ANNUAL
-  startDate       DateTime
-  endDate         DateTime?
-  status          String    @default("ACTIVE")
-  
-  // Compliance Tracking
-  lastTestDate    DateTime?
-  lastTestResult  String?   // COMPLIANT, NON_COMPLIANT
-  nextTestDate    DateTime?
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+model BeneficialOwner {
+  id                  String    @id @default(cuid())
+  entityId            String
+  name                String
+  dateOfBirth         DateTime?
+  nationality         String?
+  ownershipPercentage Float
+  controlType         String
+  verificationStatus  String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  entity              Entity    @relation(fields: [entityId], references: [id])
 
-  @@index([borrowerId])
+  @@index([entityId])
 }
 
-model BorrowerRequiredDocument {
-  id              String    @id @default(cuid())
-  borrowerId      String
-  borrower        Borrower  @relation(fields: [borrowerId], references: [id])
-  documentType    String    // FINANCIAL_STATEMENT, TAX_RETURN, INSURANCE, LICENSE
-  name            String
-  description     String?
-  required        Boolean   @default(true)
-  frequency       String    // ONE_TIME, ANNUAL, QUARTERLY
-  dueDate         DateTime?
-  receivedDate    DateTime?
-  status          String    @default("PENDING") // PENDING, RECEIVED, VERIFIED, EXPIRED
-  documentUrl     String?
-  notes           String?
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+model Borrower {
+  id               String   @id @default(cuid())
+  entityId         String   @unique
+  industrySegment  String?
+  businessType     String?
+  creditRating     String?
+  ratingAgency     String?
+  riskRating       String?
+  onboardingStatus String   @default("PENDING")
+  kycStatus        String   @default("PENDING")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  entity           Entity   @relation(fields: [entityId], references: [id])
 
-  @@index([borrowerId])
-}
-
-model BorrowerAuditLog {
-  id              String    @id @default(cuid())
-  borrowerId      String
-  borrower        Borrower  @relation(fields: [borrowerId], references: [id])
-  action          String    // CREATED, UPDATED, STATUS_CHANGE, DOCUMENT_ADDED
-  description     String
-  changes         String?   // JSON string of changes
-  performedBy     String
-  performedAt     DateTime  @default(now())
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@index([borrowerId])
-  @@index([performedAt])
+  @@index([entityId])
 }
 
 model Lender {
-  id                String    @id @default(cuid())
-  name             String
-  type             String    @default("BANK")  // BANK, FUND, OTHER
-  status           String    @default("ACTIVE")
-  creditAgreements CreditAgreement[]
+  id                String             @id @default(cuid())
+  entityId          String             @unique
+  status            String             @default("ACTIVE")
+  onboardingDate    DateTime           @default(now())
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   facilityPositions FacilityPosition[]
+  entity            Entity             @relation(fields: [entityId], references: [id])
   loanPositions     LoanPosition[]
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+
+  @@index([entityId])
 }
 
 model CreditAgreement {
-  id                String    @id @default(cuid())
-  agreementName     String
-  agreementNumber   String    @unique
-  borrowerId        String
-  borrower          Borrower  @relation(fields: [borrowerId], references: [id])
-  lenderId          String
-  lender            Lender    @relation(fields: [lenderId], references: [id])
-  facilities        Facility[]
-  status           String    @default("PENDING")  // PENDING, ACTIVE, TERMINATED
-  amount           Float
-  currency         String    @default("USD")
-  startDate        DateTime
-  maturityDate     DateTime
-  interestRate     Float
-  description      String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  transactionHistory TransactionHistory[]
+  id              String               @id @default(cuid())
+  agreementNumber String               @unique
+  borrowerId      String
+  lenderId        String
+  status          String               @default("ACTIVE")
+  amount          Float
+  currency        String               @default("USD")
+  startDate       DateTime
+  maturityDate    DateTime
+  interestRate    Float
+  description     String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  borrower        Entity               @relation("BorrowerCreditAgreements", fields: [borrowerId], references: [id])
+  lender          Entity               @relation("LenderCreditAgreements", fields: [lenderId], references: [id])
+  facilities      Facility[]
+  transactions    TransactionHistory[]
 
   @@index([borrowerId])
   @@index([lenderId])
 }
 
 model Facility {
-  id                String    @id @default(cuid())
-  facilityName      String
-  facilityType      String    // TERM_LOAN, REVOLVER, DELAYED_DRAW
-  creditAgreementId String
-  creditAgreement   CreditAgreement @relation(fields: [creditAgreementId], references: [id])
-  loans             Loan[]
-  trades            Trade[]
-  commitmentAmount  Float
-  availableAmount   Float
-  currency          String    @default("USD")
-  startDate         DateTime
-  maturityDate      DateTime
-  interestType      String    // FIXED, FLOATING
-  baseRate          String    // SOFR, PRIME, etc.
-  margin            Float
-  status            String    @default("ACTIVE")
-  description       String?
-  facilityPositions FacilityPosition[]
-  sublimits         FacilitySublimit[]
-  servicingActivities ServicingActivity[]
+  id                   String                @id @default(cuid())
+  facilityName         String
+  facilityType         String
+  creditAgreementId    String
+  commitmentAmount     Float
+  availableAmount      Float
+  currency             String                @default("USD")
+  startDate            DateTime
+  maturityDate         DateTime
+  interestType         String
+  baseRate             String
+  margin               Float
+  description          String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  creditAgreement      CreditAgreement       @relation(fields: [creditAgreementId], references: [id])
+  positions            FacilityPosition[]
+  sublimits            FacilitySublimit[]
+  loans                Loan[]
+  servicingActivities  ServicingActivity[]
   servicingAssignments ServicingAssignment[]
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  transactionHistory TransactionHistory[]
+  trades               Trade[]
 
   @@index([creditAgreementId])
 }
 
 model FacilityPosition {
-  id          String   @id @default(cuid())
-  facilityId  String
-  facility    Facility @relation(fields: [facilityId], references: [id])
-  lenderId    String
-  lender      Lender   @relation(fields: [lenderId], references: [id])
-  commitment  Float
-  share       Float
-  status      String   @default("ACTIVE")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  facilityId String
+  lenderId   String
+  amount     Float
+  status     String   @default("ACTIVE")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lender     Lender   @relation(fields: [lenderId], references: [id])
+  facility   Facility @relation(fields: [facilityId], references: [id])
 
   @@index([facilityId])
   @@index([lenderId])
@@ -223,344 +184,132 @@ model FacilityPosition {
 model FacilitySublimit {
   id          String   @id @default(cuid())
   facilityId  String
-  facility    Facility @relation(fields: [facilityId], references: [id])
-  type        String   // e.g., CURRENCY, BORROWER, PURPOSE
+  type        String
   amount      Float
-  currency    String   @default("USD")
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  facility    Facility @relation(fields: [facilityId], references: [id])
 
   @@index([facilityId])
 }
 
 model Loan {
-  id                String    @id @default(cuid())
-  facilityId        String
-  facility          Facility  @relation(fields: [facilityId], references: [id])
-  drawdownNumber    Int
-  amount            Float     // Original drawdown amount
-  outstandingAmount Float     // Current outstanding amount
-  currency          String    @default("USD")
-  status            String    @default("PENDING")  // PENDING, ACTIVE, REPAID
-  drawdownDate      DateTime
-  maturityDate      DateTime
-  interestRate      Float     // Actual rate for this drawdown
-  interestAccrued   Float     @default(0)  // Track accrued interest
-  loanPositions     LoanPosition[]  // Track lender positions for this drawdown
-  repaymentSchedule RepaymentSchedule[]
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  transactionHistory TransactionHistory[]
+  id               String               @id @default(cuid())
+  facilityId       String
+  amount           Float
+  outstandingAmount Float
+  currency         String               @default("USD")
+  status           String               @default("ACTIVE")
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  facility         Facility             @relation(fields: [facilityId], references: [id])
+  positions        LoanPosition[]
+  transactions     TransactionHistory[]
 
   @@index([facilityId])
 }
 
 model LoanPosition {
-  id          String   @id @default(cuid())
-  loanId      String
-  loan        Loan     @relation(fields: [loanId], references: [id])
-  lenderId    String
-  lender      Lender   @relation(fields: [lenderId], references: [id])
-  amount      Float    // Lender's share of the loan amount
-  share       Float    // Percentage share (0-100)
-  status      String   @default("ACTIVE")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  loanId    String
+  lenderId  String
+  amount    Float
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lender    Lender   @relation(fields: [lenderId], references: [id])
+  loan      Loan     @relation(fields: [loanId], references: [id])
 
   @@index([loanId])
   @@index([lenderId])
 }
 
-model RepaymentSchedule {
-  id                String    @id @default(cuid())
-  loanId            String
-  loan              Loan      @relation(fields: [loanId], references: [id])
-  paymentNumber     Int
-  dueDate           DateTime
-  principalAmount   Float
-  interestAmount    Float
-  status            String    @default("PENDING")  // PENDING, PAID, OVERDUE
-  actualPaymentDate DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  @@index([loanId])
-}
-
 model Trade {
-  id                String           @id @default(cuid())
-  facilityId        String
-  facility          Facility         @relation(fields: [facilityId], references: [id])
-  counterpartyId    String
-  counterparty      Counterparty     @relation(fields: [counterpartyId], references: [id])
-  tradeDate        DateTime
-  settlementDate   DateTime
-  status           String           @default("PENDING")
-  amount           Float
-  price            Float
-  comments         TradeComment[]
-  historicalBalances TradeHistoricalBalance[]
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  transactionHistory TransactionHistory[]
-
-  @@index([facilityId])
-  @@index([counterpartyId])
-}
-
-model TradeComment {
-  id        String   @id @default(cuid())
-  tradeId   String
-  trade     Trade    @relation(fields: [tradeId], references: [id])
-  comment   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([tradeId])
-}
-
-model TradeHistoricalBalance {
-  id        String   @id @default(cuid())
-  tradeId   String
-  trade     Trade    @relation(fields: [tradeId], references: [id])
-  date      DateTime
-  balance   Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([tradeId])
-}
-
-model Counterparty {
-  id                String               @id @default(cuid())
-  legalName         String
-  dba              String?
-  registrationNumber String?
-  taxId            String?
-  typeId           String
-  type             CounterpartyType     @relation(fields: [typeId], references: [id])
-  status           String               @default("ACTIVE")
-  incorporationDate DateTime?
-  website          String?
-  description      String?
-  addresses        CounterpartyAddress[]
-  contacts         CounterpartyContact[]
-  trades           Trade[]
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
-
-  @@index([typeId])
-}
-
-model CounterpartyType {
-  id           String        @id @default(cuid())
-  name         String
-  description  String?
-  counterparties Counterparty[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-}
-
-model CounterpartyAddress {
-  id            String      @id @default(cuid())
+  id             String               @id @default(cuid())
+  facilityId     String
   counterpartyId String
-  counterparty   Counterparty @relation(fields: [counterpartyId], references: [id])
-  type          String      // LEGAL, OPERATIONAL, MAILING
-  street1       String
-  street2       String?
-  city          String
-  state         String?
-  postalCode    String?
-  country       String
-  isPrimary     Boolean     @default(false)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-
-  @@index([counterpartyId])
-}
-
-model CounterpartyContact {
-  id            String      @id @default(cuid())
-  counterpartyId String
-  counterparty   Counterparty @relation(fields: [counterpartyId], references: [id])
-  type          String      // PRIMARY, TRADING, OPERATIONS, LEGAL
-  firstName     String
-  lastName      String
-  title         String?
-  email         String?
-  phone         String?
-  isPrimary     Boolean     @default(false)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-
-  @@index([counterpartyId])
-}
-
-model Entity {
-  id                String          @id @default(cuid())
-  legalName         String
-  dba              String?
-  registrationNumber String?
-  taxId            String?
-  entityTypeId     String
-  entityType       EntityType      @relation(fields: [entityTypeId], references: [id])
-  status           String          @default("ACTIVE")
-  incorporationDate DateTime?
-  website          String?
-  description      String?
-  addresses        EntityAddress[]
-  contacts         EntityContact[]
-  borrower         Borrower?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-
-  @@index([entityTypeId])
-}
-
-model EntityType {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  entities    Entity[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model EntityAddress {
-  id          String    @id @default(cuid())
-  entityId    String
-  entity      Entity    @relation(fields: [entityId], references: [id])
-  type        String
-  street1     String
-  street2     String?
-  city        String
-  state       String?
-  postalCode  String?
-  country     String
-  isPrimary   Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([entityId])
-}
-
-model EntityContact {
-  id          String    @id @default(cuid())
-  entityId    String
-  entity      Entity    @relation(fields: [entityId], references: [id])
-  type        String
-  firstName   String
-  lastName    String
-  title       String?
-  email       String?
-  phone       String?
-  isPrimary   Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([entityId])
-}
-
-model ServicingActivity {
-  id              String    @id @default(cuid())
-  facilityId      String
-  facility        Facility  @relation(fields: [facilityId], references: [id])
-  
-  // Activity Type & Details
-  activityType    String    // INTEREST_PAYMENT, PRINCIPAL_PAYMENT, UNSCHEDULED_PAYMENT
-  dueDate         DateTime
-  amount          Float
-  description     String?
-  
-  // Status & Completion
-  status          String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, OVERDUE
-  completedAt     DateTime?
-  completedBy     String?
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  transactionHistory TransactionHistory[]
+  tradeDate      DateTime
+  settlementDate DateTime
+  amount         Float
+  price          Float
+  status         String               @default("PENDING")
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  counterparty   Counterparty         @relation(fields: [counterpartyId], references: [id])
+  facility       Facility             @relation(fields: [facilityId], references: [id])
+  transactions   TransactionHistory[]
 
   @@index([facilityId])
-  @@index([dueDate])
-  @@index([status])
-}
-
-model ServicingRole {
-  id                String    @id @default(cuid())
-  name              String    @unique
-  description       String
-  permissions       String    // JSON string of permissions
-  teamMembers       ServicingTeamMember[]
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-}
-
-model ServicingTeamMember {
-  id                String    @id @default(cuid())
-  name              String
-  email             String    @unique
-  roleId            String
-  role              ServicingRole @relation(fields: [roleId], references: [id])
-  status            String    @default("ACTIVE")  // ACTIVE, INACTIVE, ON_LEAVE
-  assignments       ServicingAssignment[]
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  @@index([roleId])
-}
-
-model ServicingAssignment {
-  id                String    @id @default(cuid())
-  teamMemberId      String
-  teamMember        ServicingTeamMember @relation(fields: [teamMemberId], references: [id])
-  facilityId        String
-  facility          Facility @relation(fields: [facilityId], references: [id])
-  assignmentType    String    // PRIMARY_AGENT, BACKUP_AGENT, SPECIALIST
-  startDate         DateTime
-  endDate           DateTime?
-  status            String    @default("ACTIVE")  // ACTIVE, COMPLETED, TRANSFERRED
-  notes             String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  @@index([teamMemberId])
-  @@index([facilityId])
+  @@index([counterpartyId])
 }
 
 model TransactionHistory {
-  id            String    @id @default(cuid())
-  eventType     String    // PAYDOWN, RATE_RESET, TRADE_SETTLEMENT, etc.
-  facilityId    String
-  facility      Facility  @relation(fields: [facilityId], references: [id])
-  
-  // Related entities
-  creditAgreementId String?
-  creditAgreement   CreditAgreement? @relation(fields: [creditAgreementId], references: [id])
-  loanId           String?
-  loan             Loan?    @relation(fields: [loanId], references: [id])
-  tradeId          String?
-  trade            Trade?   @relation(fields: [tradeId], references: [id])
+  id                  String             @id @default(cuid())
+  creditAgreementId   String?
+  loanId              String?
+  tradeId             String?
   servicingActivityId String?
-  servicingActivity ServicingActivity? @relation(fields: [servicingActivityId], references: [id])
-  
-  // Change details
-  balanceChange   Float?    // Change in loan balance
-  lenderShare     Float?    // Change in lender share
-  description     String    // Detailed description of the change
-  
-  // Timing
-  effectiveDate   DateTime  // When the change takes effect
-  processedBy     String    // User who processed the change
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  activityType        String
+  amount              Float
+  currency            String             @default("USD")
+  status              String             @default("PENDING")
+  description         String?
+  effectiveDate       DateTime
+  processedBy         String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  creditAgreement     CreditAgreement?   @relation(fields: [creditAgreementId], references: [id])
+  loan                Loan?              @relation(fields: [loanId], references: [id])
+  servicingActivity   ServicingActivity? @relation(fields: [servicingActivityId], references: [id])
+  trade               Trade?             @relation(fields: [tradeId], references: [id])
 
-  @@index([facilityId])
   @@index([creditAgreementId])
   @@index([loanId])
   @@index([tradeId])
   @@index([servicingActivityId])
-  @@index([eventType])
-  @@index([effectiveDate])
+}
+
+model ServicingActivity {
+  id                 String               @id @default(cuid())
+  facilityId         String
+  activityType       String
+  dueDate            DateTime
+  description        String?
+  amount             Float
+  status             String               @default("PENDING")
+  completedAt        DateTime?
+  completedBy        String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  facility           Facility             @relation(fields: [facilityId], references: [id])
+  transactions       TransactionHistory[]
+  servicingAssignment ServicingAssignment?
+
+  @@index([facilityId])
+}
+
+model ServicingAssignment {
+  id                 String            @id @default(cuid())
+  facilityId         String
+  servicingActivityId String           @unique
+  assignedTo         String
+  status             String           @default("PENDING")
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  facility           Facility         @relation(fields: [facilityId], references: [id])
+  servicingActivity  ServicingActivity @relation(fields: [servicingActivityId], references: [id])
+
+  @@index([facilityId])
+  @@index([servicingActivityId])
+}
+
+model Counterparty {
+  id        String   @id @default(cuid())
+  name      String
+  type      String
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  trades    Trade[]
 }

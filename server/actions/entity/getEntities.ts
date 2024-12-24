@@ -1,13 +1,12 @@
 'use server'
 
 import { prisma } from '@/server/db/client'
-import { type EntityWithRelations } from '@/server/types'
+import { type EntityWithRelations } from '@/server/types/entity'
 
 export async function getEntities(): Promise<EntityWithRelations[]> {
   try {
     const entities = await prisma.entity.findMany({
       include: {
-        entityType: true,
         addresses: {
           where: {
             isPrimary: true
@@ -17,7 +16,10 @@ export async function getEntities(): Promise<EntityWithRelations[]> {
           where: {
             isPrimary: true
           }
-        }
+        },
+        beneficialOwners: true,
+        lender: true,
+        borrower: true
       },
       orderBy: {
         createdAt: 'desc'

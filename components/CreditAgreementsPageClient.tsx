@@ -1,31 +1,28 @@
 'use client'
 
+import { useState } from 'react'
 import { ScrollText } from 'lucide-react'
 import { NewCreditAgreementModal } from '@/components/NewCreditAgreementModal'
 import { CreditAgreementList } from '@/components/CreditAgreementList'
-import { useCreditAgreements } from '@/hooks/useCreditAgreements'
+import { getCreditAgreements } from '@/server/actions/loan/getCreditAgreements'
+import { type CreditAgreementWithRelations } from '@/server/types/credit-agreement'
 
-export function CreditAgreementsPageClient() {
-  const { creditAgreements, isLoading, isError, mutate } = useCreditAgreements()
+interface CreditAgreementsPageClientProps {
+  initialCreditAgreements: CreditAgreementWithRelations[]
+}
 
-  const handleCreditAgreementCreated = () => {
-    mutate()
-  }
+export function CreditAgreementsPageClient({ 
+  initialCreditAgreements 
+}: CreditAgreementsPageClientProps) {
+  const [creditAgreements, setCreditAgreements] = useState<CreditAgreementWithRelations[]>(initialCreditAgreements)
 
-  if (isError) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-destructive">Error: Failed to load credit agreements</p>
-      </div>
-    )
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">Loading credit agreements...</p>
-      </div>
-    )
+  const handleUpdate = async () => {
+    try {
+      const updatedAgreements = await getCreditAgreements()
+      setCreditAgreements(updatedAgreements as CreditAgreementWithRelations[])
+    } catch (error) {
+      console.error('Failed to update credit agreements:', error)
+    }
   }
 
   return (
@@ -38,7 +35,7 @@ export function CreditAgreementsPageClient() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <NewCreditAgreementModal onCreditAgreementCreated={handleCreditAgreementCreated} />
+          <NewCreditAgreementModal onCreditAgreementCreated={handleUpdate} />
         </div>
       </div>
 
@@ -48,13 +45,16 @@ export function CreditAgreementsPageClient() {
             <ScrollText className="h-10 w-10 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">No credit agreements</h3>
             <p className="mb-4 mt-2 text-sm text-muted-foreground">
-              You haven't created any credit agreements yet. Add one to get started.
+              You haven&apos;t created any credit agreements yet. Add one to get started.
             </p>
-            <NewCreditAgreementModal onCreditAgreementCreated={handleCreditAgreementCreated} />
+            <NewCreditAgreementModal onCreditAgreementCreated={handleUpdate} />
           </div>
         </div>
       ) : (
-        <CreditAgreementList creditAgreements={creditAgreements} />
+        <CreditAgreementList 
+          creditAgreements={creditAgreements} 
+          onUpdate={handleUpdate}
+        />
       )}
     </div>
   )

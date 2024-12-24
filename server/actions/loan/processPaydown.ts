@@ -1,42 +1,57 @@
 'use server'
 
 import { prisma } from '@/server/db/client'
-import { type PaydownInput, type PaydownResult } from '@/server/types/servicing'
+import { type PaydownInput, type PaydownResult, paydownInputSchema } from '@/server/types/servicing'
 import { revalidatePath } from 'next/cache'
 
 export async function processPaydown(params: PaydownInput): Promise<PaydownResult> {
+  if (!params) {
+    throw new Error('Paydown parameters are required')
+  }
+
   try {
+    // Validate input
+    const validatedParams = paydownInputSchema.parse(params)
+
     // Start a transaction since we need to update multiple records atomically
     return await prisma.$transaction(async (tx) => {
       // 1. Verify the loan exists and get current amounts
       const loan = await tx.loan.findUnique({
-        where: { id: params.loanId },
+        where: { id: validatedParams.loanId },
         include: {
-          loanPositions: true,
+          positions: true,
           facility: {
             include: {
+              positions: true,
               creditAgreement: true
             }
-          },
-        },
+          }
+        }
       })
 
       if (!loan) {
-        throw new Error('Loan not found')
+        throw new Error(`Loan with ID ${validatedParams.loanId} not found`)
       }
 
-      if (loan.outstandingAmount < params.amount) {
-        throw new Error('Paydown amount exceeds outstanding balance')
+      if (!loan.facility) {
+        throw new Error(`Facility not found for loan ${validatedParams.loanId}`)
+      }
+
+      // Calculate total outstanding amount from positions
+      const totalOutstanding = loan.positions.reduce((sum: number, pos) => sum + pos.amount, 0)
+
+      if (totalOutstanding < validatedParams.amount) {
+        throw new Error(`Paydown amount ${validatedParams.amount} exceeds outstanding balance ${totalOutstanding}`)
       }
 
       // 2. Calculate new amounts
-      const newOutstandingAmount = loan.outstandingAmount - params.amount
-      const newAvailableAmount = loan.facility.availableAmount + params.amount
+      const availableAmount = loan.facility.positions.reduce((sum: number, pos) => sum + pos.amount, 0)
+      const newAvailableAmount = availableAmount + validatedParams.amount
 
       // 3. Update loan positions
-      const lenderPositionUpdates = loan.loanPositions.map(async (position) => {
-        const share = position.share / 100 // Convert percentage to decimal
-        const paydownShare = params.amount * share
+      const positionUpdates = loan.positions.map(async (position) => {
+        const share = position.amount / totalOutstanding // Calculate share based on current position
+        const paydownShare = validatedParams.amount * share
         const newAmount = position.amount - paydownShare
 
         const updatedPosition = await tx.loanPosition.update({
@@ -48,69 +63,81 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
           lenderId: position.lenderId,
           previousAmount: position.amount,
           newAmount: updatedPosition.amount,
-          share: position.share
+          share: share * 100 // Convert to percentage
         }
       })
 
-      // 4. Update loan outstanding amount
-      const updatedLoan = await tx.loan.update({
-        where: { id: params.loanId },
-        data: { outstandingAmount: newOutstandingAmount }
-      })
+      // 4. Update facility positions
+      await Promise.all(loan.facility.positions.map(async (position) => {
+        const share = position.amount / availableAmount
+        const increaseShare = validatedParams.amount * share
+        await tx.facilityPosition.update({
+          where: { id: position.id },
+          data: { amount: position.amount + increaseShare }
+        })
+      }))
 
-      // 5. Update facility available amount
-      const updatedFacility = await tx.facility.update({
-        where: { id: params.facilityId },
-        data: { availableAmount: newAvailableAmount }
-      })
-
-      // 6. Create servicing activity record
+      // 5. Create servicing activity record
       const servicingActivity = await tx.servicingActivity.create({
         data: {
-          facilityId: params.facilityId,
+          facilityId: validatedParams.facilityId,
           activityType: 'PRINCIPAL_PAYMENT',
-          amount: params.amount,
-          dueDate: params.paymentDate,
-          description: params.description || `Principal payment of ${params.amount}`,
+          amount: validatedParams.amount,
+          dueDate: validatedParams.paymentDate,
+          description: validatedParams.description || `Principal payment of ${validatedParams.amount}`,
           status: 'COMPLETED',
           completedAt: new Date(),
+          completedBy: 'SYSTEM'
         }
       })
 
-      // 7. Create transaction history record
-      const transaction = await tx.transactionHistory.create({
+      // 6. Create transaction history record
+      const transactionHistory = await tx.transactionHistory.create({
         data: {
-          eventType: 'PAYDOWN',
-          facilityId: params.facilityId,
           creditAgreementId: loan.facility.creditAgreementId,
-          loanId: params.loanId,
+          loanId: validatedParams.loanId,
           servicingActivityId: servicingActivity.id,
-          balanceChange: -params.amount,
-          description: params.description || `Principal payment of ${params.amount}`,
-          effectiveDate: params.paymentDate,
-          processedBy: 'Current User' // TODO: Replace with actual user
+          activityType: 'PRINCIPAL_PAYMENT',
+          amount: validatedParams.amount,
+          currency: loan.currency,
+          status: 'COMPLETED',
+          description: validatedParams.description || `Principal payment of ${validatedParams.amount}`,
+          effectiveDate: validatedParams.paymentDate,
+          processedBy: 'SYSTEM'
         }
       })
 
-      // 8. Wait for all lender position updates to complete
-      const updatedPositions = await Promise.all(lenderPositionUpdates)
+      // 7. Wait for all position updates to complete
+      const updatedPositions = await Promise.all(positionUpdates)
 
       // Revalidate the servicing and transactions pages to reflect the changes
       revalidatePath('/servicing')
       revalidatePath('/transactions')
 
+      // Get the updated loan for the response
+      const updatedLoan = await tx.loan.findUnique({
+        where: { id: validatedParams.loanId },
+        include: { positions: true }
+      })
+
+      if (!updatedLoan) {
+        throw new Error('Failed to fetch updated loan')
+      }
+
+      const newTotalOutstanding = updatedLoan.positions.reduce((sum: number, pos) => sum + pos.amount, 0)
+
       return {
         success: true,
         loan: {
-          id: loan.id,
-          previousOutstandingAmount: loan.outstandingAmount,
-          newOutstandingAmount: updatedLoan.outstandingAmount,
+          id: updatedLoan.id,
+          previousOutstandingAmount: totalOutstanding,
+          newOutstandingAmount: newTotalOutstanding,
           lenderPositions: updatedPositions
         },
         facility: {
-          id: updatedFacility.id,
-          previousAvailableAmount: loan.facility.availableAmount,
-          newAvailableAmount: updatedFacility.availableAmount
+          id: loan.facility.id,
+          previousAvailableAmount: availableAmount,
+          newAvailableAmount: newAvailableAmount
         },
         servicingActivity: {
           id: servicingActivity.id,
@@ -122,7 +149,7 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
       }
     })
   } catch (error) {
-    console.error('Error processing paydown:', error)
-    throw new Error(error instanceof Error ? error.message : 'Failed to process paydown')
+    console.error('Error processing paydown:', error instanceof Error ? error.message : 'Unknown error')
+    throw error instanceof Error ? error : new Error('Failed to process paydown')
   }
 } 

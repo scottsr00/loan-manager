@@ -1,21 +1,49 @@
 'use server'
 
-import { db } from '@/server/db'
-import { format, startOfMonth, subMonths } from 'date-fns'
+import { prisma } from '@/server/db/client'
+import type { Loan, Borrower, Entity } from '@prisma/client'
+
+interface BorrowerWithEntity extends Borrower {
+  entity: Entity
+}
 
 export async function getAnalytics() {
   try {
-    // Get all credit agreements with related data
-    const creditAgreements = await db.creditAgreement.findMany({
+    // Get commitment by month
+    const commitmentByMonth = await prisma.$queryRaw`
+      SELECT 
+        strftime('%Y-%m', createdAt) as month,
+        SUM(amount) as total
+      FROM Loan
+      GROUP BY month
+      ORDER BY month DESC
+      LIMIT 12
+    `
+
+    // Get facilities by type
+    const facilitiesByType = await prisma.$queryRaw`
+      SELECT 
+        type,
+        COUNT(*) as count
+      FROM FacilitySublimit
+      GROUP BY type
+    `
+
+    // Get commitments by borrower
+    const borrowers = await prisma.borrower.findMany({
       include: {
-        borrower: true,
-        lender: true,
-        facilities: {
+        entity: true
+      }
+    }) as BorrowerWithEntity[]
+
+    // Get all loans with their relationships
+    const loans = await prisma.loan.findMany({
+      include: {
+        facility: {
           include: {
-            trades: {
+            creditAgreement: {
               include: {
-                counterparty: true,
-                historicalBalances: true
+                borrower: true
               }
             }
           }
@@ -23,92 +51,47 @@ export async function getAnalytics() {
       }
     })
 
-    if (!creditAgreements || creditAgreements.length === 0) {
-      return {
-        commitmentByMonth: [],
-        facilitiesByType: [],
-        commitmentsByBorrower: [],
-        creditMetrics: [],
-        interestProjection: []
+    // Group loans by borrower
+    const loansByBorrower = loans.reduce((acc, loan) => {
+      const borrowerId = loan.facility.creditAgreement.borrower.id
+      if (!acc[borrowerId]) {
+        acc[borrowerId] = []
       }
-    }
-
-    // Calculate commitment by month for the last 12 months
-    const last12Months = Array.from({ length: 12 }, (_, i) => {
-      const date = startOfMonth(subMonths(new Date(), i))
-      return format(date, 'yyyy-MM')
-    }).reverse()
-
-    const commitmentByMonth = last12Months.map(monthStr => {
-      const totalCommitment = creditAgreements.reduce((sum, agreement) => {
-        const agreementDate = format(new Date(agreement.startDate), 'yyyy-MM')
-        if (agreementDate <= monthStr) {
-          sum += agreement.amount
-        }
-        return sum
-      }, 0)
-
-      return {
-        date: monthStr,
-        volume: totalCommitment
-      }
-    })
-
-    // Calculate facilities by type
-    const facilitiesByType = creditAgreements.reduce((acc, agreement) => {
-      agreement.facilities.forEach(facility => {
-        const existingType = acc.find(item => item.type === facility.facilityType)
-        if (existingType) {
-          existingType.amount += facility.commitmentAmount
-        } else {
-          acc.push({
-            type: facility.facilityType,
-            amount: facility.commitmentAmount
-          })
-        }
-      })
+      acc[borrowerId].push(loan)
       return acc
-    }, [] as { type: string; amount: number }[])
+    }, {} as Record<string, Loan[]>)
 
-    // Calculate commitments by borrower
-    const commitmentsByBorrower = creditAgreements.map(agreement => ({
-      borrowerName: agreement.borrower.name,
-      commitment: agreement.amount
+    const commitmentsByBorrower = borrowers.map(borrower => ({
+      borrowerName: borrower.entity.legalName,
+      commitment: (loansByBorrower[borrower.id] || []).reduce((sum, loan) => sum + loan.amount, 0)
     }))
 
-    // Compile credit metrics
-    const creditMetrics = creditAgreements.map(agreement => ({
-      borrowerName: agreement.borrower.name,
-      creditRating: 'N/A', // Not in current schema
-      totalAssets: 0, // Not in current schema
-      totalLiabilities: 0, // Not in current schema
-      totalEquity: 0, // Not in current schema
-      totalCommitment: agreement.amount
+    // Get credit metrics
+    const creditMetrics = borrowers.map(borrower => ({
+      borrowerName: borrower.entity.legalName,
+      creditRating: borrower.creditRating || 'N/A',
+      totalCommitment: (loansByBorrower[borrower.id] || []).reduce((sum, loan) => sum + loan.amount, 0)
     }))
 
-    // Calculate projected interest income for next 12 months
-    const interestProjection = last12Months.map(monthStr => {
-      const projectedInterest = creditAgreements.reduce((sum, agreement) => {
-        const annualRate = agreement.interestRate / 100
-        const monthlyRate = annualRate / 12
-        return sum + (agreement.amount * monthlyRate)
-      }, 0)
-
+    // Calculate interest projection (simplified)
+    const interestProjection = Array.from({ length: 12 }, (_, i) => {
+      const date = new Date()
+      date.setMonth(date.getMonth() + i)
       return {
-        date: monthStr,
-        amount: projectedInterest
+        date: date.toISOString().slice(0, 7), // YYYY-MM format
+        amount: 0 // Placeholder - would need actual interest rate data
       }
     })
 
     return {
-      commitmentByMonth,
-      facilitiesByType,
+      commitmentByMonth: commitmentByMonth || [],
+      facilitiesByType: facilitiesByType || [],
       commitmentsByBorrower,
       creditMetrics,
       interestProjection
     }
   } catch (error) {
-    console.error('Error fetching analytics:', error)
+    console.error('Error fetching analytics:', error instanceof Error ? error.message : 'Unknown error')
     return {
       commitmentByMonth: [],
       facilitiesByType: [],

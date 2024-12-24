@@ -2,10 +2,12 @@
 
 import { useState, useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { DataGrid } from '@/components/ui/data-grid'
-import { type ColDef } from 'ag-grid-community'
+import { type ColDef, type ICellRendererParams } from 'ag-grid-community'
+import { BorrowerModal } from './BorrowerModal'
+import { Plus } from 'lucide-react'
 import type { Borrower } from '@/types/borrower'
-import { BorrowerDetailsModal } from './BorrowerDetailsModal'
 
 interface BorrowerListProps {
   borrowers: Borrower[]
@@ -13,113 +15,111 @@ interface BorrowerListProps {
 
 export function BorrowerList({ borrowers }: BorrowerListProps) {
   const [selectedBorrower, setSelectedBorrower] = useState<Borrower | null>(null)
-  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'name',
-      headerName: 'Name',
-      width: 200,
-      pinned: 'left',
+      field: 'entity.legalName',
+      headerName: 'Legal Name',
+      width: 250,
+      valueFormatter: (params) => {
+        const dba = params.data.entity.dba
+        return dba ? `${params.value} (DBA: ${dba})` : params.value
+      },
     },
     {
-      field: 'businessType',
-      headerName: 'Type',
-      width: 120,
-      cellRenderer: (params: any) => (
-        <Badge variant="outline">
-          {params.value || 'CORPORATE'}
-        </Badge>
-      ),
+      field: 'entity.countryOfIncorporation',
+      headerName: 'Country of Incorporation',
+      width: 150,
     },
     {
-      field: 'industry',
+      field: 'industrySegment',
       headerName: 'Industry',
       width: 150,
     },
     {
-      field: 'taxId',
-      headerName: 'Tax ID',
-      width: 130,
-    },
-    {
-      field: 'jurisdiction',
-      headerName: 'Jurisdiction',
-      width: 130,
-    },
-    {
-      field: 'status',
-      headerName: 'Status',
-      width: 120,
-      cellRenderer: (params: any) => (
-        <Badge variant={params.value === 'ACTIVE' ? 'default' : 'secondary'}>
-          {params.value || 'ACTIVE'}
-        </Badge>
-      ),
-    },
-    {
-      field: 'riskRating',
-      headerName: 'Risk Rating',
-      width: 120,
-      cellRenderer: (params: any) => params.value ? (
-        <Badge variant={
-          params.value.includes('HIGH') ? 'destructive' :
-          params.value.includes('MEDIUM') ? 'warning' : 'default'
-        }>
-          {params.value}
-        </Badge>
-      ) : '-',
+      field: 'businessType',
+      headerName: 'Business Type',
+      width: 150,
     },
     {
       field: 'creditRating',
       headerName: 'Credit Rating',
       width: 120,
+      valueFormatter: (params) => {
+        if (!params.value) return 'N/A'
+        return params.data.ratingAgency ? `${params.value} (${params.data.ratingAgency})` : params.value
+      },
+    },
+    {
+      field: 'riskRating',
+      headerName: 'Risk Rating',
+      width: 120,
+    },
+    {
+      field: 'onboardingStatus',
+      headerName: 'Onboarding',
+      width: 120,
+      cellRenderer: (params: ICellRendererParams) => (
+        <Badge variant={params.value === 'COMPLETED' ? 'success' : 'secondary'}>
+          {params.value}
+        </Badge>
+      ),
     },
     {
       field: 'kycStatus',
       headerName: 'KYC',
       width: 120,
-      cellRenderer: (params: any) => (
-        <Badge variant={params.value === 'COMPLETED' ? 'default' : 'secondary'}>
+      cellRenderer: (params: ICellRendererParams) => (
+        <Badge variant={params.value === 'COMPLETED' ? 'success' : 'secondary'}>
           {params.value}
         </Badge>
       ),
     },
     {
-      field: 'amlStatus',
-      headerName: 'AML',
-      width: 120,
-      cellRenderer: (params: any) => (
-        <Badge variant={
-          params.value === 'CLEARED' ? 'default' :
-          params.value === 'FLAGGED' ? 'destructive' : 'secondary'
-        }>
-          {params.value}
-        </Badge>
-      ),
+      field: 'entity.contacts',
+      headerName: 'Primary Contact',
+      width: 200,
+      valueGetter: (params) => {
+        const primaryContact = params.data.entity.contacts[0]
+        if (!primaryContact) return 'No primary contact'
+        const contactInfo = `${primaryContact.firstName} ${primaryContact.lastName}`
+        return primaryContact.title ? `${contactInfo}\n${primaryContact.title}` : contactInfo
+      },
     },
     {
-      field: 'sanctionsStatus',
-      headerName: 'Sanctions',
-      width: 120,
-      cellRenderer: (params: any) => (
-        <Badge variant={
-          params.value === 'CLEARED' ? 'default' :
-          params.value === 'FLAGGED' ? 'destructive' : 'secondary'
-        }>
-          {params.value}
-        </Badge>
-      ),
+      field: 'entity.addresses',
+      headerName: 'Location',
+      width: 200,
+      valueGetter: (params) => {
+        const primaryAddress = params.data.entity.addresses[0]
+        if (!primaryAddress) return 'No primary address'
+        return primaryAddress.state 
+          ? `${primaryAddress.city}, ${primaryAddress.state}, ${primaryAddress.country}`
+          : `${primaryAddress.city}, ${primaryAddress.country}`
+      },
     },
   ], [])
 
-  const handleRowClick = (data: Borrower) => {
-    setSelectedBorrower(data)
-    setDetailsOpen(true)
+  const handleModalClose = () => {
+    setIsModalOpen(false)
+    setSelectedBorrower(null)
   }
 
   return (
-    <>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button
+          onClick={() => {
+            setSelectedBorrower(null)
+            setIsModalOpen(true)
+          }}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Borrower
+        </Button>
+      </div>
+
       <DataGrid
         rowData={borrowers}
         columnDefs={columnDefs}
@@ -129,15 +129,17 @@ export function BorrowerList({ borrowers }: BorrowerListProps) {
           resizable: true,
           floatingFilter: true,
         }}
-        onRowClick={handleRowClick}
-        domLayout="autoHeight"
+        onRowClick={(params) => {
+          setSelectedBorrower(params.data)
+          setIsModalOpen(true)
+        }}
       />
 
-      <BorrowerDetailsModal
+      <BorrowerModal
+        open={isModalOpen}
+        onClose={handleModalClose}
         borrower={selectedBorrower}
-        open={detailsOpen}
-        onOpenChange={setDetailsOpen}
       />
-    </>
+    </div>
   )
 } 

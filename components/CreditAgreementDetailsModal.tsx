@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { format } from 'date-fns'
 import { formatCurrency } from '@/lib/utils'
-import { CreditAgreement, Borrower, Lender, Facility } from '@prisma/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,18 +20,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-
-type CreditAgreementWithRelations = CreditAgreement & {
-  borrower: Borrower;
-  lender: Lender;
-  facilities: Facility[];
-}
+import { type CreditAgreementWithRelations } from '@/server/types/credit-agreement'
 
 interface CreditAgreementDetailsModalProps {
-  creditAgreement: any | null
+  creditAgreement: CreditAgreementWithRelations | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onUpdate?: () => void
+}
+
+interface FormData {
+  id: string
+  agreementNumber: string
+  borrowerId: string
+  status: string
+  amount: number
+  currency: string
+  startDate: Date
+  maturityDate: Date
+  interestRate: number
+  description?: string | null
 }
 
 export function CreditAgreementDetailsModal({
@@ -44,16 +51,15 @@ export function CreditAgreementDetailsModal({
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { borrowers = [], isLoading: isLoadingBorrowers } = useBorrowers()
-  const [formData, setFormData] = useState<any>(null)
+  const [formData, setFormData] = useState<FormData | null>(null)
 
   if (!creditAgreement) return null
 
   const handleEdit = () => {
     setFormData({
       id: creditAgreement.id,
-      agreementName: creditAgreement.agreementName,
       agreementNumber: creditAgreement.agreementNumber,
-      borrowerId: creditAgreement.borrower.id,
+      borrowerId: creditAgreement.borrowerId,
       status: creditAgreement.status,
       amount: creditAgreement.amount,
       currency: creditAgreement.currency,
@@ -88,11 +94,11 @@ export function CreditAgreementDetailsModal({
     }
   }
 
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
+  const handleInputChange = (field: keyof FormData, value: any) => {
+    setFormData(prev => prev ? ({
       ...prev,
       [field]: value
-    }))
+    }) : null)
   }
 
   return (
@@ -104,27 +110,18 @@ export function CreditAgreementDetailsModal({
               <DialogTitle className="text-2xl">
                 {isEditing ? (
                   <Input
-                    value={formData.agreementName}
-                    onChange={(e) => handleInputChange('agreementName', e.target.value)}
+                    value={formData?.agreementNumber}
+                    onChange={(e) => handleInputChange('agreementNumber', e.target.value)}
                     className="text-2xl font-semibold"
                   />
                 ) : (
-                  creditAgreement.agreementName
+                  creditAgreement.agreementNumber
                 )}
               </DialogTitle>
               <div className="flex items-center gap-2 mt-2">
                 {isEditing ? (
-                  <Input
-                    value={formData.agreementNumber}
-                    onChange={(e) => handleInputChange('agreementNumber', e.target.value)}
-                    className="w-40"
-                  />
-                ) : (
-                  <Badge variant="outline">{creditAgreement.agreementNumber}</Badge>
-                )}
-                {isEditing ? (
                   <Select
-                    value={formData.status}
+                    value={formData?.status}
                     onValueChange={(value) => handleInputChange('status', value)}
                   >
                     <SelectTrigger className="w-32">
@@ -182,12 +179,12 @@ export function CreditAgreementDetailsModal({
                   <div className="flex gap-2">
                     <Input
                       type="number"
-                      value={formData.amount}
+                      value={formData?.amount}
                       onChange={(e) => handleInputChange('amount', parseFloat(e.target.value))}
                       className="flex-1"
                     />
                     <Select
-                      value={formData.currency}
+                      value={formData?.currency}
                       onValueChange={(value) => handleInputChange('currency', value)}
                     >
                       <SelectTrigger className="w-24">
@@ -209,7 +206,7 @@ export function CreditAgreementDetailsModal({
                 {isEditing ? (
                   <Input
                     type="number"
-                    value={formData.interestRate}
+                    value={formData?.interestRate}
                     onChange={(e) => handleInputChange('interestRate', parseFloat(e.target.value))}
                     step="0.01"
                   />
@@ -221,7 +218,7 @@ export function CreditAgreementDetailsModal({
                 <Label>Start Date</Label>
                 {isEditing ? (
                   <DatePicker
-                    value={formData.startDate}
+                    value={formData?.startDate}
                     onChange={(date) => handleInputChange('startDate', date)}
                   />
                 ) : (
@@ -232,7 +229,7 @@ export function CreditAgreementDetailsModal({
                 <Label>Maturity Date</Label>
                 {isEditing ? (
                   <DatePicker
-                    value={formData.maturityDate}
+                    value={formData?.maturityDate}
                     onChange={(date) => handleInputChange('maturityDate', date)}
                   />
                 ) : (
@@ -243,7 +240,7 @@ export function CreditAgreementDetailsModal({
                 <Label>Description</Label>
                 {isEditing ? (
                   <Input
-                    value={formData.description || ''}
+                    value={formData?.description || ''}
                     onChange={(e) => handleInputChange('description', e.target.value)}
                   />
                 ) : (
@@ -263,7 +260,7 @@ export function CreditAgreementDetailsModal({
                 <Label>Borrower</Label>
                 {isEditing ? (
                   <Select
-                    value={formData.borrowerId}
+                    value={formData?.borrowerId}
                     onValueChange={(value) => handleInputChange('borrowerId', value)}
                     disabled={isLoadingBorrowers}
                   >
@@ -273,18 +270,20 @@ export function CreditAgreementDetailsModal({
                     <SelectContent>
                       {borrowers.map((borrower) => (
                         <SelectItem key={borrower.id} value={borrower.id}>
-                          {borrower.name}
+                          {borrower.legalName}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 ) : (
                   <>
-                    <p>{creditAgreement.borrower.name}</p>
+                    <p>{creditAgreement.borrower?.legalName || 'N/A'}</p>
                     <div className="flex gap-2 mt-1">
-                      <Badge variant="outline">{creditAgreement.borrower.type}</Badge>
-                      <Badge variant={creditAgreement.borrower.status === 'ACTIVE' ? 'success' : 'secondary'}>
-                        {creditAgreement.borrower.status}
+                      {creditAgreement.borrower?.dba && (
+                        <Badge variant="outline">{creditAgreement.borrower.dba}</Badge>
+                      )}
+                      <Badge variant={creditAgreement.borrower?.status === 'ACTIVE' ? 'success' : 'secondary'}>
+                        {creditAgreement.borrower?.status || 'N/A'}
                       </Badge>
                     </div>
                   </>
@@ -301,11 +300,13 @@ export function CreditAgreementDetailsModal({
             <CardContent className="space-y-2">
               <div>
                 <Label>Name</Label>
-                <p>{creditAgreement.lender.name}</p>
+                <p>{creditAgreement.lender?.legalName || 'N/A'}</p>
                 <div className="flex gap-2 mt-1">
-                  <Badge variant="outline">{creditAgreement.lender.type}</Badge>
-                  <Badge variant={creditAgreement.lender.status === 'ACTIVE' ? 'success' : 'secondary'}>
-                    {creditAgreement.lender.status}
+                  {creditAgreement.lender?.dba && (
+                    <Badge variant="outline">{creditAgreement.lender.dba}</Badge>
+                  )}
+                  <Badge variant={creditAgreement.lender?.status === 'ACTIVE' ? 'success' : 'secondary'}>
+                    {creditAgreement.lender?.status || 'N/A'}
                   </Badge>
                 </div>
               </div>

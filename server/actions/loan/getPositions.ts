@@ -2,7 +2,62 @@
 
 import { prisma } from '@/server/db/client'
 
-export async function getPositions() {
+interface PositionResponse {
+  id: string
+  agreementNumber: string
+  borrower: {
+    name: string
+    type: string
+    status: string
+  }
+  agent: {
+    name: string
+    type: string
+  }
+  amount: number
+  currency: string
+  status: string
+  startDate: Date
+  maturityDate: Date
+  facilities: {
+    id: string
+    facilityName: string
+    facilityType: string
+    commitmentAmount: number
+    currency: string
+    status: string
+    interestType: string
+    baseRate: string
+    margin: number
+    positions: {
+      lender: string
+      commitment: number
+      status: string
+    }[]
+    trades: {
+      id: string
+      counterparty: string
+      amount: number
+      price: number
+      status: string
+      tradeDate: Date
+      settlementDate: Date
+    }[]
+    loans: {
+      id: string
+      amount: number
+      currency: string
+      status: string
+      positions: {
+        lender: string
+        amount: number
+        status: string
+      }[]
+    }[]
+  }[]
+}
+
+export async function getPositions(): Promise<PositionResponse[]> {
   try {
     const creditAgreements = await prisma.creditAgreement.findMany({
       include: {
@@ -10,23 +65,17 @@ export async function getPositions() {
         lender: true,
         facilities: {
           include: {
-            facilityPositions: {
+            positions: {
               include: {
                 lender: true
               }
             },
             loans: {
               include: {
-                loanPositions: {
+                positions: {
                   include: {
                     lender: true
                   }
-                },
-                repaymentSchedule: {
-                  orderBy: {
-                    dueDate: 'asc'
-                  },
-                  take: 1
                 }
               }
             },
@@ -39,7 +88,7 @@ export async function getPositions() {
         }
       },
       orderBy: {
-        agreementName: 'asc'
+        agreementNumber: 'asc'
       }
     })
 
@@ -49,16 +98,15 @@ export async function getPositions() {
 
     return creditAgreements.map(agreement => ({
       id: agreement.id,
-      agreementName: agreement.agreementName || 'Unnamed Agreement',
-      agreementNumber: agreement.agreementNumber || 'No Number',
+      agreementNumber: agreement.agreementNumber,
       borrower: {
-        name: agreement.borrower.name,
-        type: agreement.borrower.type,
-        status: agreement.borrower.status
+        name: agreement.borrower?.legalName || 'Unknown',
+        type: 'BORROWER',
+        status: agreement.borrower?.status || 'UNKNOWN'
       },
       agent: {
-        name: agreement.lender.name,
-        type: agreement.lender.type
+        name: agreement.lender?.legalName || 'Unknown',
+        type: 'LENDER'
       },
       amount: agreement.amount,
       currency: agreement.currency,
@@ -70,21 +118,19 @@ export async function getPositions() {
         facilityName: facility.facilityName,
         facilityType: facility.facilityType,
         commitmentAmount: facility.commitmentAmount,
-        availableAmount: facility.availableAmount,
         currency: facility.currency,
         status: facility.status,
         interestType: facility.interestType,
         baseRate: facility.baseRate,
         margin: facility.margin,
-        positions: facility.facilityPositions.map(pos => ({
-          lender: pos.lender.name,
-          commitment: pos.commitment,
-          share: pos.share,
+        positions: facility.positions.map(pos => ({
+          lender: pos.lender?.legalName || 'Unknown',
+          commitment: pos.amount,
           status: pos.status
         })),
         trades: facility.trades.map(trade => ({
           id: trade.id,
-          counterparty: trade.counterparty.name,
+          counterparty: trade.counterparty?.legalName || 'Unknown',
           amount: trade.amount,
           price: trade.price,
           status: trade.status,
@@ -93,25 +139,12 @@ export async function getPositions() {
         })),
         loans: facility.loans.map(loan => ({
           id: loan.id,
-          drawdownNumber: loan.drawdownNumber,
           amount: loan.amount,
-          outstandingAmount: loan.outstandingAmount,
           currency: loan.currency,
           status: loan.status,
-          drawdownDate: loan.drawdownDate,
-          maturityDate: loan.maturityDate,
-          interestRate: loan.interestRate,
-          interestAccrued: loan.interestAccrued,
-          nextPayment: loan.repaymentSchedule[0] ? {
-            dueDate: loan.repaymentSchedule[0].dueDate,
-            principalAmount: loan.repaymentSchedule[0].principalAmount,
-            interestAmount: loan.repaymentSchedule[0].interestAmount,
-            status: loan.repaymentSchedule[0].status
-          } : null,
-          positions: loan.loanPositions.map(pos => ({
-            lender: pos.lender.name,
+          positions: loan.positions.map(pos => ({
+            lender: pos.lender?.legalName || 'Unknown',
             amount: pos.amount,
-            share: pos.share,
             status: pos.status
           }))
         }))

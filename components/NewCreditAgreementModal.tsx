@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { createCreditAgreement } from '@/server/actions/loan/createCreditAgreement'
-import { type CreditAgreementWithRelations } from '@/server/actions/loan/types'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,10 +15,6 @@ import {
   DialogTrigger
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { getEntities, type EntityWithRelations } from '@/server/actions/entity'
-import { DatePicker } from '@/components/ui/date-picker'
-import { FacilityFormDialog } from './FacilityFormDialog'
 import {
   Form,
   FormControl,
@@ -41,6 +36,18 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { DatePicker } from '@/components/ui/date-picker'
+import { FacilityFormDialog } from './FacilityFormDialog'
+import { type EntityWithRelations } from '@/server/types/entity'
+import { creditAgreementInputSchema, facilityInputSchema, type CreditAgreementWithRelations } from '@/server/types/credit-agreement'
+import { getEntities } from '@/server/actions/entity/getEntities'
+
+type CreditAgreementFormValues = z.infer<typeof creditAgreementInputSchema>
+type FacilityFormValues = z.infer<typeof facilityInputSchema>
+
+interface NewCreditAgreementModalProps {
+  onCreditAgreementCreated: (creditAgreement: CreditAgreementWithRelations) => void
+}
 
 // Helper component for required field label
 function RequiredLabel({ children }: { children: React.ReactNode }) {
@@ -52,39 +59,6 @@ function RequiredLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-const facilitySchema = z.object({
-  facilityName: z.string().min(1, 'Facility name is required'),
-  facilityType: z.string().min(1, 'Facility type is required'),
-  commitmentAmount: z.number().min(0, 'Amount must be positive'),
-  currency: z.string().min(1, 'Currency is required'),
-  startDate: z.date(),
-  maturityDate: z.date(),
-  interestType: z.string().min(1, 'Interest type is required'),
-  baseRate: z.string().min(1, 'Base rate is required'),
-  margin: z.number().min(0, 'Margin must be positive'),
-  description: z.string().optional(),
-})
-
-const creditAgreementFormSchema = z.object({
-  agreementName: z.string().min(1, 'Agreement name is required'),
-  agreementNumber: z.string().min(1, 'Agreement number is required'),
-  borrowerId: z.string().min(1, 'Borrower is required'),
-  agentBankId: z.string().min(1, 'Agent bank is required'),
-  status: z.string().min(1, 'Status is required'),
-  effectiveDate: z.date(),
-  maturityDate: z.date(),
-  totalAmount: z.number().min(0, 'Amount must be positive'),
-  currency: z.string().min(1, 'Currency is required'),
-  description: z.string().optional(),
-  facilities: z.array(facilitySchema).min(1, 'At least one facility is required'),
-})
-
-type CreditAgreementFormValues = z.infer<typeof creditAgreementFormSchema>
-
-interface NewCreditAgreementModalProps {
-  onCreditAgreementCreated: (creditAgreement: CreditAgreementWithRelations) => void
-}
-
 export function NewCreditAgreementModal({
   onCreditAgreementCreated,
 }: NewCreditAgreementModalProps) {
@@ -92,7 +66,7 @@ export function NewCreditAgreementModal({
   const [isFacilityDialogOpen, setIsFacilityDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [facilities, setFacilities] = useState<z.infer<typeof facilitySchema>[]>([])
+  const [facilities, setFacilities] = useState<FacilityFormValues[]>([])
   const [entities, setEntities] = useState<EntityWithRelations[]>([])
   const [isLoadingEntities, setIsLoadingEntities] = useState(true)
   
@@ -113,11 +87,11 @@ export function NewCreditAgreementModal({
     loadEntities()
   }, [])
 
-  const bankEntities = entities.filter(entity => entity.entityType.name === 'Bank')
-  const borrowerEntities = entities.filter(entity => entity.entityType.name === 'Corporate')
+  const bankEntities = entities.filter(entity => entity.lender !== null)
+  const borrowerEntities = entities.filter(entity => entity.borrower !== null)
 
   const form = useForm<CreditAgreementFormValues>({
-    resolver: zodResolver(creditAgreementFormSchema),
+    resolver: zodResolver(creditAgreementInputSchema),
     defaultValues: {
       status: 'ACTIVE',
       currency: 'USD',
@@ -151,7 +125,7 @@ export function NewCreditAgreementModal({
     }
   }
 
-  const handleAddFacility = (facility: z.infer<typeof facilitySchema>) => {
+  const handleAddFacility = (facility: FacilityFormValues) => {
     setFacilities(prev => [...prev, facility])
   }
 
@@ -251,16 +225,16 @@ export function NewCreditAgreementModal({
 
                   <FormField
                     control={form.control}
-                    name="agentBankId"
+                    name="lenderId"
                     render={({ field }) => (
                       <FormItem>
                         <RequiredLabel>
-                          <FormLabel>Agent Bank</FormLabel>
+                          <FormLabel>Lender</FormLabel>
                         </RequiredLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingEntities}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder={isLoadingEntities ? "Loading..." : "Select agent bank"} />
+                              <SelectValue placeholder={isLoadingEntities ? "Loading..." : "Select lender"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -304,11 +278,11 @@ export function NewCreditAgreementModal({
 
                   <FormField
                     control={form.control}
-                    name="totalAmount"
+                    name="amount"
                     render={({ field }) => (
                       <FormItem>
                         <RequiredLabel>
-                          <FormLabel>Total Amount</FormLabel>
+                          <FormLabel>Amount</FormLabel>
                         </RequiredLabel>
                         <FormControl>
                           <Input
@@ -343,6 +317,79 @@ export function NewCreditAgreementModal({
                             <SelectItem value="GBP">GBP</SelectItem>
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <RequiredLabel>
+                          <FormLabel>Start Date</FormLabel>
+                        </RequiredLabel>
+                        <FormControl>
+                          <DatePicker
+                            date={field.value}
+                            onDateChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="maturityDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <RequiredLabel>
+                          <FormLabel>Maturity Date</FormLabel>
+                        </RequiredLabel>
+                        <FormControl>
+                          <DatePicker
+                            date={field.value}
+                            onDateChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="interestRate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <RequiredLabel>
+                          <FormLabel>Interest Rate (%)</FormLabel>
+                        </RequiredLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            onChange={e => field.onChange(parseFloat(e.target.value))}
+                            value={field.value}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -403,21 +450,11 @@ export function NewCreditAgreementModal({
                 </CardContent>
               </Card>
 
-              <div className="flex justify-end space-x-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => {
-                    setOpen(false)
-                    form.reset()
-                    setFacilities([])
-                    setFormError(null)
-                  }}
-                  disabled={isSubmitting}
+              <div className="flex justify-end gap-4">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || facilities.length === 0}
                 >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting || facilities.length === 0}>
                   {isSubmitting ? 'Creating...' : 'Create Credit Agreement'}
                 </Button>
               </div>

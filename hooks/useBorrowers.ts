@@ -1,72 +1,42 @@
 'use client'
 
-import { useCallback } from 'react'
-import useSWR from 'swr'
-import type { Borrower } from '@/types/borrower'
+import { useState, useEffect } from 'react'
 import { getBorrowers } from '@/server/actions/borrower/getBorrowers'
-import { deleteBorrower } from '@/server/actions/borrower/deleteBorrower'
-import { createBorrower, type CreateBorrowerInput } from '@/server/actions/borrower/createBorrower'
-import { withErrorHandling } from '@/lib/error-handling'
-import { toast } from 'sonner'
+import type { Borrower } from '@/types/borrower'
 
 export function useBorrowers() {
-  const { data, error, isLoading, mutate } = useSWR<Borrower[]>(
-    'borrowers',
-    () => withErrorHandling(
-      'fetch borrowers',
-      async () => await getBorrowers()
-    ),
-    {
-      refreshInterval: 30000,
-      revalidateOnFocus: true
-    }
-  )
+  const [borrowers, setBorrowers] = useState<Borrower[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
 
-  const create = useCallback(async (borrowerData: CreateBorrowerInput) => {
-    await withErrorHandling(
-      'create borrower',
-      async () => {
-        await createBorrower(borrowerData)
-        await mutate()
+  useEffect(() => {
+    const fetchBorrowers = async () => {
+      try {
+        setIsLoading(true)
+        const data = await getBorrowers()
+        setBorrowers(data)
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to fetch borrowers'))
+      } finally {
+        setIsLoading(false)
       }
-    )
-  }, [mutate])
-
-  const remove = useCallback(async (id: string) => {
-    try {
-      await withErrorHandling(
-        'delete borrower',
-        async () => {
-          await deleteBorrower(id)
-          await mutate()
-        }
-      )
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes('active credit agreements')) {
-          toast.error('Cannot Delete Borrower', {
-            description: 'Please remove all credit agreements before deleting this borrower.'
-          })
-        } else if (error.message.includes('existing relationships')) {
-          toast.error('Cannot Delete Borrower', {
-            description: 'This borrower has existing relationships that must be removed first.'
-          })
-        } else {
-          toast.error('Error', {
-            description: error.message
-          })
-        }
-      }
-      throw error
     }
-  }, [mutate])
+    
+    fetchBorrowers()
+  }, [])
+
+  const refresh = () => {
+    setIsLoading(true)
+    getBorrowers()
+      .then(data => setBorrowers(data))
+      .catch(err => setError(err instanceof Error ? err : new Error('Failed to fetch borrowers')))
+      .finally(() => setIsLoading(false))
+  }
 
   return {
-    borrowers: data,
+    borrowers,
     isLoading,
-    isError: error,
-    mutate,
-    create,
-    remove,
+    error,
+    refresh
   }
 } 

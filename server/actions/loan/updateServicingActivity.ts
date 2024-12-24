@@ -11,6 +11,15 @@ interface UpdateServicingActivityParams {
 
 export async function updateServicingActivity(params: UpdateServicingActivityParams) {
   try {
+    // First check if the servicing activity exists
+    const existingActivity = await prisma.servicingActivity.findUnique({
+      where: { id: params.id }
+    })
+
+    if (!existingActivity) {
+      throw new Error(`Servicing activity with ID ${params.id} not found`)
+    }
+
     const activity = await prisma.servicingActivity.update({
       where: { id: params.id },
       data: {

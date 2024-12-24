@@ -7,9 +7,10 @@ import { format } from 'date-fns'
 import { formatCurrency } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { ColDef } from 'ag-grid-community'
+import type { TransactionHistory as TransactionHistoryType } from '@/server/types/transaction'
 
 export function TransactionHistory() {
-  const [transactions, setTransactions] = useState<any[]>([])
+  const [transactions, setTransactions] = useState<TransactionHistoryType[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const loadTransactions = async () => {
@@ -26,7 +27,7 @@ export function TransactionHistory() {
     loadTransactions()
   }, [])
 
-  const getEventTypeBadge = (eventType: string) => {
+  const getTypeBadge = (type: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'success' | 'destructive'> = {
       'PAYDOWN': 'success',
       'RATE_RESET': 'secondary',
@@ -37,38 +38,33 @@ export function TransactionHistory() {
       'CREDIT_AGREEMENT_AMENDMENT': 'secondary',
       'OTHER': 'default'
     }
-    return <Badge variant={variants[eventType] || 'default'}>{eventType}</Badge>
+    return <Badge variant={variants[type] || 'default'}>{type}</Badge>
   }
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'eventType',
-      headerName: 'Event Type',
+      field: 'type',
+      headerName: 'Type',
       flex: 1,
-      cellRenderer: (params: { value: string }) => getEventTypeBadge(params.value)
+      cellRenderer: (params: { value: string }) => getTypeBadge(params.value)
     },
     {
-      field: 'facility.facilityName',
-      headerName: 'Facility',
+      field: 'creditAgreement.agreementNumber',
+      headerName: 'Agreement',
       flex: 1,
-      valueGetter: params => {
-        const facility = params.data?.facility
-        return facility ? `${facility.facilityName} (${facility.creditAgreement?.agreementName || 'N/A'})` : 'N/A'
-      }
+      valueGetter: params => params.data?.creditAgreement?.agreementNumber || 'N/A'
     },
     {
-      field: 'balanceChange',
-      headerName: 'Balance Change',
+      field: 'amount',
+      headerName: 'Amount',
       flex: 1,
       valueFormatter: params => params.value ? formatCurrency(params.value) : '-',
       filter: 'agNumberColumnFilter'
     },
     {
-      field: 'lenderShare',
-      headerName: 'Lender Share',
-      flex: 1,
-      valueFormatter: params => params.value ? `${params.value}%` : '-',
-      filter: 'agNumberColumnFilter'
+      field: 'currency',
+      headerName: 'Currency',
+      flex: 1
     },
     {
       field: 'description',

@@ -5,14 +5,15 @@ import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { EntityDetailsModal } from './EntityDetailsModal'
 import { DataGrid } from '@/components/ui/data-grid'
-import { type ColDef } from 'ag-grid-community'
+import { type ColDef, type ICellRendererParams } from 'ag-grid-community'
+import { type EntityWithRelations } from '@/server/types/entity'
 
 interface EntityListProps {
-  entities: any[]
+  entities: EntityWithRelations[]
 }
 
 export function EntityList({ entities }: EntityListProps) {
-  const [selectedEntity, setSelectedEntity] = useState<any | null>(null)
+  const [selectedEntity, setSelectedEntity] = useState<EntityWithRelations | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
 
   const columnDefs = useMemo<ColDef[]>(() => [
@@ -26,15 +27,15 @@ export function EntityList({ entities }: EntityListProps) {
       },
     },
     {
-      field: 'entityType.name',
-      headerName: 'Type',
+      field: 'jurisdiction',
+      headerName: 'Jurisdiction',
       width: 150,
     },
     {
       field: 'status',
       headerName: 'Status',
       width: 120,
-      cellRenderer: (params: any) => (
+      cellRenderer: (params: ICellRendererParams) => (
         <Badge variant={params.value === 'ACTIVE' ? 'success' : 'secondary'}>
           {params.value}
         </Badge>
@@ -85,14 +86,16 @@ export function EntityList({ entities }: EntityListProps) {
           setSelectedEntity(params.data)
           setDetailsOpen(true)
         }}
-        domLayout="autoHeight"
+        className="h-[600px]"
       />
 
-      <EntityDetailsModal
-        entity={selectedEntity}
-        open={detailsOpen}
-        onOpenChange={setDetailsOpen}
-      />
+      {selectedEntity && (
+        <EntityDetailsModal
+          entity={selectedEntity}
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+        />
+      )}
     </>
   )
 } 

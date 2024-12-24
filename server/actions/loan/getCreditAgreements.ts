@@ -1,17 +1,22 @@
 'use server'
 
-import { db } from '@/server/db'
+import { prisma } from '@/server/db/client'
+import { type CreditAgreementWithRelations } from '@/server/types/credit-agreement'
 
-export async function getCreditAgreements() {
+export async function getCreditAgreements(): Promise<CreditAgreementWithRelations[]> {
   try {
-    const creditAgreements = await db.creditAgreement.findMany({
+    const creditAgreements = await prisma.creditAgreement.findMany({
       include: {
         borrower: {
           include: {
-            entity: true
+            borrower: true
           }
         },
-        lender: true,
+        lender: {
+          include: {
+            lender: true
+          }
+        },
         facilities: {
           include: {
             trades: {
@@ -21,22 +26,30 @@ export async function getCreditAgreements() {
             },
           },
         },
+        transactions: true
       },
       orderBy: {
         createdAt: 'desc',
       },
     })
 
-    return creditAgreements
+    if (!creditAgreements) {
+      throw new Error('No credit agreements found')
+    }
+
+    return creditAgreements as CreditAgreementWithRelations[]
   } catch (error) {
-    console.error('Error fetching credit agreements:', error)
-    throw error
+    console.error('Error fetching credit agreements:', error instanceof Error ? error.message : 'Unknown error')
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch credit agreements: ${error.message}`)
+    }
+    throw new Error('Failed to fetch credit agreements: Unknown error')
   }
 }
 
-export async function getAvailableLoans() {
+export async function getAvailableLoans(): Promise<CreditAgreementWithRelations[]> {
   try {
-    const availableLoans = await db.creditAgreement.findMany({
+    const availableLoans = await prisma.creditAgreement.findMany({
       where: {
         status: 'ACTIVE',
         facilities: {
@@ -50,8 +63,16 @@ export async function getAvailableLoans() {
         },
       },
       include: {
-        borrower: true,
-        lender: true,
+        borrower: {
+          include: {
+            borrower: true
+          }
+        },
+        lender: {
+          include: {
+            lender: true
+          }
+        },
         facilities: {
           include: {
             trades: {
@@ -61,15 +82,23 @@ export async function getAvailableLoans() {
             },
           },
         },
+        transactions: true
       },
       orderBy: {
         createdAt: 'desc',
       },
     })
 
-    return availableLoans
+    if (!availableLoans) {
+      throw new Error('No available loans found')
+    }
+
+    return availableLoans as CreditAgreementWithRelations[]
   } catch (error) {
-    console.error('Error fetching available loans:', error)
-    throw error
+    console.error('Error fetching available loans:', error instanceof Error ? error.message : 'Unknown error')
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch available loans: ${error.message}`)
+    }
+    throw new Error('Failed to fetch available loans: Unknown error')
   }
 } 

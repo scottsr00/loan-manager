@@ -12,7 +12,7 @@ export const TransactionEventType = {
 } as const
 
 export const transactionHistorySchema = z.object({
-  eventType: z.enum([
+  type: z.enum([
     'PAYDOWN',
     'RATE_RESET',
     'TRADE_SETTLEMENT',
@@ -22,16 +22,47 @@ export const transactionHistorySchema = z.object({
     'CREDIT_AGREEMENT_AMENDMENT',
     'OTHER'
   ]),
-  facilityId: z.string(),
   creditAgreementId: z.string().optional(),
   loanId: z.string().optional(),
   tradeId: z.string().optional(),
   servicingActivityId: z.string().optional(),
-  balanceChange: z.number().optional(),
-  lenderShare: z.number().optional(),
+  amount: z.number(),
+  currency: z.string().default('USD'),
+  status: z.string().default('PENDING'),
   description: z.string(),
   effectiveDate: z.date(),
   processedBy: z.string()
 })
 
-export type TransactionHistoryInput = z.infer<typeof transactionHistorySchema> 
+export type TransactionHistoryInput = z.infer<typeof transactionHistorySchema>
+
+export interface TransactionHistory {
+  id: string
+  type: keyof typeof TransactionEventType
+  creditAgreementId: string | null
+  loanId: string | null
+  tradeId: string | null
+  servicingActivityId: string | null
+  amount: number
+  currency: string
+  status: string
+  description: string | null
+  effectiveDate: Date
+  processedBy: string
+  createdAt: Date
+  updatedAt: Date
+  creditAgreement?: {
+    agreementNumber: string
+  } | null
+  loan?: {
+    amount: number
+  } | null
+  trade?: {
+    amount: number
+    price: number
+  } | null
+  servicingActivity?: {
+    type: string
+    description: string | null
+  } | null
+} 

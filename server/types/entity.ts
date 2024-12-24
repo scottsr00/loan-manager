@@ -1,12 +1,14 @@
-import { type Prisma, type Entity as PrismaEntity } from '@prisma/client'
+import { type Prisma } from '@prisma/client'
 import { z } from 'zod'
 
 // Base Prisma Types with Relations
 export type EntityWithRelations = Prisma.EntityGetPayload<{
   include: {
-    entityType: true
     addresses: true
     contacts: true
+    beneficialOwners: true
+    lender: true
+    borrower: true
   }
 }>
 
@@ -37,11 +39,15 @@ export const entityInputSchema = z.object({
   dba: z.string().optional(),
   registrationNumber: z.string().optional(),
   taxId: z.string().optional(),
-  entityTypeId: z.string().min(1, 'Entity type is required'),
   status: z.string().default('ACTIVE'),
-  incorporationDate: z.date().optional(),
-  website: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  description: z.string().optional(),
+  dateOfIncorporation: z.date().optional(),
+  jurisdiction: z.string().optional(),
+  governmentId: z.string().optional(),
+  governmentIdType: z.string().optional(),
+  governmentIdExpiry: z.date().optional(),
+  primaryContactName: z.string().optional(),
+  primaryContactEmail: z.string().optional(),
+  primaryContactPhone: z.string().optional(),
   addresses: z.array(entityAddressSchema).min(1, 'At least one address is required'),
   contacts: z.array(entityContactSchema).min(1, 'At least one contact is required'),
 })

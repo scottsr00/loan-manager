@@ -20,11 +20,13 @@ export type BorrowerWithRelations = Prisma.BorrowerGetPayload<{
 // Input Validation Schemas
 export const borrowerInputSchema = z.object({
   entityId: z.string().min(1, 'Entity ID is required'),
-  industrySegment: z.string().min(1, 'Industry segment is required'),
+  industrySegment: z.string().optional(),
+  businessType: z.string().optional(),
   creditRating: z.string().optional(),
   ratingAgency: z.string().optional(),
-  onboardingStatus: z.string().min(1, 'Onboarding status is required'),
-  kycStatus: z.string().min(1, 'KYC status is required'),
+  riskRating: z.string().optional(),
+  onboardingStatus: z.string().default('PENDING'),
+  kycStatus: z.string().default('PENDING')
 })
 
 export const financialStatementSchema = z.object({

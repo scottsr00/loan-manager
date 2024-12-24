@@ -9,6 +9,71 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
+interface FacilityPosition {
+  lender: string;
+  commitment: number;
+  status: string;
+}
+
+interface LoanPosition {
+  lender: string;
+  amount: number;
+  status: string;
+}
+
+interface Trade {
+  id: string;
+  counterparty: string;
+  amount: number;
+  price: number;
+  status: string;
+  tradeDate: Date;
+  settlementDate: Date;
+}
+
+interface Loan {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  positions: LoanPosition[];
+}
+
+interface Facility {
+  id: string;
+  facilityName: string;
+  facilityType: string;
+  commitmentAmount: number;
+  currency: string;
+  status: string;
+  interestType: string;
+  baseRate: string;
+  margin: number;
+  positions: FacilityPosition[];
+  trades: Trade[];
+  loans: Loan[];
+}
+
+interface PositionResponse {
+  id: string;
+  agreementNumber: string;
+  borrower: {
+    name: string;
+    type: string;
+    status: string;
+  };
+  agent: {
+    name: string;
+    type: string;
+  };
+  amount: number;
+  currency: string;
+  status: string;
+  startDate: Date;
+  maturityDate: Date;
+  facilities: Facility[];
+}
+
 interface ExpandedState {
   [key: string]: {
     isExpanded: boolean;
@@ -27,52 +92,88 @@ export function LoanPositionsHierarchy() {
   const { positions, isLoading, error } = usePositions()
   const [expanded, setExpanded] = useState<ExpandedState>({})
 
+  console.log('Positions:', positions)
+  console.log('Expanded state:', expanded)
+
   const toggleAgreement = (agreementId: string) => {
-    setExpanded(prev => ({
-      ...prev,
-      [agreementId]: {
-        isExpanded: !prev[agreementId]?.isExpanded,
-        facilities: prev[agreementId]?.facilities || {}
-      }
-    }))
+    console.log('Toggling agreement:', agreementId)
+    setExpanded(prev => {
+      const isCurrentlyExpanded = prev[agreementId]?.isExpanded;
+      const newState = {
+        ...prev,
+        [agreementId]: {
+          isExpanded: !isCurrentlyExpanded,
+          facilities: prev[agreementId]?.facilities || {}
+        }
+      };
+      console.log('New expanded state after agreement toggle:', newState);
+      return newState;
+    });
   }
 
   const toggleFacility = (agreementId: string, facilityId: string) => {
-    setExpanded(prev => ({
-      ...prev,
-      [agreementId]: {
-        ...prev[agreementId],
-        facilities: {
-          ...prev[agreementId]?.facilities,
-          [facilityId]: {
-            isExpanded: !prev[agreementId]?.facilities[facilityId]?.isExpanded,
-            loans: prev[agreementId]?.facilities[facilityId]?.loans || {}
-          }
-        }
-      }
-    }))
-  }
+    console.log('Toggling facility:', facilityId, 'in agreement:', agreementId)
+    setExpanded(prev => {
+      // Ensure the agreement exists in the state
+      const currentAgreement = prev[agreementId] || { isExpanded: true, facilities: {} };
+      // Get current facility state or initialize it
+      const currentFacility = currentAgreement.facilities[facilityId] || { isExpanded: false, loans: {} };
 
-  const toggleLoan = (agreementId: string, facilityId: string, loanId: string) => {
-    setExpanded(prev => ({
-      ...prev,
-      [agreementId]: {
-        ...prev[agreementId],
-        facilities: {
-          ...prev[agreementId]?.facilities,
-          [facilityId]: {
-            ...prev[agreementId]?.facilities[facilityId],
-            loans: {
-              ...prev[agreementId]?.facilities[facilityId]?.loans,
-              [loanId]: !prev[agreementId]?.facilities[facilityId]?.loans[loanId]
+      const newState = {
+        ...prev,
+        [agreementId]: {
+          ...currentAgreement,
+          isExpanded: true, // Keep agreement expanded
+          facilities: {
+            ...currentAgreement.facilities,
+            [facilityId]: {
+              ...currentFacility,
+              isExpanded: !currentFacility.isExpanded
             }
           }
         }
-      }
-    }))
+      };
+      console.log('New expanded state after facility toggle:', newState);
+      return newState;
+    });
   }
 
-  const getStatusBadge = (status: string) => {
+  const toggleLoan = (agreementId: string, facilityId: string, loanId: string) => {
+    console.log('Toggling loan:', loanId, 'in facility:', facilityId, 'in agreement:', agreementId)
+    setExpanded(prev => {
+      // Ensure the agreement exists and is expanded
+      const currentAgreement = prev[agreementId] || { isExpanded: true, facilities: {} };
+      // Ensure the facility exists and is expanded
+      const currentFacility = currentAgreement.facilities[facilityId] || { isExpanded: true, loans: {} };
+      // Get current loan state
+      const isLoanExpanded = currentFacility.loans[loanId];
+
+      const newState = {
+        ...prev,
+        [agreementId]: {
+          ...currentAgreement,
+          isExpanded: true, // Keep agreement expanded
+          facilities: {
+            ...currentAgreement.facilities,
+            [facilityId]: {
+              ...currentFacility,
+              isExpanded: true, // Keep facility expanded
+              loans: {
+                ...currentFacility.loans,
+                [loanId]: !isLoanExpanded
+              }
+            }
+          }
+        }
+      };
+      console.log('New expanded state after loan toggle:', newState);
+      return newState;
+    });
+  }
+
+  const getStatusBadge = (status: string | null | undefined) => {
+    if (!status) return <Badge variant="outline">Unknown</Badge>
+    
     switch (status.toUpperCase()) {
       case 'ACTIVE':
         return <Badge variant="default">Active</Badge>
@@ -124,36 +225,36 @@ export function LoanPositionsHierarchy() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {positions.map(agreement => (
-                <Fragment key={agreement.id}>
+              {(positions as PositionResponse[]).map(position => (
+                <Fragment key={position.id}>
                   {/* Credit Agreement Row */}
                   <TableRow 
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => toggleAgreement(agreement.id)}
+                    onClick={() => toggleAgreement(position.id)}
                   >
                     <TableCell>
-                      {expanded[agreement.id]?.isExpanded ? 
+                      {expanded[position.id]?.isExpanded ? 
                         <ChevronDown className="h-4 w-4" /> : 
                         <ChevronRight className="h-4 w-4" />
                       }
                     </TableCell>
-                    <TableCell className="font-medium">{agreement.agreementName}</TableCell>
+                    <TableCell className="font-medium">{position.agreementNumber}</TableCell>
                     <TableCell>Credit Agreement</TableCell>
-                    <TableCell>{formatCurrency(agreement.amount)}</TableCell>
-                    <TableCell>{getStatusBadge(agreement.status)}</TableCell>
-                    <TableCell>{new Date(agreement.startDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{new Date(agreement.maturityDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{formatCurrency(position.amount)}</TableCell>
+                    <TableCell>{getStatusBadge(position.status)}</TableCell>
+                    <TableCell>{new Date(position.startDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(position.maturityDate).toLocaleDateString()}</TableCell>
                   </TableRow>
 
                   {/* Facility Rows */}
-                  {expanded[agreement.id]?.isExpanded && agreement.facilities.map(facility => (
+                  {expanded[position.id]?.isExpanded && position.facilities.map(facility => (
                     <Fragment key={facility.id}>
                       <TableRow 
                         className="cursor-pointer hover:bg-muted/50 bg-muted/30"
-                        onClick={() => toggleFacility(agreement.id, facility.id)}
+                        onClick={() => toggleFacility(position.id, facility.id)}
                       >
                         <TableCell className="pl-8">
-                          {expanded[agreement.id]?.facilities[facility.id]?.isExpanded ? 
+                          {expanded[position.id]?.facilities[facility.id]?.isExpanded ? 
                             <ChevronDown className="h-4 w-4" /> : 
                             <ChevronRight className="h-4 w-4" />
                           }
@@ -164,7 +265,7 @@ export function LoanPositionsHierarchy() {
                           <div className="space-y-1">
                             <div>{formatCurrency(facility.commitmentAmount)} (Committed)</div>
                             <div className="text-sm text-muted-foreground">
-                              {formatCurrency(facility.availableAmount)} (Available)
+                              {formatCurrency(facility.positions.reduce((sum, pos) => sum + pos.commitment, 0))} (Available)
                             </div>
                           </div>
                         </TableCell>
@@ -180,38 +281,41 @@ export function LoanPositionsHierarchy() {
                       </TableRow>
 
                       {/* Loan Rows */}
-                      {expanded[agreement.id]?.facilities[facility.id]?.isExpanded && facility.loans.map(loan => (
+                      {expanded[position.id]?.facilities[facility.id]?.isExpanded && facility.loans.map(loan => (
                         <Fragment key={loan.id}>
                           <TableRow 
                             className="cursor-pointer hover:bg-muted/50 bg-muted/20"
-                            onClick={() => toggleLoan(agreement.id, facility.id, loan.id)}
+                            onClick={() => toggleLoan(position.id, facility.id, loan.id)}
                           >
                             <TableCell className="pl-12">
-                              {expanded[agreement.id]?.facilities[facility.id]?.loans[loan.id] ? 
+                              {expanded[position.id]?.facilities[facility.id]?.loans[loan.id] ? 
                                 <ChevronDown className="h-4 w-4" /> : 
                                 <ChevronRight className="h-4 w-4" />
                               }
                             </TableCell>
-                            <TableCell className="font-medium">Drawdown #{loan.drawdownNumber}</TableCell>
+                            <TableCell className="font-medium">Loan #{loan.id}</TableCell>
                             <TableCell>Loan</TableCell>
                             <TableCell>
                               <div className="space-y-1">
                                 <div>{formatCurrency(loan.amount)} (Original)</div>
                                 <div className="text-sm text-muted-foreground">
-                                  {formatCurrency(loan.outstandingAmount)} (Outstanding)
+                                  {formatCurrency(loan.positions.reduce((sum, pos) => sum + pos.amount, 0))} (Outstanding)
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell>{getStatusBadge(loan.status)}</TableCell>
-                            <TableCell>{new Date(loan.drawdownDate).toLocaleDateString()}</TableCell>
-                            <TableCell>{new Date(loan.maturityDate).toLocaleDateString()}</TableCell>
+                            <TableCell colSpan={2}>
+                              <div className="space-y-1">
+                                <div>Positions: {loan.positions.length}</div>
+                              </div>
+                            </TableCell>
                           </TableRow>
 
                           {/* Loan Details */}
-                          {expanded[agreement.id]?.facilities[facility.id]?.loans[loan.id] && (
+                          {expanded[position.id]?.facilities[facility.id]?.loans[loan.id] && (
                             <TableRow className="bg-muted/10">
                               <TableCell colSpan={7} className="p-4">
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-4">
                                   <Card>
                                     <CardHeader>
                                       <CardTitle className="text-sm">Loan Positions</CardTitle>
@@ -222,7 +326,7 @@ export function LoanPositionsHierarchy() {
                                           <TableRow>
                                             <TableHead>Lender</TableHead>
                                             <TableHead>Amount</TableHead>
-                                            <TableHead>Share</TableHead>
+                                            <TableHead>Status</TableHead>
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -230,43 +334,11 @@ export function LoanPositionsHierarchy() {
                                             <TableRow key={index}>
                                               <TableCell>{position.lender}</TableCell>
                                               <TableCell>{formatCurrency(position.amount)}</TableCell>
-                                              <TableCell>{position.share}%</TableCell>
+                                              <TableCell>{getStatusBadge(position.status)}</TableCell>
                                             </TableRow>
                                           ))}
                                         </TableBody>
                                       </Table>
-                                    </CardContent>
-                                  </Card>
-
-                                  <Card>
-                                    <CardHeader>
-                                      <CardTitle className="text-sm">Next Payment</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                      {loan.nextPayment ? (
-                                        <div className="space-y-2">
-                                          <div className="flex justify-between">
-                                            <span>Due Date:</span>
-                                            <span>{new Date(loan.nextPayment.dueDate).toLocaleDateString()}</span>
-                                          </div>
-                                          <div className="flex justify-between">
-                                            <span>Principal:</span>
-                                            <span>{formatCurrency(loan.nextPayment.principalAmount)}</span>
-                                          </div>
-                                          <div className="flex justify-between">
-                                            <span>Interest:</span>
-                                            <span>{formatCurrency(loan.nextPayment.interestAmount)}</span>
-                                          </div>
-                                          <div className="flex justify-between">
-                                            <span>Status:</span>
-                                            <span>{getStatusBadge(loan.nextPayment.status)}</span>
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <div className="text-center text-muted-foreground">
-                                          No upcoming payments
-                                        </div>
-                                      )}
                                     </CardContent>
                                   </Card>
                                 </div>

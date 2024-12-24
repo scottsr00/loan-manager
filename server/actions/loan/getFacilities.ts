@@ -6,28 +6,23 @@ export async function getFacilities() {
   try {
     const facilities = await prisma.facility.findMany({
       include: {
-        creditAgreement: {
-          select: {
-            agreementName: true,
-            borrower: {
-              select: {
-                entity: {
-                  select: {
-                    legalName: true
-                  }
-                }
-              }
-            }
-          }
-        }
+        creditAgreement: true
       },
       orderBy: {
-        facilityName: 'asc'
+        createdAt: 'desc'
       }
     })
+
+    if (!facilities) {
+      throw new Error('No facilities found')
+    }
+
     return facilities
   } catch (error) {
-    console.error('Error in getFacilities:', error)
-    throw new Error('Failed to fetch facilities')
+    console.error('Error in getFacilities:', error instanceof Error ? error.message : 'Unknown error')
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch facilities: ${error.message}`)
+    }
+    throw new Error('Failed to fetch facilities: Unknown error')
   }
 } 
