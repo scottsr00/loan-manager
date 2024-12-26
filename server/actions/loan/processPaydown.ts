@@ -77,19 +77,30 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
         })
       }))
 
-      // 5. Create servicing activity record
-      const servicingActivity = await tx.servicingActivity.create({
-        data: {
-          facilityId: validatedParams.facilityId,
-          activityType: 'PRINCIPAL_PAYMENT',
-          amount: validatedParams.amount,
-          dueDate: validatedParams.paymentDate,
-          description: validatedParams.description || `Principal payment of ${validatedParams.amount}`,
-          status: 'COMPLETED',
-          completedAt: new Date(),
-          completedBy: 'SYSTEM'
-        }
-      })
+      // 5. Create servicing activity record ONLY if not already linked to one
+      let servicingActivity;
+      if (!params.servicingActivityId) {
+        servicingActivity = await tx.servicingActivity.create({
+          data: {
+            facilityId: validatedParams.facilityId,
+            activityType: 'PRINCIPAL_PAYMENT',
+            amount: validatedParams.amount,
+            dueDate: validatedParams.paymentDate,
+            description: validatedParams.description || `Principal payment of ${validatedParams.amount}`,
+            status: 'COMPLETED',
+            completedAt: new Date(),
+            completedBy: 'SYSTEM'
+          }
+        })
+      } else {
+        servicingActivity = await tx.servicingActivity.findUnique({
+          where: { id: params.servicingActivityId }
+        })
+      }
+
+      if (!servicingActivity) {
+        throw new Error('Failed to find or create servicing activity')
+      }
 
       // 6. Create transaction history record
       const transactionHistory = await tx.transactionHistory.create({

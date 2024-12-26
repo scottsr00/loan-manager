@@ -51,4 +51,14 @@ export type Counterparty = {
   contacts: CounterpartyContact[]
   createdAt: Date
   updatedAt: Date
+}
+
+export interface CreateCounterpartyInput {
+  legalName: string
+  typeId: string
+  status?: string
+}
+
+export interface UpdateCounterpartyInput extends Partial<CreateCounterpartyInput> {
+  id: string
 } 

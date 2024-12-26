@@ -1,39 +1,33 @@
 'use server'
 
-import { db } from '@/server/db'
-import { type Counterparty } from '@prisma/client'
-import { revalidatePath } from 'next/cache'
+import { prisma } from '@/server/db/client'
+import { type CreateCounterpartyInput } from '@/types/counterparty'
 
-type CreateCounterpartyInput = {
-  name: string
-  typeId: string
-  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING'
-}
-
-export async function createCounterparty(data: CreateCounterpartyInput): Promise<Counterparty> {
+export async function createCounterparty(data: CreateCounterpartyInput) {
   try {
-    // Validate counterparty type exists
-    const counterpartyType = await db.counterpartyType.findUnique({
-      where: { id: data.typeId },
-    })
-
-    if (!counterpartyType) {
-      throw new Error('Invalid counterparty type')
+    // Validate required fields
+    if (!data.legalName) {
+      throw new Error('Legal name is required')
+    }
+    if (!data.typeId) {
+      throw new Error('Counterparty type is required')
     }
 
-    // Create the counterparty using unchecked create for direct typeId assignment
-    const counterparty = await db.counterparty.create({
+    // Create the counterparty
+    const counterparty = await prisma.counterparty.create({
       data: {
-        name: data.name,
+        name: data.legalName,
         typeId: data.typeId,
-        status: data.status || 'ACTIVE',
-      } as any, // Temporary type assertion to bypass strict checking
+        status: 'ACTIVE',
+      },
+      include: {
+        type: true,
+      },
     })
 
-    revalidatePath('/counterparties')
     return counterparty
   } catch (error) {
     console.error('Error creating counterparty:', error)
-    throw error
+    throw error instanceof Error ? error : new Error('Failed to create counterparty')
   }
 } 

@@ -4,8 +4,9 @@ import { useState, useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DataGrid } from '@/components/ui/data-grid'
-import { type ColDef, type ICellRendererParams } from 'ag-grid-community'
+import { type ColDef, type ICellRendererParams, type RowClickedEvent } from 'ag-grid-community'
 import { BorrowerModal } from './BorrowerModal'
+import { BorrowerDetailsModal } from '@/components/borrowers/BorrowerDetailsModal'
 import { Plus } from 'lucide-react'
 import type { Borrower } from '@/types/borrower'
 
@@ -15,7 +16,8 @@ interface BorrowerListProps {
 
 export function BorrowerList({ borrowers }: BorrowerListProps) {
   const [selectedBorrower, setSelectedBorrower] = useState<Borrower | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
@@ -28,6 +30,11 @@ export function BorrowerList({ borrowers }: BorrowerListProps) {
       },
     },
     {
+      field: 'entity.taxId',
+      headerName: 'Tax ID',
+      width: 150,
+    },
+    {
       field: 'entity.countryOfIncorporation',
       headerName: 'Country of Incorporation',
       width: 150,
@@ -38,72 +45,24 @@ export function BorrowerList({ borrowers }: BorrowerListProps) {
       width: 150,
     },
     {
-      field: 'businessType',
-      headerName: 'Business Type',
-      width: 150,
-    },
-    {
-      field: 'creditRating',
-      headerName: 'Credit Rating',
-      width: 120,
-      valueFormatter: (params) => {
-        if (!params.value) return 'N/A'
-        return params.data.ratingAgency ? `${params.value} (${params.data.ratingAgency})` : params.value
-      },
-    },
-    {
-      field: 'riskRating',
-      headerName: 'Risk Rating',
-      width: 120,
-    },
-    {
       field: 'onboardingStatus',
-      headerName: 'Onboarding',
+      headerName: 'Status',
       width: 120,
       cellRenderer: (params: ICellRendererParams) => (
         <Badge variant={params.value === 'COMPLETED' ? 'success' : 'secondary'}>
-          {params.value}
+          {params.value || '-'}
         </Badge>
       ),
-    },
-    {
-      field: 'kycStatus',
-      headerName: 'KYC',
-      width: 120,
-      cellRenderer: (params: ICellRendererParams) => (
-        <Badge variant={params.value === 'COMPLETED' ? 'success' : 'secondary'}>
-          {params.value}
-        </Badge>
-      ),
-    },
-    {
-      field: 'entity.contacts',
-      headerName: 'Primary Contact',
-      width: 200,
-      valueGetter: (params) => {
-        const primaryContact = params.data.entity.contacts[0]
-        if (!primaryContact) return 'No primary contact'
-        const contactInfo = `${primaryContact.firstName} ${primaryContact.lastName}`
-        return primaryContact.title ? `${contactInfo}\n${primaryContact.title}` : contactInfo
-      },
-    },
-    {
-      field: 'entity.addresses',
-      headerName: 'Location',
-      width: 200,
-      valueGetter: (params) => {
-        const primaryAddress = params.data.entity.addresses[0]
-        if (!primaryAddress) return 'No primary address'
-        return primaryAddress.state 
-          ? `${primaryAddress.city}, ${primaryAddress.state}, ${primaryAddress.country}`
-          : `${primaryAddress.city}, ${primaryAddress.country}`
-      },
     },
   ], [])
 
-  const handleModalClose = () => {
-    setIsModalOpen(false)
+  const handleDetailsModalClose = () => {
+    setIsDetailsModalOpen(false)
     setSelectedBorrower(null)
+  }
+
+  const handleEditModalClose = () => {
+    setIsEditModalOpen(false)
   }
 
   return (
@@ -112,7 +71,7 @@ export function BorrowerList({ borrowers }: BorrowerListProps) {
         <Button
           onClick={() => {
             setSelectedBorrower(null)
-            setIsModalOpen(true)
+            setIsEditModalOpen(true)
           }}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -129,15 +88,27 @@ export function BorrowerList({ borrowers }: BorrowerListProps) {
           resizable: true,
           floatingFilter: true,
         }}
-        onRowClick={(params) => {
-          setSelectedBorrower(params.data)
-          setIsModalOpen(true)
+        onRowClick={(params: RowClickedEvent) => {
+          if (params.data) {
+            setSelectedBorrower(params.data)
+            setIsDetailsModalOpen(true)
+          }
+        }}
+      />
+
+      <BorrowerDetailsModal
+        borrower={selectedBorrower}
+        open={isDetailsModalOpen}
+        onOpenChange={setIsDetailsModalOpen}
+        onEdit={() => {
+          setIsDetailsModalOpen(false)
+          setIsEditModalOpen(true)
         }}
       />
 
       <BorrowerModal
-        open={isModalOpen}
-        onClose={handleModalClose}
+        open={isEditModalOpen}
+        onClose={handleEditModalClose}
         borrower={selectedBorrower}
       />
     </div>

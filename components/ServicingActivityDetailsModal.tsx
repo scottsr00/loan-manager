@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select'
 import { updateServicingActivity } from '@/server/actions/loan/updateServicingActivity'
 import { toast } from 'sonner'
+import { useServicing } from '@/hooks/useServicing'
 
 interface ServicingActivityType {
   id: string
@@ -30,7 +31,7 @@ interface ServicingActivityType {
   facility?: {
     facilityName: string
     creditAgreement?: {
-      agreementName: string
+      agreementNumber: string
     }
   }
   loan?: {
@@ -52,6 +53,7 @@ export function ServicingActivityDetailsModal({
   onUpdate,
 }: ServicingActivityDetailsModalProps) {
   const [isUpdating, setIsUpdating] = useState(false)
+  const { processPaydown } = useServicing()
 
   if (!activity) return null
 
@@ -68,6 +70,19 @@ export function ServicingActivityDetailsModal({
   const handleUpdateStatus = async (newStatus: string) => {
     setIsUpdating(true)
     try {
+      // If completing a payment activity, process the paydown first
+      if (newStatus === 'COMPLETED' && 
+          ['PRINCIPAL_PAYMENT', 'INTEREST_PAYMENT', 'UNSCHEDULED_PAYMENT'].includes(activity.activityType)) {
+        await processPaydown({
+          loanId: activity.loan?.id || '',
+          facilityId: activity.facilityId,
+          amount: activity.amount,
+          paymentDate: new Date(),
+          description: activity.description || undefined,
+          servicingActivityId: activity.id
+        })
+      }
+
       await updateServicingActivity({
         id: activity.id,
         status: newStatus,
@@ -108,7 +123,7 @@ export function ServicingActivityDetailsModal({
                       {activity.facility.facilityName}
                       {activity.facility.creditAgreement && (
                         <span className="text-muted-foreground ml-1">
-                          ({activity.facility.creditAgreement.agreementName})
+                          ({activity.facility.creditAgreement.agreementNumber})
                         </span>
                       )}
                     </>

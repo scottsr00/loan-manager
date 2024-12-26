@@ -95,6 +95,8 @@ export function NewCreditAgreementModal({
     defaultValues: {
       status: 'ACTIVE',
       currency: 'USD',
+      startDate: new Date(),
+      maturityDate: new Date(new Date().setFullYear(new Date().getFullYear() + 5)),
       facilities: [],
     },
   })
@@ -332,8 +334,8 @@ export function NewCreditAgreementModal({
                         </RequiredLabel>
                         <FormControl>
                           <DatePicker
-                            date={field.value}
-                            onDateChange={field.onChange}
+                            value={field.value}
+                            onChange={field.onChange}
                           />
                         </FormControl>
                         <FormMessage />
@@ -351,8 +353,8 @@ export function NewCreditAgreementModal({
                         </RequiredLabel>
                         <FormControl>
                           <DatePicker
-                            date={field.value}
-                            onDateChange={field.onChange}
+                            value={field.value}
+                            onChange={field.onChange}
                           />
                         </FormControl>
                         <FormMessage />

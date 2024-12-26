@@ -1,6 +1,9 @@
 import { z } from 'zod'
 import type { Entity } from './entity'
 
+const KYC_STATUSES = ['PENDING', 'IN_PROGRESS', 'APPROVED', 'REJECTED'] as const
+const ONBOARDING_STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'REJECTED'] as const
+
 export const createBorrowerSchema = z.object({
   legalName: z.string().min(1, 'Legal name is required'),
   dba: z.string().optional(),
@@ -12,8 +15,8 @@ export const createBorrowerSchema = z.object({
   creditRating: z.string().optional(),
   ratingAgency: z.string().optional(),
   riskRating: z.string().optional(),
-  onboardingStatus: z.string().default('PENDING'),
-  kycStatus: z.string().default('PENDING')
+  onboardingStatus: z.enum(ONBOARDING_STATUSES).default('PENDING'),
+  kycStatus: z.enum(KYC_STATUSES).default('PENDING')
 })
 
 export type CreateBorrowerInput = z.infer<typeof createBorrowerSchema>

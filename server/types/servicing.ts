@@ -6,6 +6,7 @@ export const paydownInputSchema = z.object({
   amount: z.number().positive('Amount must be greater than 0'),
   paymentDate: z.date(),
   description: z.string().optional(),
+  servicingActivityId: z.string().optional(),
 })
 
 export type PaydownInput = z.infer<typeof paydownInputSchema>

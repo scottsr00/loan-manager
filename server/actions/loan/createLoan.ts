@@ -1,36 +1,62 @@
 'use server'
 
 import { prisma } from '@/server/db/client'
-import { type LoanInput } from '@/server/types'
 
-export async function createLoan(data: LoanInput) {
+interface CreateLoanInput {
+  facilityId: string
+  amount: number
+  currency?: string
+  status?: string
+  positions: {
+    lenderId: string
+    amount: number
+    status?: string
+  }[]
+}
+
+export async function createLoan(data: CreateLoanInput) {
   try {
+    // Validate required fields
+    if (!data.facilityId) {
+      throw new Error('Facility ID is required')
+    }
+    if (data.amount <= 0) {
+      throw new Error('Amount must be positive')
+    }
+    if (!data.positions || data.positions.length === 0) {
+      throw new Error('At least one position is required')
+    }
+
+    // Validate position amounts
+    const totalPositionAmount = data.positions.reduce((sum, pos) => sum + pos.amount, 0)
+    if (totalPositionAmount !== data.amount) {
+      throw new Error('Position amounts must equal loan amount')
+    }
+
+    // Create the loan
     const loan = await prisma.loan.create({
       data: {
-        dealName: data.dealName,
-        currentBalance: data.currentBalance,
-        currentPeriodTerms: data.currentPeriodTerms,
-        priorPeriodPaymentStatus: data.priorPeriodPaymentStatus,
-        agentBank: data.agentBank,
-        lenderPositions: {
-          create: data.lenderPositions.map(position => ({
+        facilityId: data.facilityId,
+        amount: data.amount,
+        currency: data.currency || 'USD',
+        status: data.status || 'ACTIVE',
+        positions: {
+          create: data.positions.map(position => ({
             lenderId: position.lenderId,
-            balance: position.balance
+            amount: position.amount,
+            status: position.status || 'ACTIVE'
           }))
         }
       },
       include: {
-        lenderPositions: {
-          include: {
-            lender: true
-          }
-        }
+        positions: true,
+        facility: true
       }
     })
 
     return loan
   } catch (error) {
     console.error('Error creating loan:', error)
-    throw new Error('Failed to create loan')
+    throw error instanceof Error ? error : new Error('Failed to create loan')
   }
 } 

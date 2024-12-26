@@ -11,10 +11,14 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import type { Borrower } from '@/types/borrower'
 import { createBorrower } from '@/server/actions/borrower/createBorrower'
 import { updateBorrower } from '@/server/actions/borrower/updateBorrower'
+
+const KYC_STATUSES = ['PENDING', 'IN_PROGRESS', 'APPROVED', 'REJECTED'] as const
+const ONBOARDING_STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'REJECTED'] as const
 
 const formSchema = z.object({
   legalName: z.string().min(1, 'Legal name is required'),
@@ -27,8 +31,8 @@ const formSchema = z.object({
   creditRating: z.string().optional(),
   ratingAgency: z.string().optional(),
   riskRating: z.string().optional(),
-  onboardingStatus: z.string().default('PENDING'),
-  kycStatus: z.string().default('PENDING')
+  onboardingStatus: z.enum(ONBOARDING_STATUSES).default('PENDING'),
+  kycStatus: z.enum(KYC_STATUSES).default('PENDING')
 })
 
 export interface BorrowerModalProps {
@@ -74,8 +78,8 @@ export function BorrowerModal({ open, onClose, borrower }: BorrowerModalProps) {
         creditRating: borrower.creditRating || '',
         ratingAgency: borrower.ratingAgency || '',
         riskRating: borrower.riskRating || '',
-        onboardingStatus: borrower.onboardingStatus || 'PENDING',
-        kycStatus: borrower.kycStatus || 'PENDING'
+        onboardingStatus: borrower.onboardingStatus as any || 'PENDING',
+        kycStatus: borrower.kycStatus as any || 'PENDING'
       })
     } else {
       setIsEditing(false)
@@ -101,8 +105,10 @@ export function BorrowerModal({ open, onClose, borrower }: BorrowerModalProps) {
       setIsSubmitting(true)
       if (isEditing && borrower) {
         await updateBorrower(borrower.id, data)
+        toast.success('Borrower updated successfully')
       } else {
         await createBorrower(data)
+        toast.success('Borrower created successfully')
       }
       onClose()
       router.refresh()
@@ -280,9 +286,20 @@ export function BorrowerModal({ open, onClose, borrower }: BorrowerModalProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Onboarding Status</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., PENDING" {...field} />
-                        </FormControl>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select onboarding status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {ONBOARDING_STATUSES.map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {status}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -294,9 +311,20 @@ export function BorrowerModal({ open, onClose, borrower }: BorrowerModalProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>KYC Status</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., PENDING" {...field} />
-                        </FormControl>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select KYC status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {KYC_STATUSES.map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {status}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -305,12 +333,18 @@ export function BorrowerModal({ open, onClose, borrower }: BorrowerModalProps) {
               </Tabs>
             </ScrollArea>
 
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" onClick={onClose} type="button">
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : isEditing ? 'Update' : 'Create'}
+                {isSubmitting ? (
+                  <>Saving...</>
+                ) : isEditing ? (
+                  'Save Changes'
+                ) : (
+                  'Create Borrower'
+                )}
               </Button>
             </div>
           </form>

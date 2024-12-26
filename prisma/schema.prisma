@@ -85,6 +85,20 @@ model BeneficialOwner {
   @@index([entityId])
 }
 
+enum KycStatus {
+  PENDING
+  IN_PROGRESS
+  APPROVED
+  REJECTED
+}
+
+enum OnboardingStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
 model Borrower {
   id               String   @id @default(cuid())
   entityId         String   @unique
@@ -93,8 +107,8 @@ model Borrower {
   creditRating     String?
   ratingAgency     String?
   riskRating       String?
-  onboardingStatus String   @default("PENDING")
-  kycStatus        String   @default("PENDING")
+  onboardingStatus String   @default("PENDING") // Values: PENDING, IN_PROGRESS, COMPLETED, REJECTED
+  kycStatus        String   @default("PENDING") // Values: PENDING, IN_PROGRESS, APPROVED, REJECTED
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   entity           Entity   @relation(fields: [entityId], references: [id])

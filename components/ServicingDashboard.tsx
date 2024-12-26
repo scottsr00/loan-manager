@@ -37,7 +37,7 @@ interface Facility {
   id: string
   facilityName: string
   creditAgreement: {
-    agreementName: string
+    agreementNumber: string
   }
 }
 
@@ -54,7 +54,7 @@ interface ServicingActivityType {
   facility?: {
     facilityName: string
     creditAgreement?: {
-      agreementName: string
+      agreementNumber: string
     }
   }
   loan?: {
@@ -101,7 +101,30 @@ export function ServicingDashboard() {
         startDate: filters.startDate || undefined,
         endDate: filters.endDate || undefined
       })
-      setActivities(data.activities as ServicingActivityType[])
+      
+      // Map the response to match our ServicingActivityType
+      const mappedActivities: ServicingActivityType[] = data.activities.map(activity => ({
+        id: activity.id,
+        facilityId: activity.facilityId,
+        activityType: activity.activityType,
+        status: activity.status,
+        dueDate: activity.dueDate,
+        description: activity.description,
+        amount: activity.amount,
+        completedAt: activity.completedAt,
+        completedBy: activity.completedBy,
+        facility: activity.facility ? {
+          facilityName: activity.facility.facilityName,
+          creditAgreement: activity.facility.creditAgreement ? {
+            agreementNumber: activity.facility.creditAgreement.agreementNumber
+          } : undefined
+        } : undefined,
+        loan: activity.loan ? {
+          id: activity.loan.id
+        } : undefined
+      }))
+      
+      setActivities(mappedActivities)
     } catch (err) {
       setError('Failed to load servicing activities')
       console.error(err)
@@ -111,7 +134,15 @@ export function ServicingDashboard() {
   const loadFacilities = async () => {
     try {
       const data = await getFacilities()
-      setFacilities(data)
+      // Map the response to match our Facility type
+      const mappedFacilities: Facility[] = data.map(facility => ({
+        id: facility.id,
+        facilityName: facility.facilityName,
+        creditAgreement: {
+          agreementNumber: facility.creditAgreement.agreementNumber
+        }
+      }))
+      setFacilities(mappedFacilities)
     } catch (err) {
       console.error('Error loading facilities:', err)
     }
@@ -161,7 +192,8 @@ export function ServicingDashboard() {
           facilityId: activity.facilityId,
           amount: activity.amount,
           paymentDate: new Date(),
-          description: activity.description || undefined
+          description: activity.description || undefined,
+          servicingActivityId: activity.id
         })
       }
 
@@ -187,7 +219,7 @@ export function ServicingDashboard() {
       flex: 1,
       valueGetter: params => {
         const facility = params.data?.facility;
-        return facility ? `${facility.facilityName} (${facility.creditAgreement?.agreementName || 'N/A'})` : 'N/A';
+        return facility ? `${facility.facilityName} (${facility.creditAgreement?.agreementNumber || 'N/A'})` : 'N/A';
       }
     },
     {
@@ -380,7 +412,7 @@ export function ServicingDashboard() {
                   <SelectContent>
                     {facilities.map((facility) => (
                       <SelectItem key={facility.id} value={facility.id}>
-                        {`${facility.facilityName} (${facility.creditAgreement.agreementName})`}
+                        {`${facility.facilityName} (${facility.creditAgreement.agreementNumber})`}
                       </SelectItem>
                     ))}
                   </SelectContent>

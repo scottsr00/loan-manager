@@ -33,6 +33,7 @@ export async function updateServicingActivity(params: UpdateServicingActivityPar
     return activity
   } catch (error) {
     console.error('Error updating servicing activity:', error)
-    throw new Error('Failed to update servicing activity')
+    // Propagate the original error message
+    throw error instanceof Error ? error : new Error('Failed to update servicing activity')
   }
 } 

@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import {
   Dialog,
@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { format } from 'date-fns'
 import type { Borrower } from '@/types/borrower'
 
 interface BorrowerDetailsModalProps {
@@ -25,6 +26,7 @@ export function BorrowerDetailsModal({ borrower, open, onOpenChange, onEdit }: B
 
   const primaryAddress = borrower.entity.addresses[0]
   const primaryContact = borrower.entity.contacts[0]
+  const primaryBeneficialOwner = borrower.entity.beneficialOwners[0]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -187,7 +189,45 @@ export function BorrowerDetailsModal({ borrower, open, onOpenChange, onEdit }: B
                     )}
                   </div>
                 </div>
+                <Separator />
               </>
+            )}
+
+            {/* Beneficial Owner */}
+            {primaryBeneficialOwner && (
+              <div className="space-y-4">
+                <h4 className="font-medium">Primary Beneficial Owner</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground">Name</Label>
+                    <div>{primaryBeneficialOwner.name}</div>
+                  </div>
+                  {primaryBeneficialOwner.dateOfBirth && (
+                    <div>
+                      <Label className="text-muted-foreground">Date of Birth</Label>
+                      <div>{format(new Date(primaryBeneficialOwner.dateOfBirth), 'PP')}</div>
+                    </div>
+                  )}
+                  {primaryBeneficialOwner.nationality && (
+                    <div>
+                      <Label className="text-muted-foreground">Nationality</Label>
+                      <div>{primaryBeneficialOwner.nationality}</div>
+                    </div>
+                  )}
+                  <div>
+                    <Label className="text-muted-foreground">Ownership</Label>
+                    <div>{primaryBeneficialOwner.ownershipPercentage}%</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Control Type</Label>
+                    <div>{primaryBeneficialOwner.controlType}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Verification Status</Label>
+                    <div>{primaryBeneficialOwner.verificationStatus}</div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </ScrollArea>
