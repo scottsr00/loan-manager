@@ -85,20 +85,6 @@ model BeneficialOwner {
   @@index([entityId])
 }
 
-enum KycStatus {
-  PENDING
-  IN_PROGRESS
-  APPROVED
-  REJECTED
-}
-
-enum OnboardingStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  REJECTED
-}
-
 model Borrower {
   id               String   @id @default(cuid())
   entityId         String   @unique
@@ -107,8 +93,8 @@ model Borrower {
   creditRating     String?
   ratingAgency     String?
   riskRating       String?
-  onboardingStatus String   @default("PENDING") // Values: PENDING, IN_PROGRESS, COMPLETED, REJECTED
-  kycStatus        String   @default("PENDING") // Values: PENDING, IN_PROGRESS, APPROVED, REJECTED
+  onboardingStatus String   @default("PENDING")
+  kycStatus        String   @default("PENDING")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   entity           Entity   @relation(fields: [entityId], references: [id])
@@ -298,24 +284,8 @@ model ServicingActivity {
   updatedAt          DateTime             @updatedAt
   facility           Facility             @relation(fields: [facilityId], references: [id])
   transactions       TransactionHistory[]
-  servicingAssignment ServicingAssignment?
 
   @@index([facilityId])
-}
-
-model ServicingAssignment {
-  id                 String            @id @default(cuid())
-  facilityId         String
-  servicingActivityId String           @unique
-  assignedTo         String
-  status             String           @default("PENDING")
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-  facility           Facility         @relation(fields: [facilityId], references: [id])
-  servicingActivity  ServicingActivity @relation(fields: [servicingActivityId], references: [id])
-
-  @@index([facilityId])
-  @@index([servicingActivityId])
 }
 
 model Counterparty {
@@ -346,7 +316,7 @@ model CounterpartyAddress {
   id             String      @id @default(cuid())
   counterpartyId String
   counterparty   Counterparty @relation(fields: [counterpartyId], references: [id])
-  type           String      // e.g., "LEGAL", "MAILING", "PHYSICAL"
+  type           String
   street1        String
   street2        String?
   city           String
@@ -364,7 +334,7 @@ model CounterpartyContact {
   id             String      @id @default(cuid())
   counterpartyId String
   counterparty   Counterparty @relation(fields: [counterpartyId], references: [id])
-  type           String      // e.g., "PRIMARY", "BILLING", "LEGAL"
+  type           String
   firstName      String
   lastName       String
   title          String?
@@ -375,4 +345,46 @@ model CounterpartyContact {
   updatedAt      DateTime    @updatedAt
 
   @@index([counterpartyId])
+}
+
+model ServicingRole {
+  id          String                 @id @default(cuid())
+  name        String                 @unique
+  description String
+  permissions String
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  teamMembers ServicingTeamMember[]
+}
+
+model ServicingTeamMember {
+  id          String                @id @default(cuid())
+  name        String
+  email       String                @unique
+  roleId      String
+  status      String                @default("ACTIVE")
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  role        ServicingRole         @relation(fields: [roleId], references: [id])
+  assignments ServicingAssignment[]
+
+  @@index([roleId])
+}
+
+model ServicingAssignment {
+  id             String               @id @default(cuid())
+  teamMemberId   String
+  facilityId     String
+  assignmentType String               @default("PRIMARY_AGENT")
+  startDate      DateTime
+  endDate        DateTime?
+  status         String               @default("ACTIVE")
+  notes          String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  teamMember     ServicingTeamMember  @relation(fields: [teamMemberId], references: [id])
+  facility       Facility             @relation(fields: [facilityId], references: [id])
+
+  @@index([teamMemberId])
+  @@index([facilityId])
 }

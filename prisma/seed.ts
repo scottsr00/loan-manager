@@ -101,6 +101,33 @@ async function main() {
     })
   }
 
+  // Create servicing roles
+  const roles = [
+    {
+      name: 'Admin',
+      description: 'Full system access',
+      permissions: JSON.stringify(['MANAGE_TEAM', 'MANAGE_ROLES', 'MANAGE_ASSIGNMENTS', 'VIEW_ALL'])
+    },
+    {
+      name: 'Manager',
+      description: 'Team and assignment management',
+      permissions: JSON.stringify(['MANAGE_ASSIGNMENTS', 'VIEW_ALL'])
+    },
+    {
+      name: 'Agent',
+      description: 'Regular team member',
+      permissions: JSON.stringify(['VIEW_ASSIGNMENTS'])
+    }
+  ]
+
+  for (const role of roles) {
+    await prisma.servicingRole.upsert({
+      where: { name: role.name },
+      update: role,
+      create: role
+    })
+  }
+
   console.log('Seed data created successfully')
 }
 

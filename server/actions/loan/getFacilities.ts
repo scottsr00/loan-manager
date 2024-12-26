@@ -6,7 +6,24 @@ export async function getFacilities() {
   try {
     const facilities = await prisma.facility.findMany({
       include: {
-        creditAgreement: true
+        creditAgreement: {
+          include: {
+            borrower: true,
+            lender: true
+          }
+        },
+        servicingAssignments: {
+          include: {
+            teamMember: {
+              include: {
+                role: true
+              }
+            }
+          },
+          where: {
+            status: 'ACTIVE'
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'

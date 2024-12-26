@@ -21,6 +21,7 @@ export function FacilityList() {
       try {
         setIsLoading(true)
         const data = await getFacilities()
+        console.log('Facilities:', JSON.stringify(data, null, 2))
         setFacilities(data)
       } catch (err) {
         console.error('Error loading facilities:', err)
@@ -47,16 +48,31 @@ export function FacilityList() {
       width: 150,
     },
     {
-      field: 'creditAgreement.agreementName',
+      field: 'creditAgreement.agreementNumber',
       headerName: 'Credit Agreement',
       filter: 'agTextColumnFilter',
       width: 200,
+      valueGetter: (params) => params.data.creditAgreement?.agreementNumber || 'N/A',
     },
     {
-      field: 'creditAgreement.borrower.entity.legalName',
+      field: 'creditAgreement.borrower.legalName',
       headerName: 'Borrower',
       filter: 'agTextColumnFilter',
       width: 200,
+      valueGetter: (params) => {
+        const entity = params.data.creditAgreement?.borrower
+        return entity ? `${entity.legalName}${entity.dba ? ` (${entity.dba})` : ''}` : 'N/A'
+      }
+    },
+    {
+      field: 'creditAgreement.lender.legalName',
+      headerName: 'Lender',
+      filter: 'agTextColumnFilter',
+      width: 200,
+      valueGetter: (params) => {
+        const entity = params.data.creditAgreement?.lender
+        return entity ? `${entity.legalName}${entity.dba ? ` (${entity.dba})` : ''}` : 'N/A'
+      }
     },
     {
       field: 'commitmentAmount',
