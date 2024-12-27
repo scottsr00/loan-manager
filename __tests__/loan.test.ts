@@ -9,12 +9,18 @@ const LoanPositionSchema = z.object({
   status: z.enum(['ACTIVE', 'CLOSED', 'DEFAULTED']).optional().default('ACTIVE')
 })
 
-const CreateLoanSchema = z.object({
+export const CreateLoanSchema = z.object({
   facilityId: z.string().min(1, 'Facility ID is required'),
   amount: z.number().positive('Amount must be positive'),
   currency: z.string().optional().default('USD'),
   status: z.enum(['ACTIVE', 'PARTIALLY_PAID', 'PAID', 'DEFAULTED', 'CLOSED']).optional().default('ACTIVE'),
   positions: z.array(LoanPositionSchema).min(1, 'At least one position is required')
+}).refine(data => {
+  const totalPositionAmount = data.positions.reduce((sum, pos) => sum + pos.amount, 0)
+  return totalPositionAmount === data.amount
+}, {
+  message: 'Position amounts must equal loan amount',
+  path: ['positions']
 })
 
 type CreateLoanInput = z.infer<typeof CreateLoanSchema>
@@ -32,12 +38,20 @@ jest.mock('@/server/db/client', () => ({
   },
 }))
 
-// Reset mocks before each test
-beforeEach(() => {
-  jest.clearAllMocks()
-})
-
 describe('Loan Tests', () => {
+  let consoleErrorSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    // Spy on console.error
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    // Restore console.error
+    consoleErrorSpy.mockRestore()
+  })
+
   describe('createLoan', () => {
     const mockLoan: CreateLoanInput = {
       facilityId: 'facility-1',
@@ -99,6 +113,7 @@ describe('Loan Tests', () => {
           facility: true,
         },
       })
+      expect(consoleErrorSpy).not.toHaveBeenCalled()
     })
 
     it('should validate required fields', async () => {
@@ -114,6 +129,10 @@ describe('Loan Tests', () => {
         .rejects.toThrow(/Facility ID is required|Amount must be positive|At least one position is required/)
 
       expect(prisma.loan.create).not.toHaveBeenCalled()
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error creating loan:',
+        expect.any(Error)
+      )
     })
 
     it('should validate position amounts match loan amount', async () => {
@@ -135,6 +154,10 @@ describe('Loan Tests', () => {
         .rejects.toThrow('Position amounts must equal loan amount')
 
       expect(prisma.loan.create).not.toHaveBeenCalled()
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error creating loan:',
+        expect.any(Error)
+      )
     })
 
     it('should validate positive amounts', async () => {
@@ -156,6 +179,10 @@ describe('Loan Tests', () => {
         .rejects.toThrow(/Amount must be positive|Position amount must be positive/)
 
       expect(prisma.loan.create).not.toHaveBeenCalled()
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error creating loan:',
+        expect.any(Error)
+      )
     })
   })
 
@@ -189,6 +216,7 @@ describe('Loan Tests', () => {
 
       expect(result.amount).toBe(updateData.amount)
       expect(result.status).toBe(updateData.status)
+      expect(consoleErrorSpy).not.toHaveBeenCalled()
     })
 
     it('should throw error if loan does not exist', async () => {
@@ -198,6 +226,11 @@ describe('Loan Tests', () => {
         id: 'non-existent',
         status: 'ACTIVE' as const,
       })).rejects.toThrow('Loan not found')
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error updating loan:',
+        'Loan not found'
+      )
     })
 
     it('should validate status transitions', async () => {
@@ -212,6 +245,11 @@ describe('Loan Tests', () => {
         id: mockClosedLoan.id,
         status: 'ACTIVE' as const,
       })).rejects.toThrow('Cannot reactivate closed loan')
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error updating loan:',
+        'Cannot reactivate closed loan'
+      )
     })
 
     it('should validate amount is not greater than original amount', async () => {
@@ -221,6 +259,11 @@ describe('Loan Tests', () => {
         id: mockExistingLoan.id,
         amount: mockExistingLoan.amount + 1000,
       })).rejects.toThrow('Amount cannot exceed original loan amount')
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error updating loan:',
+        'Amount cannot exceed original loan amount'
+      )
     })
   })
 }) 

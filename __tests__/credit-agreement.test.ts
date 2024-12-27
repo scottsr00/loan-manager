@@ -11,7 +11,7 @@ type MockPrisma = {
 
 jest.mock('@/server/db/client', () => ({
   prisma: {
-    $transaction: jest.fn((callback: (tx: MockPrisma) => Promise<any>) => callback(prisma as unknown as MockPrisma)),
+    $transaction: jest.fn((callback: (tx: MockPrisma) => Promise<unknown>) => callback(prisma as unknown as MockPrisma)),
     creditAgreement: {
       create: jest.fn(),
       update: jest.fn(),
@@ -44,19 +44,6 @@ describe('Credit Agreement Tests', () => {
       status: 'ACTIVE',
     }
 
-    const mockFacility = {
-      facilityName: 'Term Loan A',
-      facilityType: 'TERM_LOAN',
-      commitmentAmount: 1000000,
-      currency: 'USD',
-      startDate: new Date('2024-01-01'),
-      maturityDate: new Date('2025-01-01'),
-      interestType: 'FLOATING',
-      baseRate: 'SOFR',
-      margin: 2.5,
-      description: 'Test facility',
-    }
-
     const mockAgreement = {
       agreementNumber: 'CA-2024-001',
       borrowerId: 'borrower-1',
@@ -68,7 +55,19 @@ describe('Credit Agreement Tests', () => {
       maturityDate: new Date('2025-01-01'),
       interestRate: 5.5,
       description: 'Test credit agreement',
-      facilities: [mockFacility],
+      facilities: [{
+        facilityName: 'Term Loan A',
+        facilityType: 'TERM_LOAN',
+        commitmentAmount: 1000000,
+        availableAmount: 1000000,
+        currency: 'USD',
+        startDate: new Date('2024-01-01'),
+        maturityDate: new Date('2025-01-01'),
+        interestType: 'FLOATING',
+        baseRate: 'SOFR',
+        margin: 2.5,
+        description: 'Test facility',
+      }]
     }
 
     it('should create a credit agreement with valid inputs', async () => {
@@ -82,11 +81,58 @@ describe('Credit Agreement Tests', () => {
       const result = await createCreditAgreement(mockAgreement)
 
       expect(result).toHaveProperty('id', 'ca-1')
-      expect(result.borrowerId).toBe(mockAgreement.borrowerId)
-      expect(result.lenderId).toBe(mockAgreement.lenderId)
+      expect(result.borrowerId).toBe('borrower-1')
+      expect(result.lenderId).toBe('lender-1')
       expect(prisma.creditAgreement.create).toHaveBeenCalledTimes(1)
       expect(prisma.creditAgreement.create).toHaveBeenCalledWith({
-        data: mockAgreement,
+        data: {
+          agreementNumber: mockAgreement.agreementNumber,
+          borrower: {
+            connect: {
+              id: mockAgreement.borrowerId
+            }
+          },
+          lender: {
+            connect: {
+              id: mockAgreement.lenderId
+            }
+          },
+          status: mockAgreement.status,
+          amount: mockAgreement.amount,
+          currency: mockAgreement.currency,
+          startDate: mockAgreement.startDate,
+          maturityDate: mockAgreement.maturityDate,
+          interestRate: mockAgreement.interestRate,
+          description: mockAgreement.description,
+          facilities: {
+            create: mockAgreement.facilities.map(facility => ({
+              ...facility,
+              availableAmount: facility.commitmentAmount,
+            }))
+          }
+        },
+        include: {
+          borrower: {
+            include: {
+              borrower: true,
+            },
+          },
+          facilities: {
+            include: {
+              trades: {
+                include: {
+                  counterparty: true,
+                },
+              },
+            },
+          },
+          lender: {
+            include: {
+              lender: true,
+            },
+          },
+          transactions: true,
+        },
       })
     })
 
@@ -113,8 +159,8 @@ describe('Credit Agreement Tests', () => {
     it('should validate maturity date is after start date', async () => {
       const invalidAgreement = {
         ...mockAgreement,
-        startDate: new Date('2024-01-01'),
-        maturityDate: new Date('2023-12-31'),
+        startDate: new Date('2025-01-01'),
+        maturityDate: new Date('2024-01-01'),
       }
 
       await expect(createCreditAgreement(invalidAgreement))
@@ -154,6 +200,7 @@ describe('Credit Agreement Tests', () => {
       id: 'ca-1',
       agreementNumber: 'CA-2024-001',
       borrowerId: 'borrower-1',
+      lenderId: 'lender-1',
       status: 'PENDING',
       amount: 1000000,
       currency: 'USD',
@@ -161,6 +208,19 @@ describe('Credit Agreement Tests', () => {
       maturityDate: new Date('2025-01-01'),
       interestRate: 5.5,
       description: 'Test credit agreement',
+      facilities: [{
+        id: 'facility-1',
+        facilityName: 'Term Loan A',
+        facilityType: 'TERM_LOAN',
+        commitmentAmount: 800000,
+        currency: 'USD',
+        startDate: new Date('2024-01-01'),
+        maturityDate: new Date('2025-01-01'),
+        interestType: 'FLOATING',
+        baseRate: 'SOFR',
+        margin: 2.5,
+        description: 'Test facility',
+      }]
     }
 
     it('should update credit agreement with valid changes', async () => {

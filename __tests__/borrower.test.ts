@@ -26,8 +26,17 @@ jest.mock('@/server/db/client', () => ({
 }))
 
 describe('Borrower Tests', () => {
+  let consoleErrorSpy: jest.SpyInstance
+
   beforeEach(() => {
     jest.clearAllMocks()
+    // Spy on console.error
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    // Restore console.error
+    consoleErrorSpy.mockRestore()
   })
 
   describe('createBorrower', () => {
@@ -79,6 +88,7 @@ describe('Borrower Tests', () => {
       expect(result.industrySegment).toBe(mockBorrowerInput.industrySegment)
       expect(prisma.entity.create).toHaveBeenCalledTimes(1)
       expect(prisma.borrower.create).toHaveBeenCalledTimes(1)
+      expect(consoleErrorSpy).not.toHaveBeenCalled()
     })
 
     it('should validate required fields', async () => {
@@ -95,6 +105,10 @@ describe('Borrower Tests', () => {
 
       expect(prisma.entity.create).not.toHaveBeenCalled()
       expect(prisma.borrower.create).not.toHaveBeenCalled()
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error in createBorrower:',
+        expect.any(Error)
+      )
     })
 
     it('should validate onboarding status', async () => {
@@ -108,6 +122,10 @@ describe('Borrower Tests', () => {
 
       expect(prisma.entity.create).not.toHaveBeenCalled()
       expect(prisma.borrower.create).not.toHaveBeenCalled()
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error in createBorrower:',
+        expect.any(Error)
+      )
     })
 
     it('should validate KYC status', async () => {
@@ -121,6 +139,10 @@ describe('Borrower Tests', () => {
 
       expect(prisma.entity.create).not.toHaveBeenCalled()
       expect(prisma.borrower.create).not.toHaveBeenCalled()
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error in createBorrower:',
+        expect.any(Error)
+      )
     })
   })
 
@@ -153,6 +175,7 @@ describe('Borrower Tests', () => {
 
       expect(result.onboardingStatus).toBe(updateData.onboardingStatus)
       expect(result.kycStatus).toBe(updateData.kycStatus)
+      expect(consoleErrorSpy).not.toHaveBeenCalled()
     })
 
     it('should throw error if borrower does not exist', async () => {
@@ -168,6 +191,11 @@ describe('Borrower Tests', () => {
 
       await expect(updateBorrower('non-existent', updateData))
         .rejects.toThrow('Borrower not found')
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error in updateBorrower:',
+        expect.any(Error)
+      )
     })
 
     it('should validate status transitions', async () => {
@@ -188,6 +216,11 @@ describe('Borrower Tests', () => {
 
       await expect(updateBorrower(mockRejectedBorrower.id, updateData))
         .rejects.toThrow('Cannot change status of rejected borrower')
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error in updateBorrower:',
+        expect.any(Error)
+      )
     })
 
     it('should validate KYC status transitions', async () => {
@@ -208,6 +241,11 @@ describe('Borrower Tests', () => {
 
       await expect(updateBorrower(mockRejectedBorrower.id, updateData))
         .rejects.toThrow('Cannot change KYC status of rejected borrower')
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error in updateBorrower:',
+        expect.any(Error)
+      )
     })
   })
 }) 

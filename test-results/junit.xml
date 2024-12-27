@@ -1,282 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="56" failures="9" errors="0" time="0.727">
-  <testsuite name="Credit Agreement Tests" errors="0" failures="8" skipped="0" timestamp="2024-12-27T13:33:25" time="0.16" tests="10">
-    <testcase classname="Credit Agreement Tests createCreditAgreement should create a credit agreement with valid inputs" name="Credit Agreement Tests createCreditAgreement should create a credit agreement with valid inputs" time="0.005">
-      <failure>Error: expect(jest.fn()).toHaveBeenCalledWith(...expected)
-
-- Expected
-+ Received
-
-@@ -1,13 +1,18 @@
-  Object {
-    &quot;data&quot;: Object {
-      &quot;agreementNumber&quot;: &quot;CA-2024-001&quot;,
-      &quot;amount&quot;: 1000000,
--     &quot;borrowerId&quot;: &quot;borrower-1&quot;,
-+     &quot;borrower&quot;: Object {
-+       &quot;connect&quot;: Object {
-+         &quot;id&quot;: &quot;borrower-1&quot;,
-+       },
-+     },
-      &quot;currency&quot;: &quot;USD&quot;,
-      &quot;description&quot;: &quot;Test credit agreement&quot;,
--     &quot;facilities&quot;: Array [
-+     &quot;facilities&quot;: Object {
-+       &quot;create&quot;: Array [
-          Object {
-            &quot;baseRate&quot;: &quot;SOFR&quot;,
-            &quot;commitmentAmount&quot;: 1000000,
-            &quot;currency&quot;: &quot;USD&quot;,
-            &quot;description&quot;: &quot;Test facility&quot;,
-@@ -17,12 +22,39 @@
-            &quot;margin&quot;: 2.5,
-            &quot;maturityDate&quot;: 2025-01-01T00:00:00.000Z,
-            &quot;startDate&quot;: 2024-01-01T00:00:00.000Z,
-          },
-        ],
-+     },
-      &quot;interestRate&quot;: 5.5,
--     &quot;lenderId&quot;: &quot;lender-1&quot;,
-+     &quot;lender&quot;: Object {
-+       &quot;connect&quot;: Object {
-+         &quot;id&quot;: &quot;lender-1&quot;,
-+       },
-+     },
-      &quot;maturityDate&quot;: 2025-01-01T00:00:00.000Z,
-      &quot;startDate&quot;: 2024-01-01T00:00:00.000Z,
-      &quot;status&quot;: &quot;PENDING&quot;,
-+   },
-+   &quot;include&quot;: Object {
-+     &quot;borrower&quot;: Object {
-+       &quot;include&quot;: Object {
-+         &quot;borrower&quot;: true,
-+       },
-+     },
-+     &quot;facilities&quot;: Object {
-+       &quot;include&quot;: Object {
-+         &quot;trades&quot;: Object {
-+           &quot;include&quot;: Object {
-+             &quot;counterparty&quot;: true,
-+           },
-+         },
-+       },
-+     },
-+     &quot;lender&quot;: Object {
-+       &quot;include&quot;: Object {
-+         &quot;lender&quot;: true,
-+       },
-+     },
-+     &quot;transactions&quot;: true,
-    },
-  },
-
-Number of calls: 1
-    at Object.toHaveBeenCalledWith (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:88:45)</failure>
+<testsuites name="jest tests" tests="56" failures="0" errors="0" time="0.792">
+  <testsuite name="Credit Agreement Tests" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:45:33" time="0.136" tests="10">
+    <testcase classname="Credit Agreement Tests createCreditAgreement should create a credit agreement with valid inputs" name="Credit Agreement Tests createCreditAgreement should create a credit agreement with valid inputs" time="0.002">
     </testcase>
-    <testcase classname="Credit Agreement Tests createCreditAgreement should throw error if borrower does not exist" name="Credit Agreement Tests createCreditAgreement should throw error if borrower does not exist" time="0.001">
-      <failure>Error: expect(received).rejects.toThrow()
-
-Received promise resolved instead of rejected
-Resolved to value: {&quot;agreementNumber&quot;: &quot;CA-2024-001&quot;, &quot;amount&quot;: 1000000, &quot;borrowerId&quot;: &quot;borrower-1&quot;, &quot;currency&quot;: &quot;USD&quot;, &quot;description&quot;: &quot;Test credit agreement&quot;, &quot;facilities&quot;: [{&quot;baseRate&quot;: &quot;SOFR&quot;, &quot;commitmentAmount&quot;: 1000000, &quot;currency&quot;: &quot;USD&quot;, &quot;description&quot;: &quot;Test facility&quot;, &quot;facilityName&quot;: &quot;Term Loan A&quot;, &quot;facilityType&quot;: &quot;TERM_LOAN&quot;, &quot;interestType&quot;: &quot;FLOATING&quot;, &quot;margin&quot;: 2.5, &quot;maturityDate&quot;: 2025-01-01T00:00:00.000Z, &quot;startDate&quot;: 2024-01-01T00:00:00.000Z}], &quot;id&quot;: &quot;ca-1&quot;, &quot;interestRate&quot;: 5.5, &quot;lenderId&quot;: &quot;lender-1&quot;, &quot;maturityDate&quot;: 2025-01-01T00:00:00.000Z, &quot;startDate&quot;: 2024-01-01T00:00:00.000Z, &quot;status&quot;: &quot;PENDING&quot;}
-    at expect (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:113:15)
-    at Object.expect (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:97:13)
-    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
-    at new Promise (&lt;anonymous&gt;)
-    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
-    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
-    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
-    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
-    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
-    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
-    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    <testcase classname="Credit Agreement Tests createCreditAgreement should throw error if borrower does not exist" name="Credit Agreement Tests createCreditAgreement should throw error if borrower does not exist" time="0.012">
     </testcase>
-    <testcase classname="Credit Agreement Tests createCreditAgreement should throw error if lender does not exist" name="Credit Agreement Tests createCreditAgreement should throw error if lender does not exist" time="0">
-      <failure>Error: expect(received).rejects.toThrow()
-
-Received promise resolved instead of rejected
-Resolved to value: {&quot;agreementNumber&quot;: &quot;CA-2024-001&quot;, &quot;amount&quot;: 1000000, &quot;borrowerId&quot;: &quot;borrower-1&quot;, &quot;currency&quot;: &quot;USD&quot;, &quot;description&quot;: &quot;Test credit agreement&quot;, &quot;facilities&quot;: [{&quot;baseRate&quot;: &quot;SOFR&quot;, &quot;commitmentAmount&quot;: 1000000, &quot;currency&quot;: &quot;USD&quot;, &quot;description&quot;: &quot;Test facility&quot;, &quot;facilityName&quot;: &quot;Term Loan A&quot;, &quot;facilityType&quot;: &quot;TERM_LOAN&quot;, &quot;interestType&quot;: &quot;FLOATING&quot;, &quot;margin&quot;: 2.5, &quot;maturityDate&quot;: 2025-01-01T00:00:00.000Z, &quot;startDate&quot;: 2024-01-01T00:00:00.000Z}], &quot;id&quot;: &quot;ca-1&quot;, &quot;interestRate&quot;: 5.5, &quot;lenderId&quot;: &quot;lender-1&quot;, &quot;maturityDate&quot;: 2025-01-01T00:00:00.000Z, &quot;startDate&quot;: 2024-01-01T00:00:00.000Z, &quot;status&quot;: &quot;PENDING&quot;}
-    at expect (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:113:15)
-    at Object.expect (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:107:13)
-    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
-    at new Promise (&lt;anonymous&gt;)
-    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
-    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
-    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
-    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
-    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
-    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
-    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    <testcase classname="Credit Agreement Tests createCreditAgreement should throw error if lender does not exist" name="Credit Agreement Tests createCreditAgreement should throw error if lender does not exist" time="0.001">
     </testcase>
-    <testcase classname="Credit Agreement Tests createCreditAgreement should validate maturity date is after start date" name="Credit Agreement Tests createCreditAgreement should validate maturity date is after start date" time="0.001">
-      <failure>Error: expect(received).rejects.toThrow()
-
-Received promise resolved instead of rejected
-Resolved to value: {&quot;agreementNumber&quot;: &quot;CA-2024-001&quot;, &quot;amount&quot;: 1000000, &quot;borrowerId&quot;: &quot;borrower-1&quot;, &quot;currency&quot;: &quot;USD&quot;, &quot;description&quot;: &quot;Test credit agreement&quot;, &quot;facilities&quot;: [{&quot;baseRate&quot;: &quot;SOFR&quot;, &quot;commitmentAmount&quot;: 1000000, &quot;currency&quot;: &quot;USD&quot;, &quot;description&quot;: &quot;Test facility&quot;, &quot;facilityName&quot;: &quot;Term Loan A&quot;, &quot;facilityType&quot;: &quot;TERM_LOAN&quot;, &quot;interestType&quot;: &quot;FLOATING&quot;, &quot;margin&quot;: 2.5, &quot;maturityDate&quot;: 2025-01-01T00:00:00.000Z, &quot;startDate&quot;: 2024-01-01T00:00:00.000Z}], &quot;id&quot;: &quot;ca-1&quot;, &quot;interestRate&quot;: 5.5, &quot;lenderId&quot;: &quot;lender-1&quot;, &quot;maturityDate&quot;: 2025-01-01T00:00:00.000Z, &quot;startDate&quot;: 2024-01-01T00:00:00.000Z, &quot;status&quot;: &quot;PENDING&quot;}
-    at expect (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:113:15)
-    at Object.expect (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:120:13)
-    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
-    at new Promise (&lt;anonymous&gt;)
-    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
-    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
-    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
-    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
-    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
-    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
-    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    <testcase classname="Credit Agreement Tests createCreditAgreement should validate maturity date is after start date" name="Credit Agreement Tests createCreditAgreement should validate maturity date is after start date" time="0.002">
     </testcase>
-    <testcase classname="Credit Agreement Tests createCreditAgreement should validate positive amount and interest rate" name="Credit Agreement Tests createCreditAgreement should validate positive amount and interest rate" time="0">
-      <failure>Error: expect(received).rejects.toThrow()
-
-Received promise resolved instead of rejected
-Resolved to value: {&quot;agreementNumber&quot;: &quot;CA-2024-001&quot;, &quot;amount&quot;: 1000000, &quot;borrowerId&quot;: &quot;borrower-1&quot;, &quot;currency&quot;: &quot;USD&quot;, &quot;description&quot;: &quot;Test credit agreement&quot;, &quot;facilities&quot;: [{&quot;baseRate&quot;: &quot;SOFR&quot;, &quot;commitmentAmount&quot;: 1000000, &quot;currency&quot;: &quot;USD&quot;, &quot;description&quot;: &quot;Test facility&quot;, &quot;facilityName&quot;: &quot;Term Loan A&quot;, &quot;facilityType&quot;: &quot;TERM_LOAN&quot;, &quot;interestType&quot;: &quot;FLOATING&quot;, &quot;margin&quot;: 2.5, &quot;maturityDate&quot;: 2025-01-01T00:00:00.000Z, &quot;startDate&quot;: 2024-01-01T00:00:00.000Z}], &quot;id&quot;: &quot;ca-1&quot;, &quot;interestRate&quot;: 5.5, &quot;lenderId&quot;: &quot;lender-1&quot;, &quot;maturityDate&quot;: 2025-01-01T00:00:00.000Z, &quot;startDate&quot;: 2024-01-01T00:00:00.000Z, &quot;status&quot;: &quot;PENDING&quot;}
-    at expect (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:113:15)
-    at Object.expect (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:133:13)
-    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
-    at new Promise (&lt;anonymous&gt;)
-    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
-    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
-    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
-    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
-    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
-    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
-    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    <testcase classname="Credit Agreement Tests createCreditAgreement should validate positive amount and interest rate" name="Credit Agreement Tests createCreditAgreement should validate positive amount and interest rate" time="0.002">
     </testcase>
     <testcase classname="Credit Agreement Tests createCreditAgreement should validate at least one facility is provided" name="Credit Agreement Tests createCreditAgreement should validate at least one facility is provided" time="0.001">
-      <failure>Error: expect(received).rejects.toThrow()
-
-Received promise resolved instead of rejected
-Resolved to value: {&quot;agreementNumber&quot;: &quot;CA-2024-001&quot;, &quot;amount&quot;: 1000000, &quot;borrowerId&quot;: &quot;borrower-1&quot;, &quot;currency&quot;: &quot;USD&quot;, &quot;description&quot;: &quot;Test credit agreement&quot;, &quot;facilities&quot;: [{&quot;baseRate&quot;: &quot;SOFR&quot;, &quot;commitmentAmount&quot;: 1000000, &quot;currency&quot;: &quot;USD&quot;, &quot;description&quot;: &quot;Test facility&quot;, &quot;facilityName&quot;: &quot;Term Loan A&quot;, &quot;facilityType&quot;: &quot;TERM_LOAN&quot;, &quot;interestType&quot;: &quot;FLOATING&quot;, &quot;margin&quot;: 2.5, &quot;maturityDate&quot;: 2025-01-01T00:00:00.000Z, &quot;startDate&quot;: 2024-01-01T00:00:00.000Z}], &quot;id&quot;: &quot;ca-1&quot;, &quot;interestRate&quot;: 5.5, &quot;lenderId&quot;: &quot;lender-1&quot;, &quot;maturityDate&quot;: 2025-01-01T00:00:00.000Z, &quot;startDate&quot;: 2024-01-01T00:00:00.000Z, &quot;status&quot;: &quot;PENDING&quot;}
-    at expect (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:113:15)
-    at Object.expect (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:145:13)
-    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
-    at new Promise (&lt;anonymous&gt;)
-    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
-    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
-    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
-    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
-    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
-    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
-    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
     </testcase>
-    <testcase classname="Credit Agreement Tests updateCreditAgreement should update credit agreement with valid changes" name="Credit Agreement Tests updateCreditAgreement should update credit agreement with valid changes" time="0.011">
-      <failure>TypeError: Cannot read properties of undefined (reading &apos;reduce&apos;)
-    at reduce (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/updateCreditAgreement.ts:32:61)
-    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:174:22)</failure>
+    <testcase classname="Credit Agreement Tests updateCreditAgreement should update credit agreement with valid changes" name="Credit Agreement Tests updateCreditAgreement should update credit agreement with valid changes" time="0">
     </testcase>
-    <testcase classname="Credit Agreement Tests updateCreditAgreement should throw error if agreement does not exist" name="Credit Agreement Tests updateCreditAgreement should throw error if agreement does not exist" time="0.002">
+    <testcase classname="Credit Agreement Tests updateCreditAgreement should throw error if agreement does not exist" name="Credit Agreement Tests updateCreditAgreement should throw error if agreement does not exist" time="0.003">
     </testcase>
-    <testcase classname="Credit Agreement Tests updateCreditAgreement should validate status transitions" name="Credit Agreement Tests updateCreditAgreement should validate status transitions" time="0.002">
-      <failure>Error: expect(received).rejects.toThrow(expected)
-
-Expected substring: &quot;Cannot change status of terminated agreement&quot;
-Received message:   &quot;Cannot read properties of undefined (reading &apos;reduce&apos;)&quot;
-
-      30 |     // Validate facility commitments against new amount
-      31 |     if (data.amount) {
-    &gt; 32 |       const totalCommitments = existingAgreement.facilities.reduce(
-         |                                                             ^
-      33 |         (sum, facility) =&gt; sum + facility.commitmentAmount,
-      34 |         0
-      35 |       )
-
-      at reduce (server/actions/loan/updateCreditAgreement.ts:32:61)
-      at Object.&lt;anonymous&gt; (__tests__/credit-agreement.test.ts:202:7)
-    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:218:22)
-    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:205:19)
-    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
-    at new Promise (&lt;anonymous&gt;)
-    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
-    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
-    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
-    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
-    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
-    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
-    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    <testcase classname="Credit Agreement Tests updateCreditAgreement should validate status transitions" name="Credit Agreement Tests updateCreditAgreement should validate status transitions" time="0.001">
     </testcase>
     <testcase classname="Credit Agreement Tests updateCreditAgreement should validate amount changes" name="Credit Agreement Tests updateCreditAgreement should validate amount changes" time="0.001">
     </testcase>
   </testsuite>
-  <testsuite name="Facility Position Management" errors="0" failures="1" skipped="0" timestamp="2024-12-27T13:33:25" time="0.055" tests="6">
-    <testcase classname="Facility Position Management Position Creation should create a facility position within available amount" name="Facility Position Management Position Creation should create a facility position within available amount" time="0.001">
+  <testsuite name="Facility Position Management" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:45:33" time="0.046" tests="6">
+    <testcase classname="Facility Position Management Position Creation should create a facility position within available amount" name="Facility Position Management Position Creation should create a facility position within available amount" time="0.002">
     </testcase>
-    <testcase classname="Facility Position Management Position Creation should reject position exceeding facility available amount" name="Facility Position Management Position Creation should reject position exceeding facility available amount" time="0.004">
+    <testcase classname="Facility Position Management Position Creation should reject position exceeding facility available amount" name="Facility Position Management Position Creation should reject position exceeding facility available amount" time="0.002">
     </testcase>
     <testcase classname="Facility Position Management Position Creation should validate total positions do not exceed facility commitment" name="Facility Position Management Position Creation should validate total positions do not exceed facility commitment" time="0.001">
     </testcase>
     <testcase classname="Facility Position Management Position Updates should update position amount within available limits" name="Facility Position Management Position Updates should update position amount within available limits" time="0">
-      <failure>Error: expect(jest.fn()).toHaveBeenCalledWith(...expected)
-
-- Expected
-+ Received
-
-  Object {
--   &quot;data&quot;: ObjectContaining {
-+   &quot;data&quot;: Object {
-      &quot;amount&quot;: 600000,
--     &quot;id&quot;: &quot;position-1&quot;,
-+     &quot;status&quot;: undefined,
-    },
-    &quot;where&quot;: Object {
-      &quot;id&quot;: &quot;position-1&quot;,
-    },
-  },
-
-Number of calls: 1
-    at Object.toHaveBeenCalledWith (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/facilityPosition.test.ts:164:46)</failure>
     </testcase>
     <testcase classname="Facility Position Management Position Updates should reject updates that would exceed facility commitment" name="Facility Position Management Position Updates should reject updates that would exceed facility commitment" time="0.001">
     </testcase>
-    <testcase classname="Facility Position Management Position Updates should validate position status transitions" name="Facility Position Management Position Updates should validate position status transitions" time="0.001">
+    <testcase classname="Facility Position Management Position Updates should validate position status transitions" name="Facility Position Management Position Updates should validate position status transitions" time="0">
     </testcase>
   </testsuite>
-  <testsuite name="Borrower Tests" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:33:25" time="0.051" tests="8">
-    <testcase classname="Borrower Tests createBorrower should create a borrower with valid inputs" name="Borrower Tests createBorrower should create a borrower with valid inputs" time="0.001">
-    </testcase>
-    <testcase classname="Borrower Tests createBorrower should validate required fields" name="Borrower Tests createBorrower should validate required fields" time="0.005">
-    </testcase>
-    <testcase classname="Borrower Tests createBorrower should validate onboarding status" name="Borrower Tests createBorrower should validate onboarding status" time="0.001">
-    </testcase>
-    <testcase classname="Borrower Tests createBorrower should validate KYC status" name="Borrower Tests createBorrower should validate KYC status" time="0.001">
-    </testcase>
-    <testcase classname="Borrower Tests updateBorrower should update borrower with valid changes" name="Borrower Tests updateBorrower should update borrower with valid changes" time="0">
-    </testcase>
-    <testcase classname="Borrower Tests updateBorrower should throw error if borrower does not exist" name="Borrower Tests updateBorrower should throw error if borrower does not exist" time="0.002">
-    </testcase>
-    <testcase classname="Borrower Tests updateBorrower should validate status transitions" name="Borrower Tests updateBorrower should validate status transitions" time="0.001">
-    </testcase>
-    <testcase classname="Borrower Tests updateBorrower should validate KYC status transitions" name="Borrower Tests updateBorrower should validate KYC status transitions" time="0.001">
-    </testcase>
-  </testsuite>
-  <testsuite name="Servicing Activity Tests" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:33:25" time="0.058" tests="9">
+  <testsuite name="Servicing Activity Tests" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:45:33" time="0.045" tests="9">
     <testcase classname="Servicing Activity Tests addServicingActivity should create a servicing activity" name="Servicing Activity Tests addServicingActivity should create a servicing activity" time="0">
     </testcase>
-    <testcase classname="Servicing Activity Tests addServicingActivity should throw error if facility does not exist" name="Servicing Activity Tests addServicingActivity should throw error if facility does not exist" time="0.002">
+    <testcase classname="Servicing Activity Tests addServicingActivity should throw error if facility does not exist" name="Servicing Activity Tests addServicingActivity should throw error if facility does not exist" time="0.001">
     </testcase>
-    <testcase classname="Servicing Activity Tests addServicingActivity should validate required fields" name="Servicing Activity Tests addServicingActivity should validate required fields" time="0">
+    <testcase classname="Servicing Activity Tests addServicingActivity should validate required fields" name="Servicing Activity Tests addServicingActivity should validate required fields" time="0.001">
     </testcase>
     <testcase classname="Servicing Activity Tests processPaydown should process a paydown without creating duplicate servicing activity" name="Servicing Activity Tests processPaydown should process a paydown without creating duplicate servicing activity" time="0.001">
     </testcase>
@@ -284,57 +49,65 @@ Number of calls: 1
     </testcase>
     <testcase classname="Servicing Activity Tests processPaydown should throw error if paydown amount exceeds outstanding balance" name="Servicing Activity Tests processPaydown should throw error if paydown amount exceeds outstanding balance" time="0.002">
     </testcase>
-    <testcase classname="Servicing Activity Tests updateServicingActivity should update activity status and process paydown when completed" name="Servicing Activity Tests updateServicingActivity should update activity status and process paydown when completed" time="0.001">
+    <testcase classname="Servicing Activity Tests updateServicingActivity should update activity status and process paydown when completed" name="Servicing Activity Tests updateServicingActivity should update activity status and process paydown when completed" time="0">
     </testcase>
     <testcase classname="Servicing Activity Tests updateServicingActivity should throw error if activity does not exist" name="Servicing Activity Tests updateServicingActivity should throw error if activity does not exist" time="0.001">
     </testcase>
-    <testcase classname="Servicing Activity Tests updateServicingActivity should clear completion fields when status is not COMPLETED" name="Servicing Activity Tests updateServicingActivity should clear completion fields when status is not COMPLETED" time="0">
+    <testcase classname="Servicing Activity Tests updateServicingActivity should clear completion fields when status is not COMPLETED" name="Servicing Activity Tests updateServicingActivity should clear completion fields when status is not COMPLETED" time="0.001">
     </testcase>
   </testsuite>
-  <testsuite name="Loan Tests" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:33:25" time="0.043" tests="8">
-    <testcase classname="Loan Tests createLoan should create a loan with valid inputs" name="Loan Tests createLoan should create a loan with valid inputs" time="0.003">
+  <testsuite name="Borrower Tests" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:45:33" time="0.045" tests="8">
+    <testcase classname="Borrower Tests createBorrower should create a borrower with valid inputs" name="Borrower Tests createBorrower should create a borrower with valid inputs" time="0.003">
     </testcase>
-    <testcase classname="Loan Tests createLoan should validate required fields" name="Loan Tests createLoan should validate required fields" time="0.003">
+    <testcase classname="Borrower Tests createBorrower should validate required fields" name="Borrower Tests createBorrower should validate required fields" time="0.002">
     </testcase>
-    <testcase classname="Loan Tests createLoan should validate position amounts match loan amount" name="Loan Tests createLoan should validate position amounts match loan amount" time="0.001">
+    <testcase classname="Borrower Tests createBorrower should validate onboarding status" name="Borrower Tests createBorrower should validate onboarding status" time="0.001">
     </testcase>
-    <testcase classname="Loan Tests createLoan should validate positive amounts" name="Loan Tests createLoan should validate positive amounts" time="0.002">
+    <testcase classname="Borrower Tests createBorrower should validate KYC status" name="Borrower Tests createBorrower should validate KYC status" time="0">
     </testcase>
-    <testcase classname="Loan Tests updateLoan should update loan with valid changes" name="Loan Tests updateLoan should update loan with valid changes" time="0">
+    <testcase classname="Borrower Tests updateBorrower should update borrower with valid changes" name="Borrower Tests updateBorrower should update borrower with valid changes" time="0.001">
     </testcase>
-    <testcase classname="Loan Tests updateLoan should throw error if loan does not exist" name="Loan Tests updateLoan should throw error if loan does not exist" time="0.002">
+    <testcase classname="Borrower Tests updateBorrower should throw error if borrower does not exist" name="Borrower Tests updateBorrower should throw error if borrower does not exist" time="0.001">
     </testcase>
-    <testcase classname="Loan Tests updateLoan should validate status transitions" name="Loan Tests updateLoan should validate status transitions" time="0.001">
+    <testcase classname="Borrower Tests updateBorrower should validate status transitions" name="Borrower Tests updateBorrower should validate status transitions" time="0">
     </testcase>
-    <testcase classname="Loan Tests updateLoan should validate amount is not greater than original amount" name="Loan Tests updateLoan should validate amount is not greater than original amount" time="0">
+    <testcase classname="Borrower Tests updateBorrower should validate KYC status transitions" name="Borrower Tests updateBorrower should validate KYC status transitions" time="0.001">
     </testcase>
   </testsuite>
-  <testsuite name="Facility Management" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:33:25" time="0.039" tests="6">
+  <testsuite name="Facility Management" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:45:34" time="0.043" tests="6">
     <testcase classname="Facility Management createFacility should create a facility within credit agreement limits" name="Facility Management createFacility should create a facility within credit agreement limits" time="0.001">
     </testcase>
-    <testcase classname="Facility Management createFacility should reject if facility amount exceeds credit agreement amount" name="Facility Management createFacility should reject if facility amount exceeds credit agreement amount" time="0.002">
+    <testcase classname="Facility Management createFacility should reject if facility amount exceeds credit agreement amount" name="Facility Management createFacility should reject if facility amount exceeds credit agreement amount" time="0.001">
     </testcase>
     <testcase classname="Facility Management createFacility should reject if facility currency does not match credit agreement" name="Facility Management createFacility should reject if facility currency does not match credit agreement" time="0.001">
     </testcase>
-    <testcase classname="Facility Management createFacility should reject if facility maturity date exceeds credit agreement" name="Facility Management createFacility should reject if facility maturity date exceeds credit agreement" time="0">
+    <testcase classname="Facility Management createFacility should reject if facility maturity date exceeds credit agreement" name="Facility Management createFacility should reject if facility maturity date exceeds credit agreement" time="0.001">
     </testcase>
-    <testcase classname="Facility Management createFacility should validate required fields" name="Facility Management createFacility should validate required fields" time="0.001">
+    <testcase classname="Facility Management createFacility should validate required fields" name="Facility Management createFacility should validate required fields" time="0.002">
     </testcase>
     <testcase classname="Facility Management createFacility should validate facility type" name="Facility Management createFacility should validate facility type" time="0.001">
     </testcase>
   </testsuite>
-  <testsuite name="Counterparty Tests" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:33:25" time="0.034" tests="4">
-    <testcase classname="Counterparty Tests createCounterparty should create a counterparty with valid inputs" name="Counterparty Tests createCounterparty should create a counterparty with valid inputs" time="0">
+  <testsuite name="Loan Tests" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:45:34" time="0.04" tests="8">
+    <testcase classname="Loan Tests createLoan should create a loan with valid inputs" name="Loan Tests createLoan should create a loan with valid inputs" time="0.001">
     </testcase>
-    <testcase classname="Counterparty Tests createCounterparty should validate required fields" name="Counterparty Tests createCounterparty should validate required fields" time="0.001">
+    <testcase classname="Loan Tests createLoan should validate required fields" name="Loan Tests createLoan should validate required fields" time="0.002">
     </testcase>
-    <testcase classname="Counterparty Tests updateCounterparty should update counterparty with valid changes" name="Counterparty Tests updateCounterparty should update counterparty with valid changes" time="0">
+    <testcase classname="Loan Tests createLoan should validate position amounts match loan amount" name="Loan Tests createLoan should validate position amounts match loan amount" time="0">
     </testcase>
-    <testcase classname="Counterparty Tests updateCounterparty should throw error if counterparty does not exist" name="Counterparty Tests updateCounterparty should throw error if counterparty does not exist" time="0.001">
+    <testcase classname="Loan Tests createLoan should validate positive amounts" name="Loan Tests createLoan should validate positive amounts" time="0.001">
+    </testcase>
+    <testcase classname="Loan Tests updateLoan should update loan with valid changes" name="Loan Tests updateLoan should update loan with valid changes" time="0">
+    </testcase>
+    <testcase classname="Loan Tests updateLoan should throw error if loan does not exist" name="Loan Tests updateLoan should throw error if loan does not exist" time="0.001">
+    </testcase>
+    <testcase classname="Loan Tests updateLoan should validate status transitions" name="Loan Tests updateLoan should validate status transitions" time="0">
+    </testcase>
+    <testcase classname="Loan Tests updateLoan should validate amount is not greater than original amount" name="Loan Tests updateLoan should validate amount is not greater than original amount" time="0">
     </testcase>
   </testsuite>
-  <testsuite name="Credit Agreement Management" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:33:25" time="0.042" tests="5">
-    <testcase classname="Credit Agreement Management Credit Agreement Updates should update credit agreement details while preserving facility relationships" name="Credit Agreement Management Credit Agreement Updates should update credit agreement details while preserving facility relationships" time="0.003">
+  <testsuite name="Credit Agreement Management" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:45:34" time="0.035" tests="5">
+    <testcase classname="Credit Agreement Management Credit Agreement Updates should update credit agreement details while preserving facility relationships" name="Credit Agreement Management Credit Agreement Updates should update credit agreement details while preserving facility relationships" time="0.001">
     </testcase>
     <testcase classname="Credit Agreement Management Credit Agreement Updates should reject updates that would make facility commitments exceed new credit agreement amount" name="Credit Agreement Management Credit Agreement Updates should reject updates that would make facility commitments exceed new credit agreement amount" time="0.002">
     </testcase>
@@ -343,6 +116,16 @@ Number of calls: 1
     <testcase classname="Credit Agreement Management Credit Agreement Updates should reject currency changes when facilities exist" name="Credit Agreement Management Credit Agreement Updates should reject currency changes when facilities exist" time="0">
     </testcase>
     <testcase classname="Credit Agreement Management Credit Agreement Updates should validate required fields" name="Credit Agreement Management Credit Agreement Updates should validate required fields" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Counterparty Tests" errors="0" failures="0" skipped="0" timestamp="2024-12-27T13:45:34" time="0.036" tests="4">
+    <testcase classname="Counterparty Tests createCounterparty should create a counterparty with valid inputs" name="Counterparty Tests createCounterparty should create a counterparty with valid inputs" time="0">
+    </testcase>
+    <testcase classname="Counterparty Tests createCounterparty should validate required fields" name="Counterparty Tests createCounterparty should validate required fields" time="0.001">
+    </testcase>
+    <testcase classname="Counterparty Tests updateCounterparty should update counterparty with valid changes" name="Counterparty Tests updateCounterparty should update counterparty with valid changes" time="0">
+    </testcase>
+    <testcase classname="Counterparty Tests updateCounterparty should throw error if counterparty does not exist" name="Counterparty Tests updateCounterparty should throw error if counterparty does not exist" time="0.001">
     </testcase>
   </testsuite>
 </testsuites>

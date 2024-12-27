@@ -163,7 +163,9 @@ describe('Facility Position Management', () => {
       expect(result.amount).toBe(updateData.amount)
       expect(prisma.facilityPosition.update).toHaveBeenCalledWith({
         where: { id: updateData.id },
-        data: expect.objectContaining(updateData),
+        data: {
+          amount: updateData.amount,
+        },
       })
     })
 

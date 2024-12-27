@@ -22,6 +22,11 @@ export async function updateCreditAgreement(data: UpdateCreditAgreementInput) {
       throw new Error('Credit agreement not found')
     }
 
+    // Validate status transitions
+    if (data.status && existingAgreement.status === 'TERMINATED') {
+      throw new Error('Cannot change status of terminated agreement')
+    }
+
     // Check if currency change is allowed
     if (data.currency && data.currency !== existingAgreement.currency && existingAgreement.facilities.length > 0) {
       throw new Error('Cannot change currency of credit agreement with existing facilities')
