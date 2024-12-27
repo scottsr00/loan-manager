@@ -1,74 +1,67 @@
 'use server'
 
-import { db } from '@/server/db'
-import { createBorrowerSchema, type CreateBorrowerInput } from '@/types/borrower'
+import { prisma } from '@/server/db/client'
+import { type BorrowerInput, borrowerInputSchema } from '@/server/types/borrower'
 
-export async function updateBorrower(id: string, input: CreateBorrowerInput) {
+export async function updateBorrower(id: string, data: BorrowerInput) {
   try {
-    // Validate input
-    const validatedInput = createBorrowerSchema.parse(input)
+    // Validate input data
+    const validatedData = borrowerInputSchema.parse(data)
 
-    // First get the borrower to get the entityId
-    const borrower = await db.borrower.findUnique({
+    // Get existing borrower
+    const existingBorrower = await prisma.borrower.findUnique({
       where: { id },
-      select: { entityId: true }
+      include: {
+        entity: true
+      }
     })
 
-    if (!borrower) {
+    if (!existingBorrower) {
       throw new Error('Borrower not found')
     }
 
-    // Update in a transaction
-    const updatedBorrower = await db.$transaction(async (tx) => {
-      // Update entity
-      await tx.entity.update({
-        where: { id: borrower.entityId },
-        data: {
-          legalName: validatedInput.legalName,
-          dba: validatedInput.dba || null,
-          registrationNumber: validatedInput.registrationNumber || null,
-          taxId: validatedInput.taxId || null,
-          countryOfIncorporation: validatedInput.countryOfIncorporation || null,
-        }
-      })
+    // Validate status transitions
+    if (existingBorrower.onboardingStatus === 'REJECTED' && 
+        validatedData.onboardingStatus !== 'REJECTED') {
+      throw new Error('Cannot change status of rejected borrower')
+    }
 
-      // Update borrower
-      return tx.borrower.update({
-        where: { id },
-        data: {
-          industrySegment: validatedInput.industrySegment,
-          businessType: validatedInput.businessType,
-          creditRating: validatedInput.creditRating || null,
-          ratingAgency: validatedInput.ratingAgency || null,
-          riskRating: validatedInput.riskRating || null,
-          onboardingStatus: validatedInput.onboardingStatus || 'PENDING',
-          kycStatus: validatedInput.kycStatus || 'PENDING'
-        },
-        include: {
-          entity: {
-            include: {
-              addresses: {
-                where: {
-                  isPrimary: true
-                }
-              },
-              contacts: {
-                where: {
-                  isPrimary: true
-                }
-              },
-              beneficialOwners: true
-            }
+    if (existingBorrower.kycStatus === 'REJECTED' && 
+        validatedData.kycStatus !== 'REJECTED') {
+      throw new Error('Cannot change KYC status of rejected borrower')
+    }
+
+    // Update borrower
+    const updatedBorrower = await prisma.borrower.update({
+      where: { id },
+      data: {
+        industrySegment: validatedData.industrySegment,
+        businessType: validatedData.businessType,
+        creditRating: validatedData.creditRating || null,
+        ratingAgency: validatedData.ratingAgency || null,
+        riskRating: validatedData.riskRating || null,
+        onboardingStatus: validatedData.onboardingStatus,
+        kycStatus: validatedData.kycStatus,
+        entity: {
+          update: {
+            legalName: validatedData.legalName,
+            dba: validatedData.dba || null,
+            registrationNumber: validatedData.registrationNumber || null,
+            taxId: validatedData.taxId || null,
+            countryOfIncorporation: validatedData.countryOfIncorporation || null,
           }
         }
-      })
+      },
+      include: {
+        entity: true
+      }
     })
 
     return updatedBorrower
   } catch (error) {
     console.error('Error in updateBorrower:', error)
     if (error instanceof Error) {
-      throw new Error(`Failed to update borrower: ${error.message}`)
+      throw error
     }
     throw new Error('Failed to update borrower')
   }

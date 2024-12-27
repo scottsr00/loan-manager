@@ -10,8 +10,12 @@ const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1'
+    '^@/(.*)$': '<rootDir>/$1',
   },
+  roots: ['<rootDir>'],
+  testMatch: [
+    '<rootDir>/__tests__/**/*.test.{js,jsx,ts,tsx}'
+  ],
   collectCoverageFrom: [
     'server/**/*.{js,jsx,ts,tsx}',
     'components/**/*.{js,jsx,ts,tsx}',
@@ -26,10 +30,24 @@ const customJestConfig = {
       statements: 80
     }
   },
-  testMatch: [
-    '**/__tests__/**/*.test.{js,jsx,ts,tsx}'
+  transform: {
+    '^.+\\.(t|j)sx?$': ['@swc/jest'],
+  },
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
+  transformIgnorePatterns: [
+    '/node_modules/',
+    '^.+\\.module\\.(css|sass|scss)$',
   ],
   verbose: true,
+  testLocationInResults: true,
+  reporters: [
+    'default',
+    ['jest-junit', {
+      outputDirectory: 'test-results',
+      outputName: 'junit.xml',
+    }]
+  ],
   ci: true,
   maxWorkers: '50%',
   testTimeout: 20000

@@ -1,20 +1,23 @@
 'use server'
 
 import { prisma } from '@/server/db/client'
-import type { CreateBorrowerInput } from '@/types/borrower'
+import { type BorrowerInput, borrowerInputSchema } from '@/server/types/borrower'
 
-export async function createBorrower(data: CreateBorrowerInput) {
+export async function createBorrower(data: BorrowerInput) {
   try {
+    // Validate input data
+    const validatedData = borrowerInputSchema.parse(data)
+
     // Create in a transaction
     const borrower = await prisma.$transaction(async (tx) => {
       // Create a new entity
       const entity = await tx.entity.create({
         data: {
-          legalName: data.legalName,
-          dba: data.dba || null,
-          registrationNumber: data.registrationNumber || null,
-          taxId: data.taxId || null,
-          countryOfIncorporation: data.countryOfIncorporation || null,
+          legalName: validatedData.legalName,
+          dba: validatedData.dba || null,
+          registrationNumber: validatedData.registrationNumber || null,
+          taxId: validatedData.taxId || null,
+          countryOfIncorporation: validatedData.countryOfIncorporation || null,
           status: 'ACTIVE'
         }
       })
@@ -23,13 +26,13 @@ export async function createBorrower(data: CreateBorrowerInput) {
       return tx.borrower.create({
         data: {
           entityId: entity.id,
-          industrySegment: data.industrySegment,
-          businessType: data.businessType,
-          creditRating: data.creditRating || null,
-          ratingAgency: data.ratingAgency || null,
-          riskRating: data.riskRating || null,
-          onboardingStatus: data.onboardingStatus || 'PENDING',
-          kycStatus: data.kycStatus || 'PENDING'
+          industrySegment: validatedData.industrySegment,
+          businessType: validatedData.businessType,
+          creditRating: validatedData.creditRating || null,
+          ratingAgency: validatedData.ratingAgency || null,
+          riskRating: validatedData.riskRating || null,
+          onboardingStatus: validatedData.onboardingStatus,
+          kycStatus: validatedData.kycStatus
         },
         include: {
           entity: {
@@ -54,6 +57,9 @@ export async function createBorrower(data: CreateBorrowerInput) {
     return borrower
   } catch (error) {
     console.error('Error in createBorrower:', error)
+    if (error instanceof Error) {
+      throw error
+    }
     throw new Error('Failed to create borrower')
   }
 } 

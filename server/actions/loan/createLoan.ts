@@ -1,50 +1,49 @@
 'use server'
 
+import { z } from 'zod'
+
 import { prisma } from '@/server/db/client'
 
-interface CreateLoanInput {
-  facilityId: string
-  amount: number
-  currency?: string
-  status?: string
-  positions: {
-    lenderId: string
-    amount: number
-    status?: string
-  }[]
-}
+const LoanPositionSchema = z.object({
+  lenderId: z.string().min(1, 'Lender ID is required'),
+  amount: z.number().positive('Position amount must be positive'),
+  status: z.enum(['ACTIVE', 'CLOSED', 'DEFAULTED']).optional().default('ACTIVE')
+})
+
+const CreateLoanSchema = z.object({
+  facilityId: z.string().min(1, 'Facility ID is required'),
+  amount: z.number().positive('Amount must be positive'),
+  currency: z.string().optional().default('USD'),
+  status: z.enum(['ACTIVE', 'PARTIALLY_PAID', 'PAID', 'DEFAULTED', 'CLOSED']).optional().default('ACTIVE'),
+  positions: z.array(LoanPositionSchema).min(1, 'At least one position is required')
+}).refine(data => {
+  const totalPositionAmount = data.positions.reduce((sum, pos) => sum + pos.amount, 0)
+  return totalPositionAmount === data.amount
+}, {
+  message: 'Position amounts must equal loan amount',
+  path: ['positions']
+})
+
+type CreateLoanInput = z.infer<typeof CreateLoanSchema>
 
 export async function createLoan(data: CreateLoanInput) {
   try {
-    // Validate required fields
-    if (!data.facilityId) {
-      throw new Error('Facility ID is required')
-    }
-    if (data.amount <= 0) {
-      throw new Error('Amount must be positive')
-    }
-    if (!data.positions || data.positions.length === 0) {
-      throw new Error('At least one position is required')
-    }
-
-    // Validate position amounts
-    const totalPositionAmount = data.positions.reduce((sum, pos) => sum + pos.amount, 0)
-    if (totalPositionAmount !== data.amount) {
-      throw new Error('Position amounts must equal loan amount')
-    }
+    // Validate input data
+    const validatedData = CreateLoanSchema.parse(data)
 
     // Create the loan
     const loan = await prisma.loan.create({
       data: {
-        facilityId: data.facilityId,
-        amount: data.amount,
-        currency: data.currency || 'USD',
-        status: data.status || 'ACTIVE',
+        facilityId: validatedData.facilityId,
+        amount: validatedData.amount,
+        outstandingAmount: validatedData.amount,
+        currency: validatedData.currency,
+        status: validatedData.status,
         positions: {
-          create: data.positions.map(position => ({
+          create: validatedData.positions.map(position => ({
             lenderId: position.lenderId,
             amount: position.amount,
-            status: position.status || 'ACTIVE'
+            status: position.status
           }))
         }
       },

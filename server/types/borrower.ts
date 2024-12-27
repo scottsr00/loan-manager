@@ -1,5 +1,20 @@
-import { type Prisma, type Borrower as PrismaBorrower } from '@prisma/client'
+import { type Prisma } from '@prisma/client'
 import { z } from 'zod'
+
+// Enums
+export const onboardingStatusEnum = z.enum([
+  'PENDING',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'REJECTED'
+])
+
+export const kycStatusEnum = z.enum([
+  'PENDING',
+  'IN_PROGRESS',
+  'APPROVED',
+  'REJECTED'
+])
 
 // Base Prisma Types with Relations
 export type BorrowerWithRelations = Prisma.BorrowerGetPayload<{
@@ -19,14 +34,18 @@ export type BorrowerWithRelations = Prisma.BorrowerGetPayload<{
 
 // Input Validation Schemas
 export const borrowerInputSchema = z.object({
-  entityId: z.string().min(1, 'Entity ID is required'),
-  industrySegment: z.string().optional(),
-  businessType: z.string().optional(),
+  legalName: z.string().min(1, 'Legal name is required'),
+  dba: z.string().optional(),
+  registrationNumber: z.string().optional(),
+  taxId: z.string().optional(),
+  countryOfIncorporation: z.string().optional(),
+  industrySegment: z.string().min(1, 'Industry segment is required'),
+  businessType: z.string().min(1, 'Business type is required'),
   creditRating: z.string().optional(),
   ratingAgency: z.string().optional(),
   riskRating: z.string().optional(),
-  onboardingStatus: z.string().default('PENDING'),
-  kycStatus: z.string().default('PENDING')
+  onboardingStatus: onboardingStatusEnum,
+  kycStatus: kycStatusEnum
 })
 
 export const financialStatementSchema = z.object({

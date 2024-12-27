@@ -1,19 +1,19 @@
 'use server'
 
 import { prisma } from '@/server/db/client'
-import { type FacilityInput, facilityInputSchema } from '@/server/types/facility'
+import { FacilityInput, facilityInputSchema } from '@/server/types/facility'
 
-export async function createFacility(data: FacilityInput) {
+export async function createFacility(input: FacilityInput) {
   try {
     // Validate input data
-    const validatedData = facilityInputSchema.parse(data)
+    const validatedData = facilityInputSchema.parse(input)
 
-    // Get credit agreement to validate against
+    // Get credit agreement
     const creditAgreement = await prisma.creditAgreement.findUnique({
       where: { id: validatedData.creditAgreementId },
       include: {
-        facilities: true
-      }
+        facilities: true,
+      },
     })
 
     if (!creditAgreement) {
@@ -22,12 +22,12 @@ export async function createFacility(data: FacilityInput) {
 
     // Validate facility currency matches credit agreement
     if (validatedData.currency !== creditAgreement.currency) {
-      throw new Error('Facility currency must match credit agreement')
+      throw new Error('Facility currency must match credit agreement currency')
     }
 
     // Validate facility maturity date doesn't exceed credit agreement
     if (validatedData.maturityDate > creditAgreement.maturityDate) {
-      throw new Error('Facility maturity date cannot exceed credit agreement')
+      throw new Error('Facility maturity date cannot exceed credit agreement maturity date')
     }
 
     // Calculate total existing facility commitments
@@ -38,12 +38,12 @@ export async function createFacility(data: FacilityInput) {
 
     // Validate new facility commitment won't exceed credit agreement amount
     if (totalExistingCommitments + validatedData.commitmentAmount > creditAgreement.amount) {
-      throw new Error('Total facility commitments would exceed credit agreement')
+      throw new Error('Facility commitment amount cannot exceed credit agreement amount')
     }
 
     // Create facility
     const facility = await prisma.facility.create({
-      data: validatedData
+      data: validatedData,
     })
 
     return facility
