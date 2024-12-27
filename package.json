@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run test && next build",
     "start": "next start",
     "lint": "next lint",
     "db:seed": "prisma db seed",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "prebuild": "npm run lint"
   },
   "dependencies": {
     "@ag-grid-community/client-side-row-model": "^32.3.3",

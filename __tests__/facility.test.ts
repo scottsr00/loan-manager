@@ -1,215 +1,212 @@
-import type { PrismaClient } from '@prisma/client'
 import { prisma } from '@/server/db/client'
-import { createFacility, updateFacility } from '@/server/actions/facility'
+import { createFacility } from '@/server/actions/loan/createFacility'
+import { type FacilityInput } from '@/server/types/facility'
 
-type MockPrisma = {
-  [K in keyof PrismaClient]: {
-    [M in keyof PrismaClient[K]]: jest.Mock;
-  };
-};
+describe('Facility Management', () => {
+  let testCreditAgreement: any
+  let testBorrower: any
+  let testLender: any
+  let testEntity: any
 
-jest.mock('@/server/db/client', () => ({
-  prisma: {
-    $transaction: jest.fn((callback: (tx: MockPrisma) => Promise<any>) => callback(prisma as unknown as MockPrisma)),
-    facility: {
-      create: jest.fn(),
-      update: jest.fn(),
-      findUnique: jest.fn(),
-    },
-    facilitySublimit: {
-      create: jest.fn(),
-      update: jest.fn(),
-    },
-  } as unknown as MockPrisma,
-}))
-
-describe('Facility Tests', () => {
   beforeEach(() => {
+    // Reset all mocks
     jest.clearAllMocks()
+
+    // Mock test entity
+    testEntity = {
+      id: 'test-entity-1',
+      legalName: 'Test Corp',
+      status: 'ACTIVE'
+    }
+    ;(prisma.entity.create as jest.Mock).mockResolvedValue(testEntity)
+
+    // Mock test borrower
+    testBorrower = {
+      id: 'test-borrower-1',
+      entityId: testEntity.id,
+      onboardingStatus: 'COMPLETED',
+      kycStatus: 'APPROVED'
+    }
+    ;(prisma.borrower.create as jest.Mock).mockResolvedValue(testBorrower)
+
+    // Mock test lender
+    testLender = {
+      id: 'test-lender-1',
+      entityId: testEntity.id,
+      status: 'ACTIVE'
+    }
+    ;(prisma.lender.create as jest.Mock).mockResolvedValue(testLender)
+
+    // Mock test credit agreement
+    testCreditAgreement = {
+      id: 'test-ca-1',
+      agreementNumber: 'CA-TEST-001',
+      borrowerId: testEntity.id,
+      lenderId: testEntity.id,
+      amount: 1000000,
+      currency: 'USD',
+      startDate: new Date(),
+      maturityDate: new Date(new Date().setFullYear(new Date().getFullYear() + 5)),
+      interestRate: 5.0,
+      status: 'ACTIVE',
+      facilities: []
+    }
+    ;(prisma.creditAgreement.create as jest.Mock).mockResolvedValue(testCreditAgreement)
+    ;(prisma.creditAgreement.findUnique as jest.Mock).mockResolvedValue(testCreditAgreement)
   })
 
-  describe('createFacility', () => {
-    const mockFacility = {
-      creditAgreementId: 'ca-1',
-      facilityName: 'Revolving Credit Facility',
-      facilityType: 'REVOLVING',
-      commitmentAmount: 10000000,
-      currency: 'USD',
-      startDate: new Date('2024-01-01'),
-      maturityDate: new Date('2029-01-01'),
-      interestType: 'FLOATING',
-      baseRate: 'SOFR',
-      margin: 3.00,
-      sublimits: [
-        {
-          type: 'LC',
-          amount: 5000000,
-          description: 'Letter of Credit Sublimit',
-        },
-      ],
-    }
-
-    it('should create a facility with valid inputs', async () => {
-      const mockCreatedFacility = {
-        id: 'facility-1',
-        ...mockFacility,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+  describe('Facility Creation', () => {
+    it('should create a facility within credit agreement limits', async () => {
+      const facilityData: FacilityInput = {
+        facilityName: 'Test Facility',
+        facilityType: 'TERM_LOAN',
+        creditAgreementId: testCreditAgreement.id,
+        commitmentAmount: 500000,
+        availableAmount: 500000,
+        currency: 'USD',
+        startDate: new Date(),
+        maturityDate: new Date(new Date().setFullYear(new Date().getFullYear() + 4)),
+        interestType: 'FLOATING',
+        baseRate: 'SOFR',
+        margin: 2.5,
+        status: 'ACTIVE'
       }
 
+      const mockCreatedFacility = {
+        id: 'test-facility-1',
+        ...facilityData
+      }
       ;(prisma.facility.create as jest.Mock).mockResolvedValue(mockCreatedFacility)
-      ;(prisma.facilitySublimit.create as jest.Mock).mockResolvedValue({
-        id: 'sublimit-1',
-        facilityId: 'facility-1',
-        ...mockFacility.sublimits[0],
-      })
 
-      const result = await createFacility(mockFacility)
+      const facility = await createFacility(facilityData)
+      expect(facility).toBeDefined()
+      expect(facility.commitmentAmount).toBeLessThanOrEqual(testCreditAgreement.amount)
+      expect(facility.currency).toBe(testCreditAgreement.currency)
+      expect(facility.maturityDate).toBeLessThanOrEqual(testCreditAgreement.maturityDate)
+      expect(prisma.facility.create).toHaveBeenCalledWith({ data: facilityData })
+    })
 
-      expect(result).toHaveProperty('id', 'facility-1')
-      expect(result.commitmentAmount).toBe(mockFacility.commitmentAmount)
-      expect(prisma.facility.create).toHaveBeenCalledTimes(1)
-      expect(prisma.facilitySublimit.create).toHaveBeenCalledTimes(1)
+    it('should reject facility with commitment amount exceeding credit agreement', async () => {
+      const facilityData: FacilityInput = {
+        facilityName: 'Test Facility',
+        facilityType: 'TERM_LOAN',
+        creditAgreementId: testCreditAgreement.id,
+        commitmentAmount: 1500000, // Exceeds credit agreement amount
+        availableAmount: 1500000,
+        currency: 'USD',
+        startDate: new Date(),
+        maturityDate: new Date(new Date().setFullYear(new Date().getFullYear() + 4)),
+        interestType: 'FLOATING',
+        baseRate: 'SOFR',
+        margin: 2.5,
+        status: 'ACTIVE'
+      }
+
+      await expect(createFacility(facilityData)).rejects.toThrow('Total facility commitments would exceed credit agreement')
+      expect(prisma.facility.create).not.toHaveBeenCalled()
+    })
+
+    it('should reject facility with different currency than credit agreement', async () => {
+      const facilityData: FacilityInput = {
+        facilityName: 'Test Facility',
+        facilityType: 'TERM_LOAN',
+        creditAgreementId: testCreditAgreement.id,
+        commitmentAmount: 500000,
+        availableAmount: 500000,
+        currency: 'EUR', // Different currency
+        startDate: new Date(),
+        maturityDate: new Date(new Date().setFullYear(new Date().getFullYear() + 4)),
+        interestType: 'FLOATING',
+        baseRate: 'SOFR',
+        margin: 2.5,
+        status: 'ACTIVE'
+      }
+
+      await expect(createFacility(facilityData)).rejects.toThrow('Facility currency must match credit agreement')
+      expect(prisma.facility.create).not.toHaveBeenCalled()
+    })
+
+    it('should reject facility with maturity date beyond credit agreement', async () => {
+      const facilityData: FacilityInput = {
+        facilityName: 'Test Facility',
+        facilityType: 'TERM_LOAN',
+        creditAgreementId: testCreditAgreement.id,
+        commitmentAmount: 500000,
+        availableAmount: 500000,
+        currency: 'USD',
+        startDate: new Date(),
+        maturityDate: new Date(new Date().setFullYear(new Date().getFullYear() + 6)), // Beyond credit agreement
+        interestType: 'FLOATING',
+        baseRate: 'SOFR',
+        margin: 2.5,
+        status: 'ACTIVE'
+      }
+
+      await expect(createFacility(facilityData)).rejects.toThrow('Facility maturity date cannot exceed credit agreement')
+      expect(prisma.facility.create).not.toHaveBeenCalled()
+    })
+
+    it('should validate total facilities do not exceed credit agreement amount', async () => {
+      // Mock credit agreement with existing facility
+      const existingFacility = {
+        id: 'test-facility-1',
+        commitmentAmount: 600000
+      }
+      testCreditAgreement.facilities = [existingFacility]
+      ;(prisma.creditAgreement.findUnique as jest.Mock).mockResolvedValue(testCreditAgreement)
+
+      // Try to create second facility that would exceed total
+      const facility2Data: FacilityInput = {
+        facilityName: 'Test Facility 2',
+        facilityType: 'TERM_LOAN',
+        creditAgreementId: testCreditAgreement.id,
+        commitmentAmount: 500000,
+        availableAmount: 500000,
+        currency: 'USD',
+        startDate: new Date(),
+        maturityDate: new Date(new Date().setFullYear(new Date().getFullYear() + 4)),
+        interestType: 'FLOATING',
+        baseRate: 'SOFR',
+        margin: 2.5,
+        status: 'ACTIVE'
+      }
+
+      await expect(createFacility(facility2Data)).rejects.toThrow('Total facility commitments would exceed credit agreement')
+      expect(prisma.facility.create).not.toHaveBeenCalled()
     })
 
     it('should validate required fields', async () => {
-      const invalidFacility = {
-        creditAgreementId: '',
-        facilityName: '',
-        facilityType: '',
-        commitmentAmount: 0,
+      const invalidData = {
+        facilityType: 'TERM_LOAN',
+        creditAgreementId: testCreditAgreement.id,
+        commitmentAmount: 500000,
+        // Missing required fields
+      }
+
+      // @ts-ignore - Testing invalid data
+      await expect(createFacility(invalidData)).rejects.toThrow()
+      expect(prisma.facility.create).not.toHaveBeenCalled()
+    })
+
+    it('should validate facility types', async () => {
+      const facilityData: FacilityInput = {
+        facilityName: 'Test Facility',
+        facilityType: 'INVALID_TYPE', // Invalid type
+        creditAgreementId: testCreditAgreement.id,
+        commitmentAmount: 500000,
+        availableAmount: 500000,
+        currency: 'USD',
         startDate: new Date(),
-        maturityDate: new Date(),
-        interestType: '',
-        baseRate: '',
-        margin: 0,
-        sublimits: [],
+        maturityDate: new Date(new Date().setFullYear(new Date().getFullYear() + 4)),
+        interestType: 'FLOATING',
+        baseRate: 'SOFR',
+        margin: 2.5,
+        status: 'ACTIVE'
       }
 
-      await expect(createFacility(invalidFacility))
-        .rejects.toThrow(/Credit Agreement ID is required|Facility name is required|Facility type is required|Commitment amount must be positive/)
-
+      // @ts-ignore - Testing invalid type
+      await expect(createFacility(facilityData)).rejects.toThrow('Invalid facility type')
       expect(prisma.facility.create).not.toHaveBeenCalled()
-      expect(prisma.facilitySublimit.create).not.toHaveBeenCalled()
-    })
-
-    it('should validate dates', async () => {
-      const invalidFacility = {
-        ...mockFacility,
-        startDate: new Date('2024-01-01'),
-        maturityDate: new Date('2023-01-01'), // Before start date
-      }
-
-      await expect(createFacility(invalidFacility))
-        .rejects.toThrow('Maturity date must be after start date')
-
-      expect(prisma.facility.create).not.toHaveBeenCalled()
-      expect(prisma.facilitySublimit.create).not.toHaveBeenCalled()
-    })
-
-    it('should validate sublimit amounts', async () => {
-      const invalidFacility = {
-        ...mockFacility,
-        commitmentAmount: 10000000,
-        sublimits: [
-          {
-            type: 'LC',
-            amount: 15000000, // Greater than commitment amount
-            description: 'Letter of Credit Sublimit',
-          },
-        ],
-      }
-
-      await expect(createFacility(invalidFacility))
-        .rejects.toThrow('Sublimit amount cannot exceed commitment amount')
-
-      expect(prisma.facility.create).not.toHaveBeenCalled()
-      expect(prisma.facilitySublimit.create).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('updateFacility', () => {
-    const mockExistingFacility = {
-      id: 'facility-1',
-      creditAgreementId: 'ca-1',
-      facilityName: 'Revolving Credit Facility',
-      facilityType: 'REVOLVING',
-      commitmentAmount: 10000000,
-      currency: 'USD',
-      startDate: new Date('2024-01-01'),
-      maturityDate: new Date('2029-01-01'),
-      interestType: 'FLOATING',
-      baseRate: 'SOFR',
-      margin: 3.00,
-      sublimits: [
-        {
-          id: 'sublimit-1',
-          type: 'LC',
-          amount: 5000000,
-          description: 'Letter of Credit Sublimit',
-        },
-      ],
-    }
-
-    it('should update facility with valid changes', async () => {
-      ;(prisma.facility.findUnique as jest.Mock).mockResolvedValue(mockExistingFacility)
-      ;(prisma.facility.update as jest.Mock).mockResolvedValue({
-        ...mockExistingFacility,
-        commitmentAmount: 15000000,
-        margin: 2.75,
-      })
-
-      const result = await updateFacility({
-        id: 'facility-1',
-        commitmentAmount: 15000000,
-        margin: 2.75,
-      })
-
-      expect(result.commitmentAmount).toBe(15000000)
-      expect(result.margin).toBe(2.75)
-      expect(prisma.facility.update).toHaveBeenCalledTimes(1)
-    })
-
-    it('should throw error if facility does not exist', async () => {
-      ;(prisma.facility.findUnique as jest.Mock).mockResolvedValue(null)
-
-      await expect(updateFacility({
-        id: 'non-existent',
-        commitmentAmount: 15000000,
-      })).rejects.toThrow('Facility not found')
-
-      expect(prisma.facility.update).not.toHaveBeenCalled()
-    })
-
-    it('should validate commitment amount changes', async () => {
-      ;(prisma.facility.findUnique as jest.Mock).mockResolvedValue({
-        ...mockExistingFacility,
-        loans: [
-          {
-            id: 'loan-1',
-            amount: 8000000,
-            status: 'ACTIVE',
-          },
-        ],
-      })
-
-      await expect(updateFacility({
-        id: 'facility-1',
-        commitmentAmount: 7000000, // Less than outstanding loans
-      })).rejects.toThrow('Commitment amount cannot be less than outstanding loans')
-
-      expect(prisma.facility.update).not.toHaveBeenCalled()
-    })
-
-    it('should validate maturity date changes', async () => {
-      ;(prisma.facility.findUnique as jest.Mock).mockResolvedValue(mockExistingFacility)
-
-      await expect(updateFacility({
-        id: 'facility-1',
-        maturityDate: new Date('2023-01-01'), // Before start date
-      })).rejects.toThrow('Maturity date must be after start date')
-
-      expect(prisma.facility.update).not.toHaveBeenCalled()
     })
   })
 }) 
