@@ -111,7 +111,6 @@ model Lender {
   updatedAt         DateTime           @updatedAt
   facilityPositions FacilityPosition[]
   entity            Entity             @relation(fields: [entityId], references: [id])
-  loanPositions     LoanPosition[]
 
   @@index([entityId])
 }
@@ -171,6 +170,7 @@ model FacilityPosition {
   facilityId String
   lenderId   String
   amount     Float
+  share      Float    // Share percentage (0-100)
   status     String   @default("ACTIVE")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -204,25 +204,9 @@ model Loan {
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
   facility         Facility             @relation(fields: [facilityId], references: [id])
-  positions        LoanPosition[]
   transactions     TransactionHistory[]
 
   @@index([facilityId])
-}
-
-model LoanPosition {
-  id        String   @id @default(cuid())
-  loanId    String
-  lenderId  String
-  amount    Float
-  status    String   @default("ACTIVE")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  lender    Lender   @relation(fields: [lenderId], references: [id])
-  loan      Loan     @relation(fields: [loanId], references: [id])
-
-  @@index([loanId])
-  @@index([lenderId])
 }
 
 model Trade {

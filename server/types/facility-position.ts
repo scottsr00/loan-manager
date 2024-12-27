@@ -11,12 +11,14 @@ export const facilityPositionInputSchema = z.object({
   facilityId: z.string().min(1, 'Facility ID is required'),
   lenderId: z.string().min(1, 'Lender ID is required'),
   amount: z.number().positive('Amount must be positive'),
+  share: z.number().min(0, 'Share must be non-negative').max(100, 'Share cannot exceed 100%'),
   status: facilityPositionStatusEnum.default('ACTIVE')
 })
 
 export const facilityPositionUpdateSchema = z.object({
   id: z.string().min(1, 'Position ID is required'),
   amount: z.number().positive('Amount must be positive').optional(),
+  share: z.number().min(0, 'Share must be non-negative').max(100, 'Share cannot exceed 100%').optional(),
   status: facilityPositionStatusEnum.optional()
 })
 

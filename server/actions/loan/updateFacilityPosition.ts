@@ -14,7 +14,12 @@ export async function updateFacilityPosition(data: FacilityPositionUpdate) {
       include: {
         facility: {
           include: {
-            positions: true
+            positions: true,
+            loans: {
+              where: {
+                status: 'ACTIVE'
+              }
+            }
           }
         }
       }
@@ -24,17 +29,44 @@ export async function updateFacilityPosition(data: FacilityPositionUpdate) {
       throw new Error('Position not found')
     }
 
-    // If updating amount, validate against facility limits
-    if (validatedData.amount) {
+    // If updating amount or share, validate against facility limits
+    if (validatedData.amount || validatedData.share) {
       // Calculate total of other positions
-      const totalOtherPositions = existingPosition.facility.positions.reduce(
+      const totalOtherAmount = existingPosition.facility.positions.reduce(
         (sum, position) => position.id !== existingPosition.id ? sum + position.amount : sum,
+        0
+      )
+      const totalOtherShares = existingPosition.facility.positions.reduce(
+        (sum, position) => position.id !== existingPosition.id ? sum + position.share : sum,
         0
       )
 
       // Validate new amount won't exceed facility commitment
-      if (totalOtherPositions + validatedData.amount > existingPosition.facility.commitmentAmount) {
-        throw new Error('Total positions would exceed facility commitment')
+      if (validatedData.amount) {
+        if (totalOtherAmount + validatedData.amount > existingPosition.facility.commitmentAmount) {
+          throw new Error('Total positions would exceed facility commitment')
+        }
+      }
+
+      // Validate total shares won't exceed 100%
+      if (validatedData.share) {
+        if (totalOtherShares + validatedData.share > 100) {
+          throw new Error('Total position shares would exceed 100%')
+        }
+      }
+
+      // Calculate total outstanding loans
+      const totalOutstandingLoans = existingPosition.facility.loans.reduce(
+        (sum, loan) => sum + loan.outstandingAmount,
+        0
+      )
+
+      // Validate position amount against outstanding loans
+      const positionShare = validatedData.share || existingPosition.share
+      const requiredAmount = totalOutstandingLoans * (positionShare / 100)
+      const newAmount = validatedData.amount || existingPosition.amount
+      if (newAmount < requiredAmount) {
+        throw new Error('Position amount must cover pro-rata share of outstanding loans')
       }
     }
 
@@ -56,6 +88,7 @@ export async function updateFacilityPosition(data: FacilityPositionUpdate) {
       where: { id: validatedData.id },
       data: {
         amount: validatedData.amount,
+        share: validatedData.share,
         status: validatedData.status
       }
     })

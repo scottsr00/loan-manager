@@ -40,7 +40,8 @@ describe('Facility Position Management', () => {
     description: 'Test facility',
     status: 'ACTIVE',
     creditAgreementId: 'ca-1',
-    positions: []
+    positions: [],
+    loans: []
   }
 
   describe('Position Creation', () => {
@@ -54,6 +55,7 @@ describe('Facility Position Management', () => {
         facilityId: mockFacility.id,
         lenderId: 'lender-1',
         amount: 500000,
+        share: 50,
         status: 'ACTIVE',
       }
 
@@ -69,6 +71,7 @@ describe('Facility Position Management', () => {
       const position = await createFacilityPosition(positionData)
       expect(position).toBeDefined()
       expect(position.amount).toBe(positionData.amount)
+      expect(position.share).toBe(positionData.share)
       expect(prisma.facilityPosition.create).toHaveBeenCalledWith({
         data: expect.objectContaining(positionData),
       })
@@ -84,6 +87,7 @@ describe('Facility Position Management', () => {
         facilityId: mockFacility.id,
         lenderId: 'lender-1',
         amount: 1500000, // Exceeds available amount
+        share: 100,
         status: 'ACTIVE',
       }
 
@@ -102,6 +106,7 @@ describe('Facility Position Management', () => {
         facilityId: mockFacility.id,
         lenderId: 'lender-1',
         amount: 800000,
+        share: 80,
         status: 'ACTIVE',
       }
 
@@ -113,7 +118,8 @@ describe('Facility Position Management', () => {
       const positionData: FacilityPositionInput = {
         facilityId: mockFacility.id,
         lenderId: 'lender-1',
-        amount: 300000, // Would exceed total commitment with existing position
+        amount: 300000,
+        share: 30, // Would exceed 100% with existing position
         status: 'ACTIVE',
       }
 
@@ -121,7 +127,36 @@ describe('Facility Position Management', () => {
       ;(prisma.facilityPosition.findMany as jest.Mock).mockResolvedValue([existingPosition])
 
       await expect(createFacilityPosition(positionData))
-        .rejects.toThrow('Total positions would exceed facility commitment')
+        .rejects.toThrow('Total position shares would exceed 100%')
+
+      expect(prisma.facilityPosition.create).not.toHaveBeenCalled()
+    })
+
+    it('should validate position amount covers pro-rata share of loans', async () => {
+      const mockFacilityWithLoans = {
+        ...mockFacility,
+        positions: [],
+        loans: [{
+          id: 'loan-1',
+          amount: 500000,
+          outstandingAmount: 500000,
+          status: 'ACTIVE'
+        }]
+      }
+
+      const positionData: FacilityPositionInput = {
+        facilityId: mockFacility.id,
+        lenderId: 'lender-1',
+        amount: 200000, // Less than required for 50% share of 500000
+        share: 50,
+        status: 'ACTIVE',
+      }
+
+      ;(prisma.facility.findUnique as jest.Mock).mockResolvedValue(mockFacilityWithLoans)
+      ;(prisma.facilityPosition.findMany as jest.Mock).mockResolvedValue([])
+
+      await expect(createFacilityPosition(positionData))
+        .rejects.toThrow('Position amount must cover pro-rata share of outstanding loans')
 
       expect(prisma.facilityPosition.create).not.toHaveBeenCalled()
     })
@@ -134,17 +169,20 @@ describe('Facility Position Management', () => {
         facilityId: mockFacility.id,
         lenderId: 'lender-1',
         amount: 500000,
+        share: 50,
         status: 'ACTIVE',
       }
 
       const mockFacilityWithPositions = {
         ...mockFacility,
-        positions: [existingPosition]
+        positions: [existingPosition],
+        loans: []
       }
 
       const updateData = {
         id: existingPosition.id,
         amount: 600000,
+        share: 60,
       }
 
       ;(prisma.facilityPosition.findUnique as jest.Mock).mockResolvedValue({
@@ -161,10 +199,12 @@ describe('Facility Position Management', () => {
       const result = await updateFacilityPosition(updateData)
       expect(result).toBeDefined()
       expect(result.amount).toBe(updateData.amount)
+      expect(result.share).toBe(updateData.share)
       expect(prisma.facilityPosition.update).toHaveBeenCalledWith({
         where: { id: updateData.id },
         data: {
           amount: updateData.amount,
+          share: updateData.share,
         },
       })
     })
@@ -175,6 +215,7 @@ describe('Facility Position Management', () => {
         facilityId: mockFacility.id,
         lenderId: 'lender-1',
         amount: 500000,
+        share: 50,
         status: 'ACTIVE',
       }
 
@@ -186,6 +227,7 @@ describe('Facility Position Management', () => {
       const updateData = {
         id: existingPosition.id,
         amount: 1200000, // Would exceed facility commitment
+        share: 50,
       }
 
       ;(prisma.facilityPosition.findUnique as jest.Mock).mockResolvedValue({
@@ -207,6 +249,7 @@ describe('Facility Position Management', () => {
         facilityId: mockFacility.id,
         lenderId: 'lender-1',
         amount: 500000,
+        share: 50,
         status: 'COMPLETED',
       }
 
@@ -215,10 +258,57 @@ describe('Facility Position Management', () => {
         status: 'ACTIVE' as const,
       }
 
-      ;(prisma.facilityPosition.findUnique as jest.Mock).mockResolvedValue(existingPosition)
+      ;(prisma.facilityPosition.findUnique as jest.Mock).mockResolvedValue({
+        ...existingPosition,
+        facility: {
+          ...mockFacility,
+          positions: [existingPosition],
+          loans: []
+        }
+      })
 
       await expect(updateFacilityPosition(updateData))
         .rejects.toThrow('Cannot reactivate completed position')
+
+      expect(prisma.facilityPosition.update).not.toHaveBeenCalled()
+    })
+
+    it('should validate total shares do not exceed 100%', async () => {
+      const existingPosition = {
+        id: 'position-1',
+        facilityId: mockFacility.id,
+        lenderId: 'lender-1',
+        amount: 500000,
+        share: 50,
+        status: 'ACTIVE',
+      }
+
+      const otherPosition = {
+        id: 'position-2',
+        facilityId: mockFacility.id,
+        lenderId: 'lender-2',
+        amount: 300000,
+        share: 30,
+        status: 'ACTIVE',
+      }
+
+      const mockFacilityWithPositions = {
+        ...mockFacility,
+        positions: [existingPosition, otherPosition]
+      }
+
+      const updateData = {
+        id: existingPosition.id,
+        share: 80, // Would exceed 100% with other position's 30%
+      }
+
+      ;(prisma.facilityPosition.findUnique as jest.Mock).mockResolvedValue({
+        ...existingPosition,
+        facility: mockFacilityWithPositions
+      })
+
+      await expect(updateFacilityPosition(updateData))
+        .rejects.toThrow('Total position shares would exceed 100%')
 
       expect(prisma.facilityPosition.update).not.toHaveBeenCalled()
     })

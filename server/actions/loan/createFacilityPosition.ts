@@ -13,7 +13,12 @@ export async function createFacilityPosition(data: FacilityPositionInput) {
       where: { id: validatedData.facilityId },
       include: {
         positions: true,
-        creditAgreement: true
+        creditAgreement: true,
+        loans: {
+          where: {
+            status: 'ACTIVE'
+          }
+        }
       }
     })
 
@@ -21,20 +26,39 @@ export async function createFacilityPosition(data: FacilityPositionInput) {
       throw new Error('Facility not found')
     }
 
-    // Calculate total existing positions
-    const totalExistingPositions = facility.positions.reduce(
+    // Calculate total existing shares
+    const totalExistingShares = facility.positions.reduce(
+      (sum, position) => sum + position.share,
+      0
+    )
+
+    // Validate total shares won't exceed 100%
+    if (totalExistingShares + validatedData.share > 100) {
+      throw new Error('Total position shares would exceed 100%')
+    }
+
+    // Calculate total existing positions amount
+    const totalExistingAmount = facility.positions.reduce(
       (sum, position) => sum + position.amount,
       0
     )
 
     // Validate new position won't exceed facility commitment
-    if (totalExistingPositions + validatedData.amount > facility.commitmentAmount) {
+    if (totalExistingAmount + validatedData.amount > facility.commitmentAmount) {
       throw new Error('Total positions would exceed facility commitment')
     }
 
-    // Validate new position won't exceed facility available amount
-    if (validatedData.amount > facility.availableAmount) {
-      throw new Error('Position amount exceeds facility available amount')
+    // Calculate total outstanding loans
+    const totalOutstandingLoans = facility.loans.reduce(
+      (sum, loan) => sum + loan.outstandingAmount,
+      0
+    )
+
+    // Validate position amount against outstanding loans
+    const positionShare = validatedData.share / 100
+    const requiredAmount = totalOutstandingLoans * positionShare
+    if (validatedData.amount < requiredAmount) {
+      throw new Error('Position amount must cover pro-rata share of outstanding loans')
     }
 
     // Create position
