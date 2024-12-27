@@ -37,10 +37,17 @@ jobs:
     - name: Run linter
       run: npm run lint
       
-    - name: Run tests with coverage
-      run: npm run test:coverage
+    - name: Run Jest tests
+      run: npm run test:coverage -- --ci --json --outputFile=jest-results.json
       
-    - name: Upload coverage reports
+    - name: Upload Jest test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: jest-results
+        path: jest-results.json
+        
+    - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
