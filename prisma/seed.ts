@@ -55,6 +55,14 @@ async function main() {
   await prisma.counterpartyAddress.deleteMany()
   await prisma.counterparty.deleteMany()
   await prisma.counterpartyType.deleteMany()
+  await prisma.facilityPosition.deleteMany()
+  await prisma.facility.deleteMany()
+  await prisma.creditAgreement.deleteMany()
+  await prisma.lender.deleteMany()
+  await prisma.borrower.deleteMany()
+  await prisma.contact.deleteMany()
+  await prisma.address.deleteMany()
+  await prisma.entity.deleteMany()
 
   // Create counterparty types
   const counterpartyTypes = [
@@ -127,6 +135,124 @@ async function main() {
       create: role
     })
   }
+
+  // Create borrower and lender entities
+  const borrowerEntity = await prisma.entity.create({
+    data: {
+      legalName: 'Test Company Inc.',
+      dba: 'Test Co',
+      registrationNumber: 'REG123',
+      taxId: 'TAX123',
+      countryOfIncorporation: 'US',
+      status: 'ACTIVE',
+      addresses: {
+        create: [generateAddress(true)]
+      },
+      contacts: {
+        create: [generateContact(true)]
+      }
+    }
+  })
+
+  const borrower = await prisma.borrower.create({
+    data: {
+      entityId: borrowerEntity.id,
+      industrySegment: 'Technology',
+      businessType: 'Corporation',
+      creditRating: 'BBB',
+      ratingAgency: 'S&P',
+      riskRating: 'Medium',
+      onboardingStatus: 'COMPLETED',
+      kycStatus: 'COMPLETED'
+    }
+  })
+
+  const lenderEntity = await prisma.entity.create({
+    data: {
+      legalName: 'Bank of Test',
+      dba: 'Test Bank',
+      registrationNumber: 'BANK123',
+      taxId: 'BANK456',
+      countryOfIncorporation: 'US',
+      status: 'ACTIVE',
+      addresses: {
+        create: [generateAddress(true)]
+      },
+      contacts: {
+        create: [generateContact(true)]
+      }
+    }
+  })
+
+  const lender = await prisma.lender.create({
+    data: {
+      entityId: lenderEntity.id,
+      status: 'ACTIVE'
+    }
+  })
+
+  // Create credit agreement with facilities and positions
+  await prisma.creditAgreement.create({
+    data: {
+      agreementNumber: 'CA-2024-001',
+      borrowerId: borrowerEntity.id,
+      lenderId: lenderEntity.id,
+      amount: 10000000,
+      currency: 'USD',
+      status: 'ACTIVE',
+      startDate: new Date(),
+      maturityDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+      interestRate: 5.5,
+      facilities: {
+        create: [
+          {
+            facilityName: 'Term Loan A',
+            facilityType: 'TERM_LOAN',
+            commitmentAmount: 6000000,
+            availableAmount: 6000000,
+            currency: 'USD',
+            startDate: new Date(),
+            maturityDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+            interestType: 'FLOATING',
+            baseRate: 'SOFR',
+            margin: 2.5,
+            positions: {
+              create: [
+                {
+                  lenderId: lender.id,
+                  amount: 6000000,
+                  share: 100,
+                  status: 'ACTIVE'
+                }
+              ]
+            }
+          },
+          {
+            facilityName: 'Revolving Credit Facility',
+            facilityType: 'REVOLVING',
+            commitmentAmount: 4000000,
+            availableAmount: 4000000,
+            currency: 'USD',
+            startDate: new Date(),
+            maturityDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+            interestType: 'FLOATING',
+            baseRate: 'SOFR',
+            margin: 3.0,
+            positions: {
+              create: [
+                {
+                  lenderId: lender.id,
+                  amount: 4000000,
+                  share: 100,
+                  status: 'ACTIVE'
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  })
 
   console.log('Seed data created successfully')
 }

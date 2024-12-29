@@ -5,16 +5,8 @@ import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { CounterpartyDetailsModal } from './CounterpartyDetailsModal'
 import { DataGrid } from '@/components/ui/data-grid'
-import { type ColDef } from 'ag-grid-community'
-import { type Counterparty, type CounterpartyAddress, type CounterpartyContact } from '@prisma/client'
-
-type CounterpartyWithRelations = Counterparty & {
-  type: {
-    name: string
-  }
-  addresses: CounterpartyAddress[]
-  contacts: CounterpartyContact[]
-}
+import { type ColDef, type RowClickedEvent } from 'ag-grid-community'
+import { type CounterpartyWithRelations, type CounterpartyAddress, type CounterpartyContact } from '@/types/counterparty'
 
 interface CounterpartyListProps {
   counterparties: CounterpartyWithRelations[]
@@ -74,6 +66,13 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
     },
   ], [])
 
+  const handleRowClick = (event: RowClickedEvent<CounterpartyWithRelations>) => {
+    if (event.data) {
+      setSelectedCounterparty(event.data)
+      setDetailsOpen(true)
+    }
+  }
+
   return (
     <>
       <DataGrid
@@ -85,10 +84,7 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
           resizable: true,
           floatingFilter: true,
         }}
-        onRowClick={(data) => {
-          setSelectedCounterparty(data)
-          setDetailsOpen(true)
-        }}
+        onRowClick={handleRowClick}
       />
 
       <CounterpartyDetailsModal

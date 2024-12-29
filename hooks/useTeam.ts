@@ -1,19 +1,67 @@
 import { useState, useCallback } from 'react'
-import { type TeamQueryParams, type ServicingTeamMember, type ServicingRole, type ServicingAssignment } from '@/server/types/team'
+import { type TeamQueryParams } from '@/server/types/team'
 import { getTeamMembers, getRoles, upsertTeamMember, upsertRole, upsertAssignment, deleteTeamMember, deleteRole, deleteAssignment } from '@/server/actions/team'
+
+interface TeamMember {
+  id?: string;
+  name: string;
+  email: string;
+  roleId: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE';
+  role?: {
+    id: string;
+    name: string;
+  };
+  assignments?: Array<{
+    id: string;
+    status: 'ACTIVE' | 'COMPLETED' | 'TRANSFERRED';
+    assignmentType: 'PRIMARY_AGENT' | 'BACKUP_AGENT' | 'SPECIALIST';
+    startDate: Date;
+    endDate?: Date;
+    facility: {
+      facilityName: string;
+    };
+  }>;
+}
+
+interface Role {
+  id?: string;
+  name: string;
+  description: string;
+  permissions: string[];
+}
+
+interface Assignment {
+  id?: string;
+  teamMemberId: string;
+  facilityId: string;
+  assignmentType: 'PRIMARY_AGENT' | 'BACKUP_AGENT' | 'SPECIALIST';
+  startDate: Date;
+  endDate?: Date;
+  status: 'ACTIVE' | 'COMPLETED' | 'TRANSFERRED';
+  notes: string;
+}
 
 export function useTeam() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [teamMembers, setTeamMembers] = useState<ServicingTeamMember[]>([])
-  const [roles, setRoles] = useState<ServicingRole[]>([])
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [roles, setRoles] = useState<Role[]>([])
 
   const loadTeamMembers = useCallback(async (params: TeamQueryParams = {}) => {
     setIsLoading(true)
     setError(null)
     try {
       const data = await getTeamMembers(params)
-      setTeamMembers(data)
+      setTeamMembers(data.map(member => ({
+        ...member,
+        status: member.status as 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE',
+        assignments: member.assignments?.map(assignment => ({
+          ...assignment,
+          status: assignment.status as 'ACTIVE' | 'COMPLETED' | 'TRANSFERRED',
+          assignmentType: assignment.assignmentType as 'PRIMARY_AGENT' | 'BACKUP_AGENT' | 'SPECIALIST'
+        }))
+      })))
     } catch (err) {
       setError('Failed to load team members')
       console.error(err)
@@ -27,7 +75,10 @@ export function useTeam() {
     setError(null)
     try {
       const data = await getRoles()
-      setRoles(data)
+      setRoles(data.map(role => ({
+        ...role,
+        permissions: Array.isArray(role.permissions) ? role.permissions : [role.permissions]
+      })))
     } catch (err) {
       setError('Failed to load roles')
       console.error(err)
@@ -36,7 +87,7 @@ export function useTeam() {
     }
   }, [])
 
-  const saveTeamMember = useCallback(async (data: ServicingTeamMember) => {
+  const saveTeamMember = useCallback(async (data: TeamMember) => {
     setError(null)
     try {
       await upsertTeamMember(data)
@@ -48,7 +99,7 @@ export function useTeam() {
     }
   }, [loadTeamMembers])
 
-  const saveRole = useCallback(async (data: ServicingRole) => {
+  const saveRole = useCallback(async (data: Role) => {
     setError(null)
     try {
       await upsertRole(data)
@@ -60,7 +111,7 @@ export function useTeam() {
     }
   }, [loadRoles])
 
-  const saveAssignment = useCallback(async (data: ServicingAssignment) => {
+  const saveAssignment = useCallback(async (data: Assignment) => {
     setError(null)
     try {
       await upsertAssignment(data)

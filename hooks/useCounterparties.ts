@@ -2,20 +2,14 @@
 
 import { useCallback } from 'react'
 import useSWR from 'swr'
-import type { Counterparty } from '@/types/counterparty'
+import type { Counterparty, CounterpartyWithRelations, CreateCounterpartyInput } from '@/types/counterparty'
 import { getCounterparties } from '@/server/actions/counterparty/getCounterparties'
 import { createCounterparty } from '@/server/actions/counterparty/createCounterparty'
 import { deleteCounterparty } from '@/server/actions/counterparty/deleteCounterparty'
 import { withErrorHandling } from '@/lib/error-handling'
 
-interface CreateCounterpartyInput {
-  name: string
-  typeId: string
-  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING'
-}
-
 export function useCounterparties() {
-  const { data, error, isLoading, mutate } = useSWR<Counterparty[]>(
+  const { data, error, isLoading, mutate } = useSWR<CounterpartyWithRelations[]>(
     'counterparties',
     () => withErrorHandling(
       'fetch counterparties',

@@ -81,7 +81,7 @@ export function TradeDetailsModal({
               </div>
               <div>
                 <h4 className="text-sm font-medium mb-1">Status</h4>
-                <Badge variant={trade.status === 'SETTLED' ? 'success' : 'warning'}>
+                <Badge variant={trade.status === 'SETTLED' ? 'success' : 'destructive'}>
                   {trade.status}
                 </Badge>
               </div>

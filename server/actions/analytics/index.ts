@@ -10,24 +10,32 @@ interface BorrowerWithEntity extends Borrower {
 export async function getAnalytics() {
   try {
     // Get commitment by month
-    const commitmentByMonth = await prisma.$queryRaw`
+    const commitmentByMonthRaw = await prisma.$queryRaw`
       SELECT 
-        strftime('%Y-%m', createdAt) as month,
-        SUM(amount) as total
+        strftime('%Y-%m', createdAt) as date,
+        SUM(amount) as volume
       FROM Loan
-      GROUP BY month
-      ORDER BY month DESC
+      GROUP BY date
+      ORDER BY date DESC
       LIMIT 12
     `
+    const commitmentByMonth = (commitmentByMonthRaw as any[]).map(item => ({
+      date: item.date,
+      volume: Number(item.volume)
+    }))
 
     // Get facilities by type
-    const facilitiesByType = await prisma.$queryRaw`
+    const facilitiesByTypeRaw = await prisma.$queryRaw`
       SELECT 
         type,
-        COUNT(*) as count
-      FROM FacilitySublimit
+        SUM(amount) as amount
+      FROM Facility
       GROUP BY type
     `
+    const facilitiesByType = (facilitiesByTypeRaw as any[]).map(item => ({
+      type: item.type,
+      amount: Number(item.amount)
+    }))
 
     // Get commitments by borrower
     const borrowers = await prisma.borrower.findMany({
@@ -70,6 +78,9 @@ export async function getAnalytics() {
     const creditMetrics = borrowers.map(borrower => ({
       borrowerName: borrower.entity.legalName,
       creditRating: borrower.creditRating || 'N/A',
+      totalAssets: 0, // TODO: Implement actual calculation
+      totalLiabilities: 0, // TODO: Implement actual calculation
+      netWorth: 0, // TODO: Implement actual calculation
       totalCommitment: (loansByBorrower[borrower.id] || []).reduce((sum, loan) => sum + loan.amount, 0)
     }))
 
@@ -84,8 +95,8 @@ export async function getAnalytics() {
     })
 
     return {
-      commitmentByMonth: commitmentByMonth || [],
-      facilitiesByType: facilitiesByType || [],
+      commitmentByMonth,
+      facilitiesByType,
       commitmentsByBorrower,
       creditMetrics,
       interestProjection

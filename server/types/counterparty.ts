@@ -33,15 +33,9 @@ export const contactSchema = z.object({
 })
 
 export const counterpartyInputSchema = z.object({
-  legalName: z.string().min(1, 'Legal name is required'),
-  dba: z.string().optional(),
-  registrationNumber: z.string().optional(),
-  taxId: z.string().optional(),
+  name: z.string().min(1, 'Name is required'),
   typeId: z.string().min(1, 'Counterparty type is required'),
   status: z.string().default('ACTIVE'),
-  incorporationDate: z.date().optional(),
-  website: z.string().url().optional(),
-  description: z.string().optional(),
   addresses: z.array(addressSchema).min(1, 'At least one address is required'),
   contacts: z.array(contactSchema).min(1, 'At least one contact is required')
 })
@@ -54,10 +48,7 @@ export type ContactInput = z.infer<typeof contactSchema>
 // Full Counterparty Type matching Prisma schema
 export interface Counterparty extends PrismaCounterparty {
   id: string
-  legalName: string
-  dba?: string | null
-  registrationNumber?: string | null
-  taxId?: string | null
+  name: string
   typeId: string
   type: {
     id: string
@@ -65,9 +56,6 @@ export interface Counterparty extends PrismaCounterparty {
     description?: string | null
   }
   status: string
-  incorporationDate?: Date | null
-  website?: string | null
-  description?: string | null
   addresses: Array<{
     id: string
     counterpartyId: string

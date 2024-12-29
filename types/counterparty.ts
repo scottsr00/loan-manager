@@ -37,24 +37,27 @@ export type CounterpartyContact = {
 
 export type Counterparty = {
   id: string
-  legalName: string
+  name: string
   dba?: string | null
   registrationNumber?: string | null
   taxId?: string | null
   typeId: string
-  type: CounterpartyType
   status: string
   incorporationDate?: Date | null
   website?: string | null
   description?: string | null
-  addresses: CounterpartyAddress[]
-  contacts: CounterpartyContact[]
   createdAt: Date
   updatedAt: Date
 }
 
+export type CounterpartyWithRelations = Counterparty & {
+  type: CounterpartyType
+  addresses: CounterpartyAddress[]
+  contacts: CounterpartyContact[]
+}
+
 export interface CreateCounterpartyInput {
-  legalName: string
+  name: string
   typeId: string
   status?: string
 }

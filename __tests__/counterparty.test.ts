@@ -27,14 +27,14 @@ describe('Counterparty Tests', () => {
 
   describe('createCounterparty', () => {
     const mockCounterpartyInput: CreateCounterpartyInput = {
-      legalName: 'Test Counterparty Inc',
+      name: 'Test Counterparty Inc',
       typeId: 'type-1',
     }
 
     it('should create a counterparty with valid inputs', async () => {
       const mockCounterparty = {
         id: 'counterparty-1',
-        name: mockCounterpartyInput.legalName,
+        name: mockCounterpartyInput.name,
         typeId: mockCounterpartyInput.typeId,
         status: 'ACTIVE',
         type: {
@@ -48,19 +48,19 @@ describe('Counterparty Tests', () => {
       const result = await createCounterparty(mockCounterpartyInput)
 
       expect(result).toHaveProperty('id', 'counterparty-1')
-      expect(result.name).toBe(mockCounterpartyInput.legalName)
+      expect(result.name).toBe(mockCounterpartyInput.name)
       expect(result.typeId).toBe(mockCounterpartyInput.typeId)
       expect(prisma.counterparty.create).toHaveBeenCalledTimes(1)
     })
 
     it('should validate required fields', async () => {
       const invalidInput = {
-        legalName: '',
+        name: '',
         typeId: '',
       } as CreateCounterpartyInput
 
       await expect(createCounterparty(invalidInput))
-        .rejects.toThrow(/Legal name is required|Counterparty type is required/)
+        .rejects.toThrow(/Name is required|Counterparty type is required/)
 
       expect(prisma.counterparty.create).not.toHaveBeenCalled()
     })
@@ -79,7 +79,7 @@ describe('Counterparty Tests', () => {
     }
 
     const mockUpdateInput: Partial<CreateCounterpartyInput> = {
-      legalName: 'Updated Counterparty Inc',
+      name: 'Updated Counterparty Inc',
       typeId: 'type-2',
       status: 'INACTIVE',
     }
@@ -88,14 +88,14 @@ describe('Counterparty Tests', () => {
       ;(prisma.counterparty.findUnique as jest.Mock).mockResolvedValue(mockExistingCounterparty)
       ;(prisma.counterparty.update as jest.Mock).mockResolvedValue({
         ...mockExistingCounterparty,
-        name: mockUpdateInput.legalName,
+        name: mockUpdateInput.name,
         typeId: mockUpdateInput.typeId,
         status: mockUpdateInput.status,
       })
 
       const result = await updateCounterparty('counterparty-1', mockUpdateInput)
 
-      expect(result.name).toBe(mockUpdateInput.legalName)
+      expect(result.name).toBe(mockUpdateInput.name)
       expect(result.typeId).toBe(mockUpdateInput.typeId)
       expect(result.status).toBe(mockUpdateInput.status)
       expect(prisma.counterparty.update).toHaveBeenCalledTimes(1)

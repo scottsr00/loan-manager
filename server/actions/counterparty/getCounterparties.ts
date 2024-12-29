@@ -1,15 +1,7 @@
 'use server'
 
 import { db } from '@/server/db'
-import { type Counterparty, type CounterpartyAddress, type CounterpartyContact } from '@prisma/client'
-
-type CounterpartyWithRelations = Counterparty & {
-  type: {
-    name: string
-  }
-  addresses: CounterpartyAddress[]
-  contacts: CounterpartyContact[]
-}
+import { type CounterpartyWithRelations } from '@/server/types/counterparty'
 
 export async function getCounterparties(): Promise<CounterpartyWithRelations[]> {
   try {

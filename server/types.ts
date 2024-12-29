@@ -26,4 +26,24 @@ export interface ServicingActivityParams {
   facilityId?: string
   startDate?: Date
   endDate?: Date
+}
+
+export interface TradeHistoryItem {
+  id: string
+  facilityId: string
+  facility?: {
+    creditAgreement?: {
+      agreementName: string
+    }
+  }
+  amount: number
+  price: number
+  counterparty?: {
+    legalName: string
+  }
+  status: 'PENDING' | 'SETTLED'
+  tradeDate: Date
+  settlementDate?: Date
+  createdAt: Date
+  updatedAt: Date
 } 

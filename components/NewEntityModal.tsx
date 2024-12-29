@@ -20,7 +20,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { createEntity } from '@/server/actions/entity'
-import { getEntityTypes, type EntityType } from '@/server/actions/entity'
+import { getEntityTypes } from '@/server/actions/entity'
+import type { CounterpartyType } from '@/types/counterparty'
 import { DatePicker } from '@/components/ui/date-picker'
 
 export function NewEntityModal({
@@ -29,7 +30,7 @@ export function NewEntityModal({
   onEntityCreated: () => void
 }) {
   const [open, setOpen] = useState(false)
-  const [entityTypes, setEntityTypes] = useState<EntityType[]>([])
+  const [entityTypes, setEntityTypes] = useState<CounterpartyType[]>([])
   const [date, setDate] = useState<Date>()
   const [loading, setLoading] = useState(false)
 
@@ -56,33 +57,33 @@ export function NewEntityModal({
     try {
       await createEntity({
         legalName: formData.get('legalName') as string,
-        dba: formData.get('dba') as string,
-        registrationNumber: formData.get('registrationNumber') as string,
-        taxId: formData.get('taxId') as string,
-        entityTypeId: formData.get('entityTypeId') as string,
+        dba: formData.get('dba') as string || undefined,
+        registrationNumber: formData.get('registrationNumber') as string || undefined,
+        taxId: formData.get('taxId') as string || undefined,
         status: 'ACTIVE',
-        incorporationDate: date,
-        website: formData.get('website') as string,
-        description: formData.get('description') as string,
-        address: {
+        dateOfIncorporation: date,
+        addresses: [{
           type: 'REGISTERED',
           street1: formData.get('street1') as string,
-          street2: formData.get('street2') as string,
+          street2: formData.get('street2') as string || undefined,
           city: formData.get('city') as string,
-          state: formData.get('state') as string,
-          postalCode: formData.get('postalCode') as string,
+          state: formData.get('state') as string || undefined,
+          postalCode: formData.get('postalCode') as string || undefined,
           country: formData.get('country') as string,
           isPrimary: true,
-        },
-        contact: {
+        }],
+        contacts: [{
           type: 'OFFICER',
           firstName: formData.get('firstName') as string,
           lastName: formData.get('lastName') as string,
-          title: formData.get('title') as string,
-          email: formData.get('email') as string,
-          phone: formData.get('phone') as string,
+          title: formData.get('title') as string || undefined,
+          email: formData.get('email') as string || undefined,
+          phone: formData.get('phone') as string || undefined,
           isPrimary: true,
-        },
+        }],
+        primaryContactName: `${formData.get('firstName')} ${formData.get('lastName')}`,
+        primaryContactEmail: formData.get('email') as string || undefined,
+        primaryContactPhone: formData.get('phone') as string || undefined,
       })
 
       setOpen(false)
@@ -147,7 +148,7 @@ export function NewEntityModal({
             </div>
             <div className="space-y-2">
               <Label>Incorporation Date</Label>
-              <DatePicker date={date} onDateChange={setDate} />
+              <DatePicker value={date} onChange={setDate} />
             </div>
           </div>
 

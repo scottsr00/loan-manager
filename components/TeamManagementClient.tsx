@@ -38,6 +38,78 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
+type FilterStatus = 'ALL' | 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE'
+type FilterRoleId = 'ALL' | string
+
+interface TeamMember {
+  id?: string;
+  name: string;
+  email: string;
+  roleId: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE';
+  role?: {
+    id: string;
+    name: string;
+  };
+  assignments?: Array<{
+    id: string;
+    status: 'ACTIVE' | 'COMPLETED' | 'TRANSFERRED';
+    assignmentType: 'PRIMARY_AGENT' | 'BACKUP_AGENT' | 'SPECIALIST';
+    startDate: Date;
+    endDate?: Date;
+    facility: {
+      facilityName: string;
+    };
+  }>;
+}
+
+interface Role {
+  id?: string;
+  name: string;
+  description: string;
+  permissions: string[];
+}
+
+interface Assignment {
+  id?: string;
+  teamMemberId: string;
+  facilityId: string;
+  assignmentType: 'PRIMARY_AGENT' | 'BACKUP_AGENT' | 'SPECIALIST';
+  startDate: Date;
+  endDate?: Date;
+  status: 'ACTIVE' | 'COMPLETED' | 'TRANSFERRED';
+  notes: string;
+}
+
+interface TeamMemberForm {
+  id?: string;
+  name: string;
+  email: string;
+  roleId: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE';
+  role?: {
+    id: string;
+    name: string;
+  };
+  assignments?: Array<{
+    id: string;
+    status: 'ACTIVE' | 'COMPLETED' | 'TRANSFERRED';
+    assignmentType: 'PRIMARY_AGENT' | 'BACKUP_AGENT' | 'SPECIALIST';
+    startDate: Date;
+    endDate?: Date;
+    facility: {
+      facilityName: string;
+    };
+  }>;
+}
+
+interface RoleForm {
+  id?: string;
+  name: string;
+  description: string;
+  permissions: string[];
+}
+
 export function TeamManagementClient() {
   const {
     isLoading,
@@ -52,35 +124,55 @@ export function TeamManagementClient() {
     removeTeamMember,
     removeRole,
     removeAssignment
+  }: {
+    isLoading: boolean;
+    error: string | null;
+    teamMembers: TeamMember[];
+    roles: Role[];
+    loadTeamMembers: () => Promise<void>;
+    loadRoles: () => Promise<void>;
+    saveTeamMember: (member: TeamMemberForm) => Promise<void>;
+    saveRole: (role: RoleForm) => Promise<void>;
+    saveAssignment: (assignment: Assignment) => Promise<void>;
+    removeTeamMember: (id: string) => Promise<void>;
+    removeRole: (id: string) => Promise<void>;
+    removeAssignment: (id: string) => Promise<void>;
   } = useTeam()
 
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
   const [isAddRoleOpen, setIsAddRoleOpen] = useState(false)
   const [isAssignmentOpen, setIsAssignmentOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [selectedMember, setSelectedMember] = useState<any>(null)
-  const [selectedRole, setSelectedRole] = useState<any>(null)
-  const [filters, setFilters] = useState({
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null)
+
+  const [filters, setFilters] = useState<{
+    status: FilterStatus
+    roleId: FilterRoleId
+    search: string
+  }>({
     status: 'ALL',
     roleId: 'ALL',
     search: ''
   })
 
   // Form states
-  const [memberForm, setMemberForm] = useState({
+  const [memberForm, setMemberForm] = useState<TeamMemberForm>({
     name: '',
     email: '',
     roleId: '',
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    role: undefined,
+    assignments: []
   })
 
-  const [roleForm, setRoleForm] = useState({
+  const [roleForm, setRoleForm] = useState<RoleForm>({
     name: '',
     description: '',
-    permissions: [] as string[]
+    permissions: []
   })
 
-  const [assignmentForm, setAssignmentForm] = useState({
+  const [assignmentForm, setAssignmentForm] = useState<Assignment>({
     teamMemberId: '',
     facilityId: '',
     assignmentType: 'PRIMARY_AGENT',
@@ -102,7 +194,9 @@ export function TeamManagementClient() {
         name: '',
         email: '',
         roleId: '',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        role: undefined,
+        assignments: []
       })
     } catch (err) {
       console.error('Error saving member:', err)
@@ -141,11 +235,11 @@ export function TeamManagementClient() {
   }
 
   const handleDelete = async () => {
-    if (selectedMember) {
+    if (selectedMember && selectedMember.id) {
       await removeTeamMember(selectedMember.id)
+      setIsDeleteDialogOpen(false)
+      setSelectedMember(null)
     }
-    setIsDeleteDialogOpen(false)
-    setSelectedMember(null)
   }
 
   const where = {
@@ -157,6 +251,71 @@ export function TeamManagementClient() {
         { email: { contains: filters.search, mode: 'insensitive' } }
       ]
     })
+  }
+
+  const handleStatusChange = (value: FilterStatus) => {
+    setFilters(prev => ({ ...prev, status: value }))
+  }
+
+  const handleRoleChange = (value: FilterRoleId) => {
+    setFilters(prev => ({ ...prev, roleId: value }))
+  }
+
+  const handleMemberStatusChange = (value: TeamMember['status']) => {
+    setMemberForm(prev => ({ ...prev, status: value }))
+  }
+
+  const handleAssignmentStatusChange = (value: Assignment['status']) => {
+    setAssignmentForm(prev => ({ ...prev, status: value }))
+  }
+
+  const handleAssignmentTypeChange = (value: Assignment['assignmentType']) => {
+    setAssignmentForm(prev => ({ ...prev, assignmentType: value }))
+  }
+
+  const renderAssignments = (member: TeamMember) => {
+    if (!member.assignments) return null
+    return member.assignments.map((assignment) => (
+      <div key={assignment.id} className="text-sm text-muted-foreground">
+        {assignment.assignmentType} - {assignment.status}
+      </div>
+    ))
+  }
+
+  const renderRole = (member: TeamMember) => {
+    if (!member.role) return null
+    return <div className="text-sm text-muted-foreground">{member.role.name}</div>
+  }
+
+  const handleEditMember = (member: TeamMember) => {
+    setSelectedMember(member)
+    setMemberForm({
+      id: member.id,
+      name: member.name,
+      email: member.email,
+      roleId: member.roleId,
+      status: member.status,
+      role: member.role,
+      assignments: member.assignments
+    })
+    setIsAddMemberOpen(true)
+  }
+
+  const handleEditRole = (role: Role) => {
+    setSelectedRole(role)
+    setRoleForm({
+      ...roleForm,
+      name: role.name
+    })
+    setIsAddRoleOpen(true)
+  }
+
+  const handleEditAssignment = (assignment: Assignment) => {
+    setAssignmentForm({
+      ...assignment,
+      notes: assignment.notes || ''
+    })
+    setIsAssignmentOpen(true)
   }
 
   return (
@@ -171,7 +330,7 @@ export function TeamManagementClient() {
           />
           <Select
             value={filters.status}
-            onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+            onValueChange={handleStatusChange}
           >
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Status" />
@@ -185,15 +344,15 @@ export function TeamManagementClient() {
           </Select>
           <Select
             value={filters.roleId}
-            onValueChange={(value) => setFilters(prev => ({ ...prev, roleId: value }))}
+            onValueChange={handleRoleChange}
           >
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Role" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All Roles</SelectItem>
-              {roles.map((role) => (
-                <SelectItem key={role.id} value={role.id}>
+              {roles.filter(role => role.id).map((role) => (
+                <SelectItem key={role.id} value={role.id!}>
                   {role.name}
                 </SelectItem>
               ))}
@@ -289,8 +448,8 @@ export function TeamManagementClient() {
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
-                      {roles.map((role) => (
-                        <SelectItem key={role.id} value={role.id}>
+                      {roles.filter(role => role.id).map((role) => (
+                        <SelectItem key={role.id} value={role.id!}>
                           {role.name}
                         </SelectItem>
                       ))}
@@ -301,7 +460,7 @@ export function TeamManagementClient() {
                   <Label>Status</Label>
                   <Select
                     value={memberForm.status}
-                    onValueChange={(value) => setMemberForm(prev => ({ ...prev, status: value }))}
+                    onValueChange={handleMemberStatusChange}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -335,12 +494,14 @@ export function TeamManagementClient() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {teamMembers.map((member) => (
+            {teamMembers.map((member: TeamMember) => (
               <TableRow key={member.id}>
                 <TableCell className="font-medium">{member.name}</TableCell>
                 <TableCell>{member.email}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary">{member.role.name}</Badge>
+                  {member.role && (
+                    <Badge variant="secondary">{member.role.name}</Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge
@@ -357,7 +518,7 @@ export function TeamManagementClient() {
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    {member.assignments.map((assignment) => (
+                    {member.assignments?.map((assignment) => (
                       <Badge key={assignment.id} variant="outline">
                         {assignment.facility.facilityName}
                       </Badge>
@@ -369,16 +530,7 @@ export function TeamManagementClient() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => {
-                        setSelectedMember(member)
-                        setMemberForm({
-                          name: member.name,
-                          email: member.email,
-                          roleId: member.roleId,
-                          status: member.status
-                        })
-                        setIsAddMemberOpen(true)
-                      }}
+                      onClick={() => handleEditMember(member)}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>

@@ -9,9 +9,37 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { BorrowerDetailsModal } from "./BorrowerDetailsModal"
+import { BorrowerDetailsModal } from "@/components/borrowers/BorrowerDetailsModal"
 import { useState } from "react"
 import type { Borrower } from "@/types/borrower"
+
+const BorrowerActions = ({ borrower }: { borrower: Borrower }) => {
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setIsDetailsOpen(true)}>
+            View Details
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <BorrowerDetailsModal
+        borrower={borrower}
+        open={isDetailsOpen}
+        onOpenChange={setIsDetailsOpen}
+      />
+    </>
+  )
+}
 
 export const columns: ColumnDef<Borrower>[] = [
   {
@@ -32,33 +60,6 @@ export const columns: ColumnDef<Borrower>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => {
-      const borrower = row.original
-      const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-
-      return (
-        <>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsDetailsOpen(true)}>
-                View Details
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <BorrowerDetailsModal
-            borrower={borrower}
-            open={isDetailsOpen}
-            onOpenChange={setIsDetailsOpen}
-          />
-        </>
-      )
-    },
+    cell: ({ row }) => <BorrowerActions borrower={row.original} />,
   },
 ] 

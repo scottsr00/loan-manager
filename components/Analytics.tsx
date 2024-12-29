@@ -8,124 +8,196 @@ import {
   DonutChart,
   Title,
   Subtitle,
+  Text,
+  Grid,
+  Col,
+  Flex,
+  Metric,
+  ProgressBar,
 } from '@tremor/react'
 
-interface AnalyticsProps {
-  data: {
-    commitmentByMonth: { date: string; volume: number }[]
-    facilitiesByType: { type: string; amount: number }[]
-    commitmentsByBorrower: { borrowerName: string; commitment: number }[]
-    creditMetrics: {
-      borrowerName: string
-      creditRating: string
-      totalAssets: number
-      totalLiabilities: number
-      netWorth: number
-      totalCommitment: number
-    }[]
-    interestProjection: { date: string; amount: number }[]
+type FacilityType = {
+  commitment: number
+  available: number
+}
+
+type LoanStatus = {
+  total: number
+  outstanding: number
+}
+
+type BorrowerRisk = {
+  borrowerName: string
+  creditRating: string
+  totalExposure: number
+  utilization: number
+}
+
+interface AnalyticsData {
+  portfolio: {
+    totalCommitment: number
+    facilitiesByType: { [key: string]: FacilityType }
+    totalFacilities: number
+  }
+  loans: {
+    byStatus: { [key: string]: LoanStatus }
+  }
+  risk: {
+    borrowerConcentration: BorrowerRisk[]
+  }
+  payments: {
+    byType: { [key: string]: { [key: string]: number } }
   }
 }
 
+interface AnalyticsProps {
+  data: AnalyticsData
+}
+
 export function Analytics({ data }: AnalyticsProps) {
+  if (!data || !data.portfolio || !data.loans || !data.risk || !data.payments) {
+    return (
+      <div className="p-4">
+        <Text>Loading analytics data...</Text>
+      </div>
+    )
+  }
+
   // Format data for charts
-  const commitmentData = data.commitmentByMonth.map(item => ({
-    date: item.date,
-    'Total Commitment': item.volume,
+  const facilityTypeData = Object.entries(data.portfolio.facilitiesByType || {}).map(([type, amounts]) => ({
+    name: type,
+    'Total Commitment': amounts.commitment,
+    'Available Amount': amounts.available,
+    'Utilization': ((amounts.commitment - amounts.available) / amounts.commitment * 100).toFixed(1) + '%'
   }))
 
-  const facilityTypeData = data.facilitiesByType.map(item => ({
-    name: item.type,
-    amount: item.amount,
+  const loanStatusData = Object.entries(data.loans.byStatus || {}).map(([status, amounts]) => ({
+    name: status,
+    'Total Amount': amounts.total,
+    'Outstanding': amounts.outstanding,
   }))
 
-  const borrowerData = data.commitmentsByBorrower.map(item => ({
-    name: item.borrowerName,
-    commitment: item.commitment,
+  const borrowerRiskData = (data.risk.borrowerConcentration || []).map(borrower => ({
+    name: borrower.borrowerName,
+    'Total Exposure': borrower.totalExposure,
+    'Utilization': borrower.utilization,
+    'Credit Rating': borrower.creditRating,
   }))
 
-  const creditMetricsData = data.creditMetrics.map(item => ({
-    name: item.borrowerName,
-    'Credit Rating': item.creditRating,
-    'Total Assets': item.totalAssets,
-    'Net Worth': item.netWorth,
-    'Total Commitment': item.totalCommitment,
-  }))
-
-  const interestData = data.interestProjection.map(item => ({
-    date: item.date,
-    'Projected Interest': item.amount,
-  }))
+  const paymentData = Object.entries(data.payments.byType || {}).flatMap(([type, statusAmounts]) =>
+    Object.entries(statusAmounts || {}).map(([status, amount]) => ({
+      type,
+      status,
+      amount,
+    }))
+  )
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card className="col-span-4" key="total-commitments">
-        <CardHeader>
-          <CardTitle>Total Commitments Over Time</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AreaChart
-            data={commitmentData}
-            index="date"
-            categories={['Total Commitment']}
-            colors={['blue']}
-            valueFormatter={formatCurrency}
-            height="h-72"
-          />
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      {/* Portfolio Overview */}
+      <Grid numItems={1} numItemsSm={2} numItemsLg={4} className="gap-6">
+        <Card>
+          <CardContent className="pt-6">
+            <Text>Total Commitment</Text>
+            <Metric>{formatCurrency(data.portfolio.totalCommitment || 0)}</Metric>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <Text>Active Facilities</Text>
+            <Metric>{data.portfolio.totalFacilities || 0}</Metric>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <Text>Total Outstanding</Text>
+            <Metric>
+              {formatCurrency(
+                Object.values(data.loans.byStatus || {}).reduce(
+                  (sum, status) => sum + (status.outstanding || 0),
+                  0
+                )
+              )}
+            </Metric>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <Text>Portfolio Utilization</Text>
+            <Metric>
+              {(
+                (Object.values(data.loans.byStatus || {}).reduce(
+                  (sum, status) => sum + (status.outstanding || 0),
+                  0
+                ) / (data.portfolio.totalCommitment || 1)) * 100
+              ).toFixed(1)}%
+            </Metric>
+          </CardContent>
+        </Card>
+      </Grid>
 
-      <Card className="col-span-2" key="facilities-by-type">
-        <CardHeader>
-          <CardTitle>Facilities by Type</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DonutChart
-            data={facilityTypeData}
-            category="amount"
-            index="name"
-            valueFormatter={formatCurrency}
-            colors={['slate', 'violet', 'indigo', 'rose', 'cyan', 'amber']}
-          />
-        </CardContent>
-      </Card>
+      {/* Facility Analysis */}
+      <Grid numItems={1} numItemsLg={2} className="gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Facilities by Type</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {facilityTypeData.length > 0 ? (
+              <DonutChart
+                data={facilityTypeData}
+                category="Total Commitment"
+                index="name"
+                valueFormatter={formatCurrency}
+                colors={['slate', 'violet', 'indigo', 'rose', 'cyan', 'amber']}
+              />
+            ) : (
+              <Text>No facility data available</Text>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Facility Utilization</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {facilityTypeData.map((facility) => (
+                <div key={facility.name} className="space-y-2">
+                  <Flex>
+                    <Text>{facility.name}</Text>
+                    <Text>{facility.Utilization}</Text>
+                  </Flex>
+                  <ProgressBar value={parseFloat(facility.Utilization)} />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </Grid>
 
-      <Card className="col-span-2" key="commitments-by-borrower">
+      {/* Risk Analysis */}
+      <Card>
         <CardHeader>
-          <CardTitle>Commitments by Borrower</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <BarChart
-            data={borrowerData}
-            index="name"
-            categories={['commitment']}
-            colors={['blue']}
-            valueFormatter={formatCurrency}
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="col-span-4" key="credit-metrics">
-        <CardHeader>
-          <CardTitle>Credit Metrics by Borrower</CardTitle>
+          <CardTitle>Borrower Risk Analysis</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-8">
-            {creditMetricsData.map((borrower) => (
-              <div key={`${borrower.name}-metrics`} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Title>{borrower.name}</Title>
-                  <Subtitle className="text-tremor-content">
-                    Rating: {borrower['Credit Rating']}
-                  </Subtitle>
-                </div>
-                <BarChart
-                  data={[borrower]}
-                  index="name"
-                  categories={['Total Assets', 'Net Worth', 'Total Commitment']}
-                  colors={['emerald', 'violet', 'blue']}
-                  valueFormatter={formatCurrency}
-                  stack={false}
+            {borrowerRiskData.map((borrower) => (
+              <div key={borrower.name} className="space-y-2">
+                <Flex>
+                  <div>
+                    <Title>{borrower.name}</Title>
+                    <Text>Rating: {borrower['Credit Rating']}</Text>
+                  </div>
+                  <div className="text-right">
+                    <Text>Exposure</Text>
+                    <Text>{formatCurrency(borrower['Total Exposure'])}</Text>
+                  </div>
+                </Flex>
+                <ProgressBar
+                  value={(borrower.Utilization / (borrower['Total Exposure'] || 1)) * 100}
+                  label="Utilization"
                 />
               </div>
             ))}
@@ -133,19 +205,24 @@ export function Analytics({ data }: AnalyticsProps) {
         </CardContent>
       </Card>
 
-      <Card className="col-span-4" key="projected-interest">
+      {/* Payment Analysis */}
+      <Card>
         <CardHeader>
-          <CardTitle>Projected Interest Income</CardTitle>
+          <CardTitle>Payment Activity (Last 90 Days)</CardTitle>
         </CardHeader>
         <CardContent>
-          <AreaChart
-            data={interestData}
-            index="date"
-            categories={['Projected Interest']}
-            colors={['green']}
-            valueFormatter={formatCurrency}
-            height="h-72"
-          />
+          {paymentData.length > 0 ? (
+            <BarChart
+              data={paymentData}
+              categories={['amount']}
+              index="type"
+              valueFormatter={formatCurrency}
+              colors={['emerald']}
+              stack
+            />
+          ) : (
+            <Text>No payment data available</Text>
+          )}
         </CardContent>
       </Card>
     </div>

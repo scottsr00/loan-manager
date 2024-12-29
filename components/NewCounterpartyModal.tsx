@@ -14,7 +14,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { counterpartyInputSchema, type CounterpartyInput } from '@/server/types/counterparty'
 import { createCounterparty } from '@/server/actions/counterparty/createCounterparty'
@@ -36,14 +35,9 @@ export function NewCounterpartyModal({
   const form = useForm<CounterpartyInput>({
     resolver: zodResolver(counterpartyInputSchema),
     defaultValues: {
-      legalName: '',
-      dba: '',
-      registrationNumber: '',
-      taxId: '',
+      name: '',
       typeId: '',
       status: 'ACTIVE',
-      website: '',
-      description: '',
       addresses: [{
         type: 'LEGAL',
         street1: '',
@@ -106,10 +100,10 @@ export function NewCounterpartyModal({
               
               <FormField
                 control={form.control}
-                name="legalName"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Legal Name</FormLabel>
+                    <FormLabel>Name</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -117,50 +111,6 @@ export function NewCounterpartyModal({
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="dba"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>DBA (Optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="registrationNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Registration Number</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="taxId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tax ID</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
 
               <FormField
                 control={form.control}
@@ -182,34 +132,6 @@ export function NewCounterpartyModal({
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="website"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Website (Optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="url" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} />
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -268,7 +190,7 @@ export function NewCounterpartyModal({
                   name="addresses.0.state"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>State/Province (Optional)</FormLabel>
+                      <FormLabel>State/Province</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -348,7 +270,7 @@ export function NewCounterpartyModal({
                 name="contacts.0.title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title (Optional)</FormLabel>
+                    <FormLabel>Title</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -377,7 +299,7 @@ export function NewCounterpartyModal({
                   name="contacts.0.phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone (Optional)</FormLabel>
+                      <FormLabel>Phone</FormLabel>
                       <FormControl>
                         <Input {...field} type="tel" />
                       </FormControl>
@@ -388,17 +310,16 @@ export function NewCounterpartyModal({
               </div>
             </div>
 
-            <div className="flex justify-end gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
+            <div className="flex justify-end">
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Counterparty
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Counterparty'
+                )}
               </Button>
             </div>
           </form>

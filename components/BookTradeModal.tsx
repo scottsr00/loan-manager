@@ -42,7 +42,8 @@ const formSchema = z.object({
   price: z.number().min(0.01, 'Price must be greater than 0'),
   counterpartyId: z.string().min(1, 'Counterparty is required'),
   tradeDate: z.date(),
-  settlementDate: z.date()
+  settlementDate: z.date(),
+  status: z.enum(['PENDING', 'SETTLED']).default('PENDING')
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -69,7 +70,8 @@ export function BookTradeModal({
       price: 0,
       counterpartyId: '',
       tradeDate: new Date(),
-      settlementDate: new Date()
+      settlementDate: new Date(),
+      status: 'PENDING'
     }
   })
 
@@ -87,7 +89,10 @@ export function BookTradeModal({
   const onSubmit = async (data: FormData) => {
     try {
       setIsLoading(true)
-      await onTradeBooked(data)
+      await onTradeBooked({
+        ...data,
+        status: 'PENDING'
+      })
       onOpenChange(false)
     } catch (error) {
       console.error('Error booking trade:', error)

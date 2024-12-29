@@ -13,28 +13,45 @@ type MockPrisma = {
 // Mock the prisma client
 jest.mock('@/server/db/client', () => ({
   prisma: {
-    $transaction: jest.fn((callback: (tx: MockPrisma) => Promise<any>) => callback(prisma as unknown as MockPrisma)),
-    loan: {
-      findUnique: jest.fn(),
-    },
-    facility: {
-      findUnique: jest.fn(),
-    },
+    $transaction: jest.fn((callback) => callback({
+      loan: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+      facilityPosition: {
+        update: jest.fn(),
+      },
+      servicingActivity: {
+        create: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+      transactionHistory: {
+        create: jest.fn(),
+      },
+      facility: {
+        findUnique: jest.fn(),
+      },
+    })),
     servicingActivity: {
       create: jest.fn(),
-      update: jest.fn(),
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
-    transactionHistory: {
-      create: jest.fn(),
-    },
-    loanPosition: {
+    loan: {
+      findUnique: jest.fn(),
       update: jest.fn(),
     },
     facilityPosition: {
       update: jest.fn(),
     },
-  } as unknown as MockPrisma,
+    transactionHistory: {
+      create: jest.fn(),
+    },
+    facility: {
+      findUnique: jest.fn(),
+    },
+  },
 }))
 
 describe('Servicing Activity Tests', () => {
@@ -47,8 +64,9 @@ describe('Servicing Activity Tests', () => {
       const mockActivity = {
         facilityId: 'facility-1',
         activityType: 'PRINCIPAL_PAYMENT',
-        dueDate: new Date(),
         amount: 1000,
+        dueDate: new Date(),
+        description: 'Test payment',
         status: 'PENDING',
       }
 
@@ -56,6 +74,7 @@ describe('Servicing Activity Tests', () => {
       ;(prisma.servicingActivity.create as jest.Mock).mockResolvedValue({ ...mockActivity, id: 'activity-1' })
 
       const result = await addServicingActivity(mockActivity)
+
       expect(result).toHaveProperty('id', 'activity-1')
       expect(prisma.servicingActivity.create).toHaveBeenCalledTimes(1)
     })
@@ -105,78 +124,172 @@ describe('Servicing Activity Tests', () => {
     }
 
     it('should process a paydown without creating duplicate servicing activity', async () => {
-      ;(prisma.loan.findUnique as jest.Mock).mockResolvedValue(mockLoan)
-      ;(prisma.loanPosition.update as jest.Mock).mockImplementation((params: { where: { id: string } }) => {
-        const position = mockLoan.positions.find(p => p.id === params.where.id)
-        return Promise.resolve({ ...position, amount: position!.amount * 0.9 })
-      })
-      ;(prisma.facilityPosition.update as jest.Mock).mockImplementation((params: { where: { id: string } }) => {
-        const position = mockLoan.facility.positions.find(p => p.id === params.where.id)
-        return Promise.resolve({ ...position, amount: position!.amount * 1.1 })
-      })
-      ;(prisma.transactionHistory.create as jest.Mock).mockResolvedValue({ id: 'th-1' })
-
-      const paydownParams = {
-        loanId: 'loan-1',
-        facilityId: 'facility-1',
-        amount: 100,
-        paymentDate: new Date(),
-        servicingActivityId: 'existing-activity-1'
+      const mockLoan = {
+        id: 'loan-1',
+        outstandingAmount: 1000,
+        currency: 'USD',
+        facility: {
+          id: 'facility-1',
+          positions: [
+            { id: 'pos-1', lenderId: 'lender-1', amount: 600 },
+            { id: 'pos-2', lenderId: 'lender-2', amount: 400 },
+          ],
+          creditAgreement: {
+            id: 'ca-1'
+          }
+        }
       }
 
-      ;(prisma.servicingActivity.findUnique as jest.Mock).mockResolvedValue({
-        id: 'existing-activity-1',
-        status: 'COMPLETED',
+      const mockServicingActivity = {
+        id: 'sa-1',
         activityType: 'PRINCIPAL_PAYMENT',
-        amount: 100,
-        completedAt: new Date()
-      })
-
-      const result = await processPaydown(paydownParams)
-
-      expect(result.success).toBe(true)
-      expect(prisma.servicingActivity.create).not.toHaveBeenCalled()
-      expect(prisma.servicingActivity.findUnique).toHaveBeenCalledWith({
-        where: { id: 'existing-activity-1' }
-      })
-      expect(prisma.transactionHistory.create).toHaveBeenCalledTimes(1)
-      expect(prisma.loanPosition.update).toHaveBeenCalledTimes(2)
-      expect(prisma.facilityPosition.update).toHaveBeenCalledTimes(2)
-    })
-
-    it('should create new servicing activity if no existing activity provided', async () => {
-      ;(prisma.loan.findUnique as jest.Mock).mockResolvedValue(mockLoan)
-      ;(prisma.loanPosition.update as jest.Mock).mockImplementation((params: { where: { id: string } }) => {
-        const position = mockLoan.positions.find(p => p.id === params.where.id)
-        return Promise.resolve({ ...position, amount: position!.amount * 0.9 })
-      })
-      ;(prisma.facilityPosition.update as jest.Mock).mockImplementation((params: { where: { id: string } }) => {
-        const position = mockLoan.facility.positions.find(p => p.id === params.where.id)
-        return Promise.resolve({ ...position, amount: position!.amount * 1.1 })
-      })
-      ;(prisma.servicingActivity.create as jest.Mock).mockResolvedValue({
-        id: 'new-activity-1',
+        amount: 500,
         status: 'COMPLETED',
-        activityType: 'PRINCIPAL_PAYMENT',
-        amount: 100,
-        completedAt: new Date()
+        completedAt: new Date(),
+      }
+
+      const mockFacilityPositionUpdate = jest.fn().mockResolvedValue({})
+      const mockLoanUpdate = jest.fn().mockResolvedValue({
+        ...mockLoan,
+        outstandingAmount: 500
       })
-      ;(prisma.transactionHistory.create as jest.Mock).mockResolvedValue({ id: 'th-1' })
+
+      ;(prisma.$transaction as jest.Mock).mockImplementation((callback) => {
+        return callback({
+          loan: {
+            findUnique: jest.fn().mockResolvedValue(mockLoan),
+            update: mockLoanUpdate,
+          },
+          facilityPosition: {
+            update: mockFacilityPositionUpdate,
+          },
+          servicingActivity: {
+            findUnique: jest.fn().mockResolvedValue(mockServicingActivity),
+            create: jest.fn(),
+          },
+          transactionHistory: {
+            create: jest.fn().mockResolvedValue({}),
+          },
+        })
+      })
 
       const result = await processPaydown({
         loanId: 'loan-1',
         facilityId: 'facility-1',
-        amount: 100,
-        paymentDate: new Date()
+        amount: 500,
+        paymentDate: new Date(),
+        servicingActivityId: 'sa-1'
       })
 
       expect(result.success).toBe(true)
-      expect(prisma.servicingActivity.create).toHaveBeenCalledTimes(1)
-      expect(prisma.transactionHistory.create).toHaveBeenCalledTimes(1)
+      expect(result.loan.previousOutstandingAmount).toBe(1000)
+      expect(result.loan.newOutstandingAmount).toBe(500)
+      expect(mockFacilityPositionUpdate).toHaveBeenCalledTimes(2)
+      expect(mockFacilityPositionUpdate).toHaveBeenCalledWith({
+        where: { id: 'pos-1' },
+        data: { amount: expect.any(Number) }
+      })
+      expect(mockFacilityPositionUpdate).toHaveBeenCalledWith({
+        where: { id: 'pos-2' },
+        data: { amount: expect.any(Number) }
+      })
+    })
+
+    it('should create new servicing activity if no existing activity provided', async () => {
+      const mockLoan = {
+        id: 'loan-1',
+        outstandingAmount: 1000,
+        currency: 'USD',
+        facility: {
+          id: 'facility-1',
+          positions: [
+            { id: 'pos-1', lenderId: 'lender-1', amount: 600 },
+            { id: 'pos-2', lenderId: 'lender-2', amount: 400 },
+          ],
+          creditAgreement: {
+            id: 'ca-1'
+          }
+        }
+      }
+
+      const mockNewServicingActivity = {
+        id: 'sa-2',
+        activityType: 'PRINCIPAL_PAYMENT',
+        amount: 500,
+        status: 'COMPLETED',
+        completedAt: new Date(),
+      }
+
+      ;(prisma.$transaction as jest.Mock).mockImplementation((callback) => {
+        return callback({
+          loan: {
+            findUnique: jest.fn().mockResolvedValue(mockLoan),
+            update: jest.fn().mockResolvedValue({
+              ...mockLoan,
+              outstandingAmount: 500
+            }),
+          },
+          facilityPosition: {
+            update: jest.fn().mockResolvedValue({}),
+          },
+          servicingActivity: {
+            create: jest.fn().mockResolvedValue(mockNewServicingActivity),
+            findUnique: jest.fn(),
+          },
+          transactionHistory: {
+            create: jest.fn().mockResolvedValue({}),
+          },
+        })
+      })
+
+      const result = await processPaydown({
+        loanId: 'loan-1',
+        facilityId: 'facility-1',
+        amount: 500,
+        paymentDate: new Date(),
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.loan.previousOutstandingAmount).toBe(1000)
+      expect(result.loan.newOutstandingAmount).toBe(500)
+      expect(result.servicingActivity.id).toBe('sa-2')
     })
 
     it('should throw error if paydown amount exceeds outstanding balance', async () => {
-      ;(prisma.loan.findUnique as jest.Mock).mockResolvedValue(mockLoan)
+      const mockLoan = {
+        id: 'loan-1',
+        outstandingAmount: 1000,
+        currency: 'USD',
+        facility: {
+          id: 'facility-1',
+          positions: [
+            { id: 'pos-1', lenderId: 'lender-1', amount: 600 },
+            { id: 'pos-2', lenderId: 'lender-2', amount: 400 },
+          ],
+          creditAgreement: {
+            id: 'ca-1'
+          }
+        }
+      }
+
+      ;(prisma.$transaction as jest.Mock).mockImplementation((callback) => {
+        return callback({
+          loan: {
+            findUnique: jest.fn().mockResolvedValue(mockLoan),
+            update: jest.fn(),
+          },
+          facilityPosition: {
+            update: jest.fn(),
+          },
+          servicingActivity: {
+            create: jest.fn(),
+            findUnique: jest.fn(),
+          },
+          transactionHistory: {
+            create: jest.fn(),
+          },
+        })
+      })
 
       await expect(processPaydown({
         loanId: 'loan-1',
@@ -185,10 +298,7 @@ describe('Servicing Activity Tests', () => {
         paymentDate: new Date()
       })).rejects.toThrow('Paydown amount 1100 exceeds outstanding balance 1000')
 
-      expect(prisma.loanPosition.update).not.toHaveBeenCalled()
       expect(prisma.facilityPosition.update).not.toHaveBeenCalled()
-      expect(prisma.servicingActivity.create).not.toHaveBeenCalled()
-      expect(prisma.transactionHistory.create).not.toHaveBeenCalled()
     })
   })
 

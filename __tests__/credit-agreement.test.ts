@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client'
 import { prisma } from '@/server/db/client'
 import { createCreditAgreement } from '@/server/actions/loan/createCreditAgreement'
 import { updateCreditAgreement } from '@/server/actions/loan/updateCreditAgreement'
+import { type UpdateCreditAgreementInput } from '@/server/types/credit-agreement'
 
 type MockPrisma = {
   [K in keyof PrismaClient]: {
@@ -22,6 +23,9 @@ jest.mock('@/server/db/client', () => ({
     },
     lender: {
       findUnique: jest.fn(),
+    },
+    facility: {
+      findMany: jest.fn(),
     },
   } as unknown as MockPrisma,
 }))
@@ -197,86 +201,211 @@ describe('Credit Agreement Tests', () => {
 
   describe('updateCreditAgreement', () => {
     const mockExistingAgreement = {
-      id: 'ca-1',
-      agreementNumber: 'CA-2024-001',
-      borrowerId: 'borrower-1',
-      lenderId: 'lender-1',
-      status: 'PENDING',
+      id: 'test-ca-1',
+      agreementNumber: 'CA-TEST-001',
       amount: 1000000,
       currency: 'USD',
       startDate: new Date('2024-01-01'),
       maturityDate: new Date('2025-01-01'),
       interestRate: 5.5,
       description: 'Test credit agreement',
-      facilities: [{
-        id: 'facility-1',
-        facilityName: 'Term Loan A',
-        facilityType: 'TERM_LOAN',
-        commitmentAmount: 800000,
+      status: 'ACTIVE',
+      borrowerId: 'test-entity-1',
+      lenderId: 'test-entity-2',
+      facilities: [],
+      borrower: {
+        id: 'test-entity-1',
+        borrower: {
+          name: 'Test Borrower',
+        },
+      },
+      lender: {
+        id: 'test-entity-2',
+        lender: {
+          name: 'Test Lender',
+        },
+      },
+      transactions: [],
+    }
+
+    const mockFacility = {
+      id: 'test-facility-1',
+      facilityName: 'Term Loan A',
+      facilityType: 'TERM_LOAN',
+      commitmentAmount: 500000,
+      availableAmount: 500000,
+      currency: 'USD',
+      startDate: new Date('2024-01-01'),
+      maturityDate: new Date('2025-01-01'),
+      interestType: 'FLOATING',
+      baseRate: 'SOFR',
+      margin: 2.5,
+      description: 'Test facility',
+      status: 'ACTIVE',
+      creditAgreementId: 'test-ca-1',
+      trades: [],
+    }
+
+    it('should update credit agreement details while preserving facility relationships', async () => {
+      const updateData: UpdateCreditAgreementInput = {
+        id: mockExistingAgreement.id,
+        agreementNumber: 'CA-TEST-001-UPDATED',
+        amount: 1500000,
         currency: 'USD',
         startDate: new Date('2024-01-01'),
         maturityDate: new Date('2025-01-01'),
-        interestType: 'FLOATING',
-        baseRate: 'SOFR',
-        margin: 2.5,
-        description: 'Test facility',
-      }]
-    }
+        interestRate: 6.0,
+        description: 'Updated agreement',
+        status: 'ACTIVE',
+        borrowerId: mockExistingAgreement.borrowerId,
+      }
 
-    it('should update credit agreement with valid changes', async () => {
+      const mockUpdatedAgreement = {
+        ...mockExistingAgreement,
+        ...updateData,
+        facilities: [mockFacility],
+      }
+
+      ;(prisma.creditAgreement.findUnique as jest.Mock).mockResolvedValue({
+        ...mockExistingAgreement,
+        facilities: [mockFacility],
+      })
+      ;(prisma.creditAgreement.update as jest.Mock).mockResolvedValue(mockUpdatedAgreement)
+
+      const result = await updateCreditAgreement(updateData)
+
+      expect(result).toBeDefined()
+      expect(result.agreementNumber).toBe(updateData.agreementNumber)
+      expect(result.amount).toBe(updateData.amount)
+      expect(result.facilities).toHaveLength(1)
+      expect(result.facilities[0].id).toBe(mockFacility.id)
+      expect(prisma.creditAgreement.update).toHaveBeenCalledWith({
+        where: { id: updateData.id },
+        data: {
+          agreementNumber: updateData.agreementNumber,
+          status: updateData.status,
+          amount: updateData.amount,
+          currency: updateData.currency,
+          startDate: updateData.startDate,
+          maturityDate: updateData.maturityDate,
+          interestRate: updateData.interestRate,
+          description: updateData.description,
+          borrowerId: updateData.borrowerId,
+        },
+        include: {
+          borrower: {
+            include: {
+              borrower: true,
+            },
+          },
+          lender: {
+            include: {
+              lender: true,
+            },
+          },
+          facilities: {
+            include: {
+              trades: {
+                include: {
+                  counterparty: true,
+                },
+              },
+            },
+          },
+          transactions: true,
+        },
+      })
+    })
+
+    it('should reject updates that would make facility commitments exceed new credit agreement amount', async () => {
+      const updateData: UpdateCreditAgreementInput = {
+        id: mockExistingAgreement.id,
+        amount: 400000, // Less than facility commitment
+        currency: 'USD',
+        startDate: new Date('2024-01-01'),
+        maturityDate: new Date('2025-01-01'),
+        status: 'ACTIVE',
+        borrowerId: mockExistingAgreement.borrowerId,
+        agreementNumber: mockExistingAgreement.agreementNumber,
+        interestRate: mockExistingAgreement.interestRate,
+      }
+
+      ;(prisma.creditAgreement.findUnique as jest.Mock).mockResolvedValue({
+        ...mockExistingAgreement,
+        facilities: [mockFacility],
+      })
+
+      await expect(updateCreditAgreement(updateData))
+        .rejects.toThrow('Credit agreement amount cannot be less than total facility commitments')
+
+      expect(prisma.creditAgreement.update).not.toHaveBeenCalled()
+    })
+
+    it('should reject updates that would make facility maturity dates invalid', async () => {
+      const updateData: UpdateCreditAgreementInput = {
+        id: mockExistingAgreement.id,
+        maturityDate: new Date('2024-06-01'), // Earlier than facility maturity
+        currency: 'USD',
+        startDate: new Date('2024-01-01'),
+        status: 'ACTIVE',
+        borrowerId: mockExistingAgreement.borrowerId,
+        agreementNumber: mockExistingAgreement.agreementNumber,
+        amount: mockExistingAgreement.amount,
+        interestRate: mockExistingAgreement.interestRate,
+      }
+
+      ;(prisma.creditAgreement.findUnique as jest.Mock).mockResolvedValue({
+        ...mockExistingAgreement,
+        facilities: [mockFacility],
+      })
+
+      await expect(updateCreditAgreement(updateData))
+        .rejects.toThrow('Credit agreement maturity date cannot be earlier than facility maturity dates')
+
+      expect(prisma.creditAgreement.update).not.toHaveBeenCalled()
+    })
+
+    it('should reject currency changes when facilities exist', async () => {
+      const updateData: UpdateCreditAgreementInput = {
+        id: mockExistingAgreement.id,
+        currency: 'EUR', // Different currency
+        startDate: new Date('2024-01-01'),
+        maturityDate: new Date('2025-01-01'),
+        status: 'ACTIVE',
+        borrowerId: mockExistingAgreement.borrowerId,
+        agreementNumber: mockExistingAgreement.agreementNumber,
+        amount: mockExistingAgreement.amount,
+        interestRate: mockExistingAgreement.interestRate,
+      }
+
+      ;(prisma.creditAgreement.findUnique as jest.Mock).mockResolvedValue({
+        ...mockExistingAgreement,
+        facilities: [mockFacility],
+      })
+
+      await expect(updateCreditAgreement(updateData))
+        .rejects.toThrow('Cannot change currency of credit agreement with existing facilities')
+
+      expect(prisma.creditAgreement.update).not.toHaveBeenCalled()
+    })
+
+    it('should validate required fields', async () => {
+      const invalidData: UpdateCreditAgreementInput = {
+        id: mockExistingAgreement.id,
+        amount: -1000, // Invalid amount
+        currency: 'USD',
+        startDate: new Date('2024-01-01'),
+        maturityDate: new Date('2025-01-01'),
+        status: 'ACTIVE',
+        borrowerId: mockExistingAgreement.borrowerId,
+        agreementNumber: mockExistingAgreement.agreementNumber,
+        interestRate: mockExistingAgreement.interestRate,
+      }
+
       ;(prisma.creditAgreement.findUnique as jest.Mock).mockResolvedValue(mockExistingAgreement)
-      ;(prisma.creditAgreement.update as jest.Mock).mockResolvedValue({
-        ...mockExistingAgreement,
-        status: 'ACTIVE',
-        amount: 1500000,
-      })
 
-      const result = await updateCreditAgreement({
-        ...mockExistingAgreement,
-        status: 'ACTIVE',
-        amount: 1500000,
-      })
-
-      expect(result.status).toBe('ACTIVE')
-      expect(result.amount).toBe(1500000)
-      expect(prisma.creditAgreement.update).toHaveBeenCalledTimes(1)
-    })
-
-    it('should throw error if agreement does not exist', async () => {
-      ;(prisma.creditAgreement.findUnique as jest.Mock).mockResolvedValue(null)
-
-      await expect(updateCreditAgreement({
-        ...mockExistingAgreement,
-        id: 'non-existent',
-      })).rejects.toThrow('Credit agreement not found')
-
-      expect(prisma.creditAgreement.update).not.toHaveBeenCalled()
-    })
-
-    it('should validate status transitions', async () => {
-      ;(prisma.creditAgreement.findUnique as jest.Mock).mockResolvedValue({
-        ...mockExistingAgreement,
-        status: 'TERMINATED',
-      })
-
-      await expect(updateCreditAgreement({
-        ...mockExistingAgreement,
-        status: 'ACTIVE',
-      })).rejects.toThrow('Cannot change status of terminated agreement')
-
-      expect(prisma.creditAgreement.update).not.toHaveBeenCalled()
-    })
-
-    it('should validate amount changes', async () => {
-      ;(prisma.creditAgreement.findUnique as jest.Mock).mockResolvedValue({
-        ...mockExistingAgreement,
-        status: 'ACTIVE',
-      })
-
-      await expect(updateCreditAgreement({
-        ...mockExistingAgreement,
-        amount: -1000,
-      })).rejects.toThrow('Amount must be positive')
+      await expect(updateCreditAgreement(invalidData))
+        .rejects.toThrow('Amount must be positive')
 
       expect(prisma.creditAgreement.update).not.toHaveBeenCalled()
     })

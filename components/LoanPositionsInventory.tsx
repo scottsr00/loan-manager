@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ChevronDown, ChevronRight, Search, Shield, ShieldAlert } from 'lucide-react'
-import { getInventory, type LoanPosition } from '@/server/actions/loan/getInventory'
-import { getTradeHistory, type TradeHistoryItem } from '@/server/actions/trade/getTradeHistory'
+import { getInventory } from '@/server/actions/loan/getInventory'
+import { getTradeHistory } from '@/server/actions/trade/getTradeHistory'
 import { NewLoanModal } from './NewLoanModal'
 import { Button } from '@/components/ui/button'
 import { Info, Loader2 } from 'lucide-react'
+import { type Loan, type Trade, type FacilityPosition } from '@prisma/client'
 
 interface ExpandedState {
   [key: string]: boolean;
@@ -23,7 +24,7 @@ interface TradeBalance {
   total: number;
 }
 
-interface LenderPositionWithTrades extends LenderPosition {
+interface FacilityPositionWithTrades extends FacilityPosition {
   openTrades: {
     buys: number;
     sells: number;
@@ -31,24 +32,41 @@ interface LenderPositionWithTrades extends LenderPosition {
   };
   settledPosition: number;
   netPosition: number;
+  lender: {
+    entity: {
+      legalName: string;
+    };
+  };
 }
 
-interface LoanPositionWithTrades extends LoanPosition {
+interface LoanWithTrades extends Loan {
   tradeBalance: TradeBalance;
+  facilityPositions: FacilityPositionWithTrades[];
+  trades: Trade[];
+  facility: {
+    creditAgreement: {
+      borrower: {
+        legalName: string;
+      };
+      lender: {
+        legalName: string;
+      };
+    };
+  };
 }
 
 export function LoanPositionsInventoryComponent() {
-  const [positions, setPositions] = useState<LoanPosition[]>([])
-  const [trades, setTrades] = useState<TradeHistoryItem[]>([])
+  const [loans, setLoans] = useState<LoanWithTrades[]>([])
+  const [trades, setTrades] = useState<Trade[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({})
   const [filters, setFilters] = useState({
     id: '',
-    dealName: '',
-    currentBalance: '',
-    currentPeriodTerms: '',
-    priorPeriodPaymentStatus: ''
+    facilityId: '',
+    amount: '',
+    outstandingAmount: '',
+    status: ''
   })
 
   const loadData = async () => {
@@ -58,7 +76,7 @@ export function LoanPositionsInventoryComponent() {
         getInventory(),
         getTradeHistory()
       ])
-      setPositions(positionsData)
+      setLoans(positionsData)
       setTrades(tradesData)
     } catch (err) {
       setError('Failed to load inventory positions')
@@ -73,13 +91,13 @@ export function LoanPositionsInventoryComponent() {
   }, [])
 
   const positionsWithDetailedTrades = useMemo(() => {
-    return positions.map(position => {
-      const loanTrades = trades.filter(trade => trade.loanId === position.id)
+    return loans.map(position => {
+      const loanTrades = trades.filter(trade => trade.facilityId === position.facilityId)
       
       // Calculate overall trade balance
       const tradeBalance = loanTrades.reduce((acc, trade) => {
-        const amount = trade.tradeType === 'Buy' ? trade.quantity : -trade.quantity
-        if (trade.status === 'Completed') {
+        const amount = trade.status === 'Buy' ? trade.amount : -trade.amount
+        if (trade.status === 'COMPLETED') {
           acc.completed += amount
         } else {
           acc.open += amount
@@ -88,28 +106,28 @@ export function LoanPositionsInventoryComponent() {
         return acc
       }, { completed: 0, open: 0, total: 0 } as TradeBalance)
 
-      // Calculate lender positions with open trades
-      const lenderPositionsWithTrades = position.lenderPositions.map(lenderPos => {
+      // Calculate facility positions with open trades
+      const facilityPositionsWithTrades = position.facilityPositions.map(facilityPos => {
         const lenderTrades = loanTrades.filter(trade => 
-          trade.status === 'Open' && 
-          trade.counterparty === lenderPos.lenderName
+          trade.status === 'PENDING' && 
+          trade.counterpartyId === facilityPos.lenderId
         )
 
         const openTrades = lenderTrades.reduce((acc, trade) => {
-          if (trade.tradeType === 'Buy') {
-            acc.buys += trade.quantity
+          if (trade.status === 'Buy') {
+            acc.buys += trade.amount
           } else {
-            acc.sells += trade.quantity
+            acc.sells += trade.amount
           }
           acc.net = acc.buys - acc.sells
           return acc
         }, { buys: 0, sells: 0, net: 0 })
 
-        const settledPosition = lenderPos.balance
+        const settledPosition = facilityPos.amount
         const netPosition = settledPosition + openTrades.net
 
         return {
-          ...lenderPos,
+          ...facilityPos,
           openTrades,
           settledPosition,
           netPosition
@@ -119,19 +137,19 @@ export function LoanPositionsInventoryComponent() {
       return {
         ...position,
         tradeBalance,
-        lenderPositions: lenderPositionsWithTrades
+        facilityPositions: facilityPositionsWithTrades
       }
     })
-  }, [positions, trades])
+  }, [loans, trades])
 
   const totals = useMemo(() => {
     return positionsWithDetailedTrades.reduce((acc, position) => ({
-      currentBalance: acc.currentBalance + position.currentBalance,
+      amount: acc.amount + position.amount,
       completedTradeBalance: acc.completedTradeBalance + position.tradeBalance.completed,
       openTradeBalance: acc.openTradeBalance + position.tradeBalance.open,
       netPosition: acc.netPosition + position.tradeBalance.total
     }), {
-      currentBalance: 0,
+      amount: 0,
       completedTradeBalance: 0,
       openTradeBalance: 0,
       netPosition: 0
@@ -142,14 +160,16 @@ export function LoanPositionsInventoryComponent() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
   }
 
-  const getStatusBadge = (status: LoanPosition['priorPeriodPaymentStatus']) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Paid':
-        return <Badge className="bg-green-500">Paid</Badge>
-      case 'Overdue':
-        return <Badge className="bg-red-500">Overdue</Badge>
-      case 'Pending':
+      case 'ACTIVE':
+        return <Badge className="bg-green-500">Active</Badge>
+      case 'CLOSED':
+        return <Badge className="bg-red-500">Closed</Badge>
+      case 'PENDING':
         return <Badge className="bg-yellow-500">Pending</Badge>
+      default:
+        return <Badge>{status}</Badge>
     }
   }
 
@@ -165,9 +185,11 @@ export function LoanPositionsInventoryComponent() {
     setFilters(prev => ({ ...prev, [key]: value }))
   }
 
-  const getAgentBadge = (position: LoanPosition) => {
-    const isAgent = position.agentBank === 'NxtBank'
-    const isParticipant = position.lenderPositions.some(lp => lp.lenderName === 'NxtBank')
+  const getAgentBadge = (position: LoanWithTrades) => {
+    const isAgent = position.facility.creditAgreement.lender.legalName === 'NxtBank'
+    const isParticipant = position.facilityPositions.some(fp => 
+      fp.lender.entity.legalName === 'NxtBank'
+    )
 
     if (isAgent) {
       return (
@@ -213,13 +235,13 @@ export function LoanPositionsInventoryComponent() {
                 <TableHead></TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>ID</TableHead>
-                <TableHead>Deal Name</TableHead>
-                <TableHead>Current Balance</TableHead>
+                <TableHead>Facility ID</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Outstanding Amount</TableHead>
                 <TableHead>Completed Trade Balance</TableHead>
                 <TableHead>Open Trade Balance</TableHead>
                 <TableHead>Net Position</TableHead>
-                <TableHead>Current Period Terms</TableHead>
-                <TableHead>Prior Period Payment Status</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -237,13 +259,13 @@ export function LoanPositionsInventoryComponent() {
                     </TableCell>
                     <TableCell>{getAgentBadge(position)}</TableCell>
                     <TableCell>{position.id}</TableCell>
-                    <TableCell>{position.dealName}</TableCell>
-                    <TableCell>{formatCurrency(position.currentBalance)}</TableCell>
+                    <TableCell>{position.facilityId}</TableCell>
+                    <TableCell>{formatCurrency(position.amount)}</TableCell>
+                    <TableCell>{formatCurrency(position.outstandingAmount)}</TableCell>
                     <TableCell>{formatCurrency(position.tradeBalance.completed)}</TableCell>
                     <TableCell>{formatCurrency(position.tradeBalance.open)}</TableCell>
                     <TableCell>{formatCurrency(position.tradeBalance.total)}</TableCell>
-                    <TableCell>{position.currentPeriodTerms}</TableCell>
-                    <TableCell>{getStatusBadge(position.priorPeriodPaymentStatus)}</TableCell>
+                    <TableCell>{getStatusBadge(position.status)}</TableCell>
                   </TableRow>
                   {expandedRows[position.id] && (
                     <TableRow>
@@ -261,15 +283,15 @@ export function LoanPositionsInventoryComponent() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {position.lenderPositions.map((lender) => (
-                              <TableRow key={lender.lenderId}>
-                                <TableCell className="p-2">{lender.lenderId}</TableCell>
-                                <TableCell className="p-2">{lender.lenderName}</TableCell>
-                                <TableCell className="p-2">{formatCurrency(lender.settledPosition)}</TableCell>
-                                <TableCell className="p-2">{formatCurrency(lender.openTrades.buys)}</TableCell>
-                                <TableCell className="p-2">{formatCurrency(lender.openTrades.sells)}</TableCell>
-                                <TableCell className="p-2">{formatCurrency(lender.openTrades.net)}</TableCell>
-                                <TableCell className="p-2">{formatCurrency(lender.netPosition)}</TableCell>
+                            {position.facilityPositions.map((facilityPos) => (
+                              <TableRow key={facilityPos.id}>
+                                <TableCell className="p-2">{facilityPos.lenderId}</TableCell>
+                                <TableCell className="p-2">{facilityPos.lender.entity.legalName}</TableCell>
+                                <TableCell className="p-2">{formatCurrency(facilityPos.settledPosition)}</TableCell>
+                                <TableCell className="p-2">{formatCurrency(facilityPos.openTrades.buys)}</TableCell>
+                                <TableCell className="p-2">{formatCurrency(facilityPos.openTrades.sells)}</TableCell>
+                                <TableCell className="p-2">{formatCurrency(facilityPos.openTrades.net)}</TableCell>
+                                <TableCell className="p-2">{formatCurrency(facilityPos.netPosition)}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -284,11 +306,11 @@ export function LoanPositionsInventoryComponent() {
                 <TableCell>Total</TableCell>
                 <TableCell></TableCell>
                 <TableCell></TableCell>
-                <TableCell>{formatCurrency(totals.currentBalance)}</TableCell>
+                <TableCell>{formatCurrency(totals.amount)}</TableCell>
+                <TableCell></TableCell>
                 <TableCell>{formatCurrency(totals.completedTradeBalance)}</TableCell>
                 <TableCell>{formatCurrency(totals.openTradeBalance)}</TableCell>
                 <TableCell>{formatCurrency(totals.netPosition)}</TableCell>
-                <TableCell></TableCell>
                 <TableCell></TableCell>
               </TableRow>
             </TableBody>

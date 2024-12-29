@@ -17,9 +17,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
-import { Calendar } from '@/components/ui/calendar'
-import { Calendar as CalendarBase } from '@/components/ui/calendar-base'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { DatePicker } from '@/components/ui/date-picker'
 
 // Helper component for required field label
 function RequiredLabel({ children }: { children: React.ReactNode }) {
@@ -205,10 +203,12 @@ export function FacilityFormDialog({
                       <RequiredLabel>
                         <FormLabel>Start Date</FormLabel>
                       </RequiredLabel>
-                      <CalendarDatePicker
-                        date={field.value}
-                        onDateChange={field.onChange}
-                      />
+                      <FormControl>
+                        <DatePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -222,10 +222,12 @@ export function FacilityFormDialog({
                       <RequiredLabel>
                         <FormLabel>Maturity Date</FormLabel>
                       </RequiredLabel>
-                      <CalendarDatePicker
-                        date={field.value}
-                        onDateChange={field.onChange}
-                      />
+                      <FormControl>
+                        <DatePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

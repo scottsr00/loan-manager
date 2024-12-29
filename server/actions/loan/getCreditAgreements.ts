@@ -37,7 +37,7 @@ export async function getCreditAgreements(): Promise<CreditAgreementWithRelation
       throw new Error('No credit agreements found')
     }
 
-    return creditAgreements as CreditAgreementWithRelations[]
+    return creditAgreements as unknown as CreditAgreementWithRelations[]
   } catch (error) {
     console.error('Error fetching credit agreements:', error instanceof Error ? error.message : 'Unknown error')
     if (error instanceof Error) {
@@ -93,12 +93,54 @@ export async function getAvailableLoans(): Promise<CreditAgreementWithRelations[
       throw new Error('No available loans found')
     }
 
-    return availableLoans as CreditAgreementWithRelations[]
+    return availableLoans as unknown as CreditAgreementWithRelations[]
   } catch (error) {
     console.error('Error fetching available loans:', error instanceof Error ? error.message : 'Unknown error')
     if (error instanceof Error) {
       throw new Error(`Failed to fetch available loans: ${error.message}`)
     }
     throw new Error('Failed to fetch available loans: Unknown error')
+  }
+}
+
+export async function getCreditAgreement(id: string): Promise<CreditAgreementWithRelations | null> {
+  try {
+    const creditAgreement = await prisma.creditAgreement.findUnique({
+      where: { id },
+      include: {
+        borrower: {
+          include: {
+            borrower: true
+          }
+        },
+        lender: {
+          include: {
+            lender: true
+          }
+        },
+        facilities: {
+          include: {
+            trades: {
+              include: {
+                counterparty: true,
+              },
+            },
+          },
+        },
+        transactions: true
+      }
+    })
+
+    if (!creditAgreement) {
+      return null
+    }
+
+    return creditAgreement as unknown as CreditAgreementWithRelations
+  } catch (error) {
+    console.error('Error fetching credit agreement:', error instanceof Error ? error.message : 'Unknown error')
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch credit agreement: ${error.message}`)
+    }
+    throw new Error('Failed to fetch credit agreement: Unknown error')
   }
 } 

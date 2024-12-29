@@ -34,9 +34,12 @@ interface ServicingActivityType {
       agreementNumber: string
     }
   }
-  loan?: {
+  loans?: Array<{
     id: string
-  }
+    status: string
+    outstandingAmount: number
+    paymentShare: number
+  }>
 }
 
 interface ServicingActivityDetailsModalProps {
@@ -73,14 +76,22 @@ export function ServicingActivityDetailsModal({
       // If completing a payment activity, process the paydown first
       if (newStatus === 'COMPLETED' && 
           ['PRINCIPAL_PAYMENT', 'INTEREST_PAYMENT', 'UNSCHEDULED_PAYMENT'].includes(activity.activityType)) {
-        await processPaydown({
-          loanId: activity.loan?.id || '',
-          facilityId: activity.facilityId,
-          amount: activity.amount,
-          paymentDate: new Date(),
-          description: activity.description || undefined,
-          servicingActivityId: activity.id
-        })
+        
+        if (!activity.loans?.length) {
+          throw new Error('No active loans found for payment activities')
+        }
+
+        // Process paydown for each loan based on their calculated shares
+        await Promise.all(activity.loans.map(loan => 
+          processPaydown({
+            loanId: loan.id,
+            facilityId: activity.facilityId,
+            amount: loan.paymentShare,
+            paymentDate: new Date(),
+            description: activity.description || undefined,
+            servicingActivityId: activity.id
+          })
+        ))
       }
 
       await updateServicingActivity({
@@ -92,7 +103,7 @@ export function ServicingActivityDetailsModal({
       onUpdate?.()
     } catch (err) {
       console.error('Error updating activity status:', err)
-      toast.error('Failed to update status')
+      toast.error(err instanceof Error ? err.message : 'Failed to update status')
     } finally {
       setIsUpdating(false)
     }

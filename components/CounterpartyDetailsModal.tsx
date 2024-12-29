@@ -9,15 +9,7 @@ import {
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { type Counterparty, type CounterpartyAddress, type CounterpartyContact } from '@prisma/client'
-
-type CounterpartyWithRelations = Counterparty & {
-  type: {
-    name: string
-  }
-  addresses: CounterpartyAddress[]
-  contacts: CounterpartyContact[]
-}
+import { type CounterpartyWithRelations } from '@/types/counterparty'
 
 interface CounterpartyDetailsModalProps {
   counterparty: CounterpartyWithRelations | null

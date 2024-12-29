@@ -168,22 +168,6 @@ export function NewCreditAgreementModal({
                 <CardContent className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="agreementName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <RequiredLabel>
-                          <FormLabel>Agreement Name</FormLabel>
-                        </RequiredLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
                     name="agreementNumber"
                     render={({ field }) => (
                       <FormItem>
@@ -191,7 +175,7 @@ export function NewCreditAgreementModal({
                           <FormLabel>Agreement Number</FormLabel>
                         </RequiredLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} placeholder="e.g., CA-2024-001" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -281,7 +265,7 @@ export function NewCreditAgreementModal({
                   <FormField
                     control={form.control}
                     name="amount"
-                    render={({ field }) => (
+                    render={({ field: { value, onChange, ...field } }) => (
                       <FormItem>
                         <RequiredLabel>
                           <FormLabel>Amount</FormLabel>
@@ -289,9 +273,9 @@ export function NewCreditAgreementModal({
                         <FormControl>
                           <Input
                             type="number"
-                            step="0.01"
-                            onChange={e => field.onChange(parseFloat(e.target.value))}
-                            value={field.value}
+                            value={value}
+                            onChange={(e) => onChange(parseFloat(e.target.value))}
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />

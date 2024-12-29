@@ -19,7 +19,6 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
       const loan = await tx.loan.findUnique({
         where: { id: validatedParams.loanId },
         include: {
-          positions: true,
           facility: {
             include: {
               positions: true,
@@ -37,44 +36,36 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
         throw new Error(`Facility not found for loan ${validatedParams.loanId}`)
       }
 
-      // Calculate total outstanding amount from positions
-      const totalOutstanding = loan.positions.reduce((sum: number, pos) => sum + pos.amount, 0)
-
-      if (totalOutstanding < validatedParams.amount) {
-        throw new Error(`Paydown amount ${validatedParams.amount} exceeds outstanding balance ${totalOutstanding}`)
+      if (loan.outstandingAmount < validatedParams.amount) {
+        throw new Error(`Paydown amount ${validatedParams.amount} exceeds outstanding balance ${loan.outstandingAmount}`)
       }
 
       // 2. Calculate new amounts
       const availableAmount = loan.facility.positions.reduce((sum: number, pos) => sum + pos.amount, 0)
       const newAvailableAmount = availableAmount + validatedParams.amount
 
-      // 3. Update loan positions
-      const positionUpdates = loan.positions.map(async (position) => {
-        const share = position.amount / totalOutstanding // Calculate share based on current position
-        const paydownShare = validatedParams.amount * share
-        const newAmount = position.amount - paydownShare
+      // 3. Update loan outstanding amount
+      const updatedLoan = await tx.loan.update({
+        where: { id: loan.id },
+        data: { 
+          outstandingAmount: loan.outstandingAmount - validatedParams.amount 
+        }
+      })
 
-        const updatedPosition = await tx.loanPosition.update({
+      // 4. Update facility positions
+      const positionUpdates = await Promise.all(loan.facility.positions.map(async (position) => {
+        const share = position.amount / availableAmount
+        const increaseShare = validatedParams.amount * share
+        const updatedPosition = await tx.facilityPosition.update({
           where: { id: position.id },
-          data: { amount: newAmount }
+          data: { amount: position.amount + increaseShare }
         })
-
         return {
           lenderId: position.lenderId,
           previousAmount: position.amount,
           newAmount: updatedPosition.amount,
           share: share * 100 // Convert to percentage
         }
-      })
-
-      // 4. Update facility positions
-      await Promise.all(loan.facility.positions.map(async (position) => {
-        const share = position.amount / availableAmount
-        const increaseShare = validatedParams.amount * share
-        await tx.facilityPosition.update({
-          where: { id: position.id },
-          data: { amount: position.amount + increaseShare }
-        })
       }))
 
       // 5. Create servicing activity record ONLY if not already linked to one
@@ -118,32 +109,17 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
         }
       })
 
-      // 7. Wait for all position updates to complete
-      const updatedPositions = await Promise.all(positionUpdates)
-
       // Revalidate the servicing and transactions pages to reflect the changes
       revalidatePath('/servicing')
       revalidatePath('/transactions')
-
-      // Get the updated loan for the response
-      const updatedLoan = await tx.loan.findUnique({
-        where: { id: validatedParams.loanId },
-        include: { positions: true }
-      })
-
-      if (!updatedLoan) {
-        throw new Error('Failed to fetch updated loan')
-      }
-
-      const newTotalOutstanding = updatedLoan.positions.reduce((sum: number, pos) => sum + pos.amount, 0)
 
       return {
         success: true,
         loan: {
           id: updatedLoan.id,
-          previousOutstandingAmount: totalOutstanding,
-          newOutstandingAmount: newTotalOutstanding,
-          lenderPositions: updatedPositions
+          previousOutstandingAmount: loan.outstandingAmount,
+          newOutstandingAmount: updatedLoan.outstandingAmount,
+          lenderPositions: positionUpdates
         },
         facility: {
           id: loan.facility.id,

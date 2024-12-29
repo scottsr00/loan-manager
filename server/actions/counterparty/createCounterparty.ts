@@ -6,8 +6,8 @@ import { type CreateCounterpartyInput } from '@/types/counterparty'
 export async function createCounterparty(data: CreateCounterpartyInput) {
   try {
     // Validate required fields
-    if (!data.legalName) {
-      throw new Error('Legal name is required')
+    if (!data.name) {
+      throw new Error('Name is required')
     }
     if (!data.typeId) {
       throw new Error('Counterparty type is required')
@@ -16,7 +16,7 @@ export async function createCounterparty(data: CreateCounterpartyInput) {
     // Create the counterparty
     const counterparty = await prisma.counterparty.create({
       data: {
-        name: data.legalName,
+        name: data.name,
         typeId: data.typeId,
         status: 'ACTIVE',
       },

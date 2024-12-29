@@ -1,5 +1,6 @@
 'use client'
 
+import '@/lib/ag-grid-init'
 import { useState, useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'

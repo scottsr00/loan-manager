@@ -31,14 +31,14 @@ interface CreditAgreementDetailsModalProps {
 
 interface FormData {
   id: string
-  agreementNumber: string
-  borrowerId: string
-  status: string
-  amount: number
-  currency: string
-  startDate: Date
-  maturityDate: Date
-  interestRate: number
+  agreementNumber?: string
+  borrowerId?: string
+  status?: string
+  amount?: number
+  currency?: string
+  startDate?: Date
+  maturityDate?: Date
+  interestRate?: number
   description?: string | null
 }
 
@@ -80,7 +80,11 @@ export function CreditAgreementDetailsModal({
     if (!formData) return
     setIsSubmitting(true)
     try {
-      await updateCreditAgreement(formData)
+      const updateData = {
+        ...formData,
+        description: formData.description || undefined
+      }
+      await updateCreditAgreement(updateData)
       toast.success('Credit agreement updated successfully')
       setIsEditing(false)
       setFormData(null)
@@ -95,10 +99,11 @@ export function CreditAgreementDetailsModal({
   }
 
   const handleInputChange = (field: keyof FormData, value: any) => {
-    setFormData(prev => prev ? ({
-      ...prev,
+    if (!formData) return
+    setFormData({
+      ...formData,
       [field]: value
-    }) : null)
+    } as FormData)
   }
 
   return (
@@ -259,22 +264,27 @@ export function CreditAgreementDetailsModal({
               <div>
                 <Label>Borrower</Label>
                 {isEditing ? (
-                  <Select
-                    value={formData?.borrowerId}
-                    onValueChange={(value) => handleInputChange('borrowerId', value)}
-                    disabled={isLoadingBorrowers}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select borrower" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {borrowers.map((borrower) => (
-                        <SelectItem key={borrower.id} value={borrower.id}>
-                          {borrower.legalName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex flex-col gap-2">
+                    <Select
+                      value={formData?.borrowerId || creditAgreement.borrowerId}
+                      onValueChange={(value) =>
+                        setFormData((prev) => prev ? { ...prev, borrowerId: value } : null)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue>
+                          {borrowers.find((b) => b.id === creditAgreement.borrowerId)?.entity.legalName}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {borrowers.map((borrower) => (
+                          <SelectItem key={borrower.id} value={borrower.id}>
+                            {borrower.entity.legalName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 ) : (
                   <>
                     <p>{creditAgreement.borrower?.legalName || 'N/A'}</p>

@@ -26,6 +26,7 @@ export async function getServicingActivities(params: GetServicingActivitiesParam
       })
     }
 
+    // First, get all servicing activities with their facilities
     const activities = await prisma.servicingActivity.findMany({
       where,
       include: {
@@ -36,7 +37,11 @@ export async function getServicingActivities(params: GetServicingActivitiesParam
               where: {
                 status: 'ACTIVE'
               },
-              take: 1
+              select: {
+                id: true,
+                status: true,
+                outstandingAmount: true
+              }
             }
           }
         }
@@ -47,10 +52,33 @@ export async function getServicingActivities(params: GetServicingActivitiesParam
     })
 
     return {
-      activities: activities.map(activity => ({
-        ...activity,
-        loan: activity.facility.loans[0] || null
-      }))
+      activities: activities.map(activity => {
+        const { facility, ...rest } = activity
+        const activeLoans = facility?.loans || []
+        const totalOutstanding = activeLoans.reduce((sum, loan) => sum + loan.outstandingAmount, 0)
+
+        // For payment activities, include all active loans with their proportional amounts
+        if (['PRINCIPAL_PAYMENT', 'INTEREST_PAYMENT', 'UNSCHEDULED_PAYMENT'].includes(activity.activityType)) {
+          return {
+            ...rest,
+            facility,
+            loans: activeLoans.map(loan => ({
+              id: loan.id,
+              status: loan.status,
+              outstandingAmount: loan.outstandingAmount,
+              // Calculate the proportional share of the payment for each loan
+              paymentShare: totalOutstanding > 0 
+                ? (loan.outstandingAmount / totalOutstanding) * activity.amount 
+                : 0
+            }))
+          }
+        }
+
+        return {
+          ...rest,
+          facility
+        }
+      })
     }
   } catch (error) {
     console.error('Error in getServicingActivities:', error)

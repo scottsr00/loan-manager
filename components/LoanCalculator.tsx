@@ -24,7 +24,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { formatCurrency } from '@/lib/utils'
-import { Info } from 'lucide-react'
 
 interface BaseRate {
   name: string
@@ -44,13 +43,10 @@ interface LoanTerms {
 }
 
 interface CashFlow {
-  period: number
+  date: Date
+  amount: number
+  type: 'Principal' | 'Interest'
   balance: number
-  payment: number
-  principal: number
-  interest: number
-  prepayment: number
-  syndicatedPayments: { [lender: string]: number }
 }
 
 export const LoanCalculatorComponent: React.FC = () => {
@@ -67,7 +63,7 @@ export const LoanCalculatorComponent: React.FC = () => {
   const [cashFlows, setCashFlows] = useState<CashFlow[]>([])
   const [prepaymentPeriod, setPrepaymentPeriod] = useState(1)
   const [prepaymentAmount, setPrepaymentAmount] = useState(0)
-  const resultsRef = useRef<HTMLDivElement>(null) // Add this line
+  const resultsRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<string>("input")
 
   const [rates, setRates] = useState<Record<string, BaseRate>>({
@@ -101,7 +97,7 @@ export const LoanCalculatorComponent: React.FC = () => {
     }
 
     fetchRates()
-  }, [])
+  }, [loanTerms.baseRate])
 
   const handleBaseRateChange = (rateName: string) => {
     const selectedRate = rates[rateName]
@@ -144,17 +140,19 @@ export const LoanCalculatorComponent: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const result = await calculateLoanCashFlows(loanTerms)
+    const result = await calculateLoanCashFlows({
+      loanId: 'temp', // This is a calculator, so we'll use a temporary ID
+      startDate: new Date(),
+      endDate: new Date(new Date().setFullYear(new Date().getFullYear() + loanTerms.loanTerm)),
+      currentRate: loanTerms.baseRateValue + loanTerms.spread
+    })
     setCashFlows(result)
     setActiveTab("results")
     setTimeout(() => {
       if (resultsRef.current) {
-        resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }
-    }, 100); // Adjust the delay as necessary
-
-    console.log('Results:', result);
-    console.log('Results Ref:', resultsRef.current);
+    }, 100)
   }
 
   const formatNumber = (num: number) => {
@@ -179,7 +177,7 @@ export const LoanCalculatorComponent: React.FC = () => {
         <CardDescription>Calculate loan amortization and cash flows</CardDescription>
       </CardHeader>
       <CardContent className="p-4">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="input">Loan Terms</TabsTrigger>
             <TabsTrigger value="results">Results</TabsTrigger>
@@ -242,7 +240,6 @@ export const LoanCalculatorComponent: React.FC = () => {
                     type="number"
                     value={loanTerms.principalAmount}
                     onChange={handleInputChange}
-                    required
                     className="h-8"
                   />
                 </div>
@@ -254,127 +251,41 @@ export const LoanCalculatorComponent: React.FC = () => {
                     type="number"
                     value={loanTerms.loanTerm}
                     onChange={handleInputChange}
-                    required
-                    className="h-8"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="paymentFrequency" className="text-sm">Payments per Year</Label>
-                  <Input
-                    id="paymentFrequency"
-                    name="paymentFrequency"
-                    type="number"
-                    value={loanTerms.paymentFrequency}
-                    onChange={handleInputChange}
-                    required
                     className="h-8"
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Syndicated Shares (%)</Label>
-                {Object.entries(loanTerms.syndicatedShares).map(([lender, share]) => (
-                  <div key={lender} className="flex items-center space-x-2">
-                    <Input
-                      type="text"
-                      value={lender}
-                      onChange={(e) => {
-                        const newShares = { ...loanTerms.syndicatedShares }
-                        delete newShares[lender]
-                        newShares[e.target.value] = share
-                        setLoanTerms(prev => ({ ...prev, syndicatedShares: newShares }))
-                      }}
-                      className="h-8"
-                    />
-                    <Input
-                      type="number"
-                      value={share}
-                      onChange={(e) => handleSyndicateChange(lender, parseFloat(e.target.value) || 0)}
-                      className="h-8"
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Prepayments</Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    type="number"
-                    placeholder="Period"
-                    value={prepaymentPeriod}
-                    onChange={(e) => setPrepaymentPeriod(parseInt(e.target.value) || 1)}
-                    className="h-8"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Amount"
-                    value={prepaymentAmount}
-                    onChange={(e) => setPrepaymentAmount(parseFloat(e.target.value) || 0)}
-                    className="h-8"
-                    value={formatNumber(prepaymentAmount)}
-                  />
-                  <Button type="button" onClick={handleAddPrepayment} size="sm" className="h-8">
-                    <PlusCircle className="h-4 w-4" />
-                  </Button>
-                </div>
-                {loanTerms.prepayments.map((prepayment, index) => (
-                  <div key={index} className="flex items-center justify-between bg-secondary p-2 rounded-md text-sm">
-                    <span>Period: {prepayment.period}, Amount: ${prepayment.amount}</span>
-                    <Button type="button" onClick={() => handleRemovePrepayment(index)} variant="ghost" size="sm" className="h-6">
-                      <MinusCircle className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              <Button type="submit" className="w-full h-8">
-                <Calculator className="mr-2 h-4 w-4" /> Calculate Cash Flows
+              <Button type="submit" className="w-full">
+                Calculate
               </Button>
             </form>
           </TabsContent>
-          <TabsContent value="results" ref={resultsRef}> {/* Add ref here */}
-
-            {cashFlows.length > 0 ? (
-              <ScrollArea className="h-[300px] w-full rounded-md border">
-                <table className="w-full">
-                  <thead>
-                    <tr className="m-0 border-t p-0 even:bg-muted">
-                      <th className="border px-2 py-1 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right">Period</th>
-                      <th className="border px-2 py-1 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right">Balance</th>
-                      <th className="border px-2 py-1 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right">Payment</th>
-                      <th className="border px-2 py-1 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right">Principal</th>
-                      <th className="border px-2 py-1 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right">Interest</th>
-                      <th className="border px-2 py-1 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right">Prepayment</th>
-                      {Object.keys(loanTerms.syndicatedShares).map(lender => (
-                        <th key={lender} className="border px-2 py-1 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right">{lender}</th>
-                      ))}
+          <TabsContent value="results" ref={resultsRef}>
+            <ScrollArea className="h-[400px] w-full">
+              <table className="w-full border-collapse">
+                <thead className="sticky top-0 bg-background">
+                  <tr>
+                    <th className="border p-2 text-left">Date</th>
+                    <th className="border p-2 text-right">Type</th>
+                    <th className="border p-2 text-right">Amount</th>
+                    <th className="border p-2 text-right">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cashFlows.map((flow, index) => (
+                    <tr key={index}>
+                      <td className="border p-2">{flow.date.toLocaleDateString()}</td>
+                      <td className="border p-2 text-right">{flow.type}</td>
+                      <td className="border p-2 text-right">{formatNumber(flow.amount)}</td>
+                      <td className="border p-2 text-right">{formatNumber(flow.balance)}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {cashFlows.map((cf) => (
-                      <tr key={cf.period} className="m-0 border-t p-0 even:bg-muted">
-                        <td className="border px-2 py-1 text-left [&[align=center]]:text-center [&[align=right]]:text-right">{cf.period}</td>
-                        <td className="border px-2 py-1 text-left [&[align=center]]:text-center [&[align=right]]:text-right">{formatNumber(cf.balance)}</td>
-                        <td className="border px-2 py-1 text-left [&[align=center]]:text-center [&[align=right]]:text-right">{formatNumber(cf.payment)}</td>
-                        <td className="border px-2 py-1 text-left [&[align=center]]:text-center [&[align=right]]:text-right">{formatNumber(cf.principal)}</td>
-                        <td className="border px-2 py-1 text-left [&[align=center]]:text-center [&[align=right]]:text-right">{formatNumber(cf.interest)}</td>
-                        <td className="border px-2 py-1 text-left [&[align=center]]:text-center [&[align=right]]:text-right">{formatNumber(cf.prepayment)}</td>
-                        {Object.entries(cf.syndicatedPayments).map(([lender, payment]) => (
-                          <td key={lender} className="border px-2 py-1 text-left [&[align=center]]:text-center [&[align=right]]:text-right">{formatNumber(payment)}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </ScrollArea>
-            ) : (
-              <p className="text-center py-4 text-sm">No results to display. Please calculate cash flows first.</p>
-            )}
+                  ))}
+                </tbody>
+              </table>
+            </ScrollArea>
           </TabsContent>
         </Tabs>
       </CardContent>
-      <CardFooter className="text-xs text-muted-foreground p-4">
-        This calculator provides estimates and should not be considered financial advice.
-      </CardFooter>
     </Card>
   )
 }

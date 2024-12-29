@@ -1,9 +1,9 @@
 'use server'
 
 import { prisma } from '@/server/db/client'
-import { type LoanPosition } from '@/server/types'
+import { type LoanWithRelations } from '@/server/types'
 
-export async function getInventory(): Promise<LoanPosition[]> {
+export async function getInventory(): Promise<LoanWithRelations[]> {
   try {
     const loans = await prisma.loan.findMany({
       include: {

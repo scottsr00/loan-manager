@@ -1,6 +1,7 @@
 'use server'
 
 import { prisma } from '@/server/db/client'
+import { TransactionEventType } from '@/server/types/transaction'
 
 interface GetTransactionsParams {
   facilityId?: string
@@ -43,7 +44,21 @@ export async function getTransactions(params: GetTransactionsParams = {}) {
 
     const transactions = await prisma.transactionHistory.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        activityType: true,
+        creditAgreementId: true,
+        loanId: true,
+        tradeId: true,
+        servicingActivityId: true,
+        amount: true,
+        currency: true,
+        status: true,
+        description: true,
+        effectiveDate: true,
+        processedBy: true,
+        createdAt: true,
+        updatedAt: true,
         creditAgreement: {
           select: {
             agreementNumber: true
@@ -62,17 +77,24 @@ export async function getTransactions(params: GetTransactionsParams = {}) {
         },
         servicingActivity: {
           select: {
-            activityType: true,
-            description: true
+            description: true,
+            activityType: true
           }
         }
       },
       orderBy: {
-        createdAt: 'desc'
+        effectiveDate: 'desc'
       }
     })
 
-    return transactions
+    return transactions.map(transaction => ({
+      ...transaction,
+      type: transaction.activityType as keyof typeof TransactionEventType,
+      servicingActivity: transaction.servicingActivity ? {
+        ...transaction.servicingActivity,
+        type: transaction.servicingActivity.activityType
+      } : null
+    }))
   } catch (error) {
     console.error('Error in getTransactions:', error)
     throw new Error('Failed to fetch transaction history')

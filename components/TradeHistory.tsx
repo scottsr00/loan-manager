@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
 import type { TradeHistoryItem } from '@/server/types'
-import type { ColDef } from 'ag-grid-community'
+import type { ColDef, RowClickedEvent } from 'ag-grid-community'
 
 export function TradeHistory() {
   const { trades, isLoading, isError, book } = useTrades()
@@ -67,8 +67,8 @@ export function TradeHistory() {
       field: 'status',
       headerName: 'Status',
       flex: 1,
-      cellRenderer: params => (
-        <Badge variant={params.value === 'SETTLED' ? 'success' : 'warning'}>
+      cellRenderer: (params: { value: 'PENDING' | 'SETTLED' }) => (
+        <Badge variant={params.value === 'SETTLED' ? 'success' : 'destructive'}>
           {params.value}
         </Badge>
       ),
@@ -104,10 +104,11 @@ export function TradeHistory() {
         onGridReady={params => {
           params.api.sizeColumnsToFit()
         }}
-        onRowClick={(data) => {
-          console.log('Row clicked, data:', data)
-          setSelectedTrade(data)
-          setIsDetailsOpen(true)
+        onRowClick={(event: RowClickedEvent<TradeHistoryItem>) => {
+          if (event.data) {
+            setSelectedTrade(event.data)
+            setIsDetailsOpen(true)
+          }
         }}
       />
 

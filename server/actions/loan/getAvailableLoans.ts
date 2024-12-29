@@ -27,12 +27,7 @@ export async function getAvailableLoans() {
 
     return loans.map(loan => ({
       id: loan.id,
-      dealName: loan.dealName,
-      currentBalance: loan.currentBalance,
-      agentBank: loan.agentBank,
-      status: loan.priorPeriodPaymentStatus,
-      lenderCount: loan.lenderPositions.length,
-      openTrades: loan.trades.length
+      name: `${loan.dealName} - ${loan.currentBalance} (${loan.agentBank})`
     }))
   } catch (error) {
     console.error('Error in getAvailableLoans:', error)

@@ -20,6 +20,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts'
 
 interface RateData {
   date: string
@@ -39,7 +41,9 @@ interface ChartDataPoint {
   [key: string]: number | string | undefined
 }
 
-const timeframes = [
+type TimeFrame = '5d' | '1m' | '1y' | '5y'
+
+const timeframes: { label: string; value: TimeFrame }[] = [
   { label: '5 Days', value: '5d' },
   { label: '1 Month', value: '1m' },
   { label: '1 Year', value: '1y' },
@@ -69,7 +73,7 @@ const RATE_INFO = {
 }
 
 export function MarketRates() {
-  const [timeframe, setTimeframe] = useState('1m')
+  const [timeframe, setTimeframe] = useState<TimeFrame>('1m')
   const [selectedRates, setSelectedRates] = useState(rateTypes)
   const [selectedTerms, setSelectedTerms] = useState<string[]>(
     rateTypes.flatMap(rate => terms[rate as keyof typeof terms])
@@ -261,10 +265,8 @@ export function MarketRates() {
                         type="monotone"
                         dataKey={key}
                         stroke={COLORS[rate.name as keyof typeof COLORS]}
-                        strokeWidth={2}
                         dot={false}
-                        activeDot={{ r: 4 }}
-                        name={`${rate.name} ${rate.term}`}
+                        strokeWidth={2}
                       />
                     )
                   }

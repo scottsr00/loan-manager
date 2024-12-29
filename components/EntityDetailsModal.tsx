@@ -61,10 +61,10 @@ export function EntityDetailsModal({ entity, open, onOpenChange }: EntityDetails
                     <div>{format(new Date(entity.dateOfIncorporation), 'PP')}</div>
                   </div>
                 )}
-                {entity.jurisdiction && (
+                {entity.countryOfIncorporation && (
                   <div>
-                    <Label className="text-muted-foreground">Jurisdiction</Label>
-                    <div>{entity.jurisdiction}</div>
+                    <Label className="text-muted-foreground">Country of Incorporation</Label>
+                    <div>{entity.countryOfIncorporation}</div>
                   </div>
                 )}
                 {entity.governmentId && (

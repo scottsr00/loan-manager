@@ -1,27 +1,13 @@
-import { type CreditAgreement, type Entity, type Facility, type TransactionHistory } from '@prisma/client'
+import { type CreditAgreement, type Entity, type Facility, type TransactionHistory, type Borrower, type Lender } from '@prisma/client'
 import { z } from 'zod'
 
 // Base Prisma Types with Relations
 export type CreditAgreementWithRelations = CreditAgreement & {
   borrower: Entity & {
-    borrower: {
-      id: string
-      status: string
-      createdAt: Date
-      updatedAt: Date
-      entityId: string
-      onboardingDate: Date
-    } | null
+    borrower: Borrower | null
   }
   lender: Entity & {
-    lender: {
-      id: string
-      status: string
-      createdAt: Date
-      updatedAt: Date
-      entityId: string
-      onboardingDate: Date
-    } | null
+    lender: Lender | null
   }
   facilities: (Facility & {
     trades: {

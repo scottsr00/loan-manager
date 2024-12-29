@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useState } from 'react'
+import { Fragment, useState, useMemo } from 'react'
 import { usePositions } from '@/hooks/usePositions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -8,6 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { NewLoanModal } from './NewLoanModal'
+import { DataGrid } from '@/components/ui/data-grid'
+import { type ColDef, type ValueFormatterParams } from 'ag-grid-community'
+import '@/lib/ag-grid-init'
 
 interface FacilityPosition {
   lender: string;
@@ -34,8 +38,13 @@ interface Trade {
 interface Loan {
   id: string;
   amount: number;
+  outstandingAmount: number;
   currency: string;
   status: string;
+  interestPeriod: string;
+  drawDate: Date;
+  baseRate: number;
+  effectiveRate: number;
   positions: LoanPosition[];
 }
 
@@ -113,6 +122,8 @@ export function LoanPositionsHierarchy() {
 
   const toggleFacility = (agreementId: string, facilityId: string) => {
     console.log('Toggling facility:', facilityId, 'in agreement:', agreementId)
+    console.log('Current expanded state:', expanded)
+    
     setExpanded(prev => {
       // Ensure the agreement exists in the state
       const currentAgreement = prev[agreementId] || { isExpanded: true, facilities: {} };
@@ -123,12 +134,12 @@ export function LoanPositionsHierarchy() {
         ...prev,
         [agreementId]: {
           ...currentAgreement,
-          isExpanded: true, // Keep agreement expanded
           facilities: {
             ...currentAgreement.facilities,
             [facilityId]: {
               ...currentFacility,
-              isExpanded: !currentFacility.isExpanded
+              isExpanded: !currentFacility.isExpanded,
+              loans: currentFacility.loans
             }
           }
         }
@@ -185,6 +196,81 @@ export function LoanPositionsHierarchy() {
         return <Badge variant="outline">{status}</Badge>
     }
   }
+
+  const loanColumnDefs = useMemo<ColDef[]>(() => [
+    { field: 'id', headerName: 'Loan ID', flex: 1 },
+    { 
+      field: 'amount', 
+      headerName: 'Original Amount',
+      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
+      flex: 1 
+    },
+    { 
+      field: 'outstandingAmount', 
+      headerName: 'Outstanding',
+      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
+      flex: 1 
+    },
+    {
+      field: 'interestPeriod',
+      headerName: 'Interest Period',
+      flex: 1
+    },
+    {
+      field: 'drawDate',
+      headerName: 'Draw Date',
+      valueFormatter: (params: ValueFormatterParams) => params.value ? new Date(params.value).toLocaleDateString() : '',
+      flex: 1
+    },
+    {
+      field: 'baseRate',
+      headerName: 'Base Rate',
+      valueFormatter: (params: ValueFormatterParams) => {
+        if (params.value == null) return '';
+        const rate = Number(params.value);
+        return isNaN(rate) ? '' : `${rate.toFixed(5)}%`;
+      },
+      flex: 1
+    },
+    {
+      field: 'effectiveRate',
+      headerName: 'Effective Rate',
+      valueFormatter: (params: ValueFormatterParams) => {
+        if (params.value == null) return '';
+        const rate = Number(params.value);
+        return isNaN(rate) ? '' : `${rate.toFixed(5)}%`;
+      },
+      flex: 1
+    },
+    { 
+      field: 'status', 
+      headerName: 'Status',
+      cellRenderer: (params: ValueFormatterParams) => getStatusBadge(params.value),
+      flex: 1 
+    }
+  ], [])
+
+  const positionColumnDefs = useMemo<ColDef[]>(() => [
+    { field: 'lender', headerName: 'Lender', flex: 1 },
+    { 
+      field: 'commitment', 
+      headerName: 'Commitment',
+      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
+      flex: 1 
+    },
+    { 
+      field: 'share', 
+      headerName: 'Share %',
+      valueFormatter: (params: ValueFormatterParams) => `${params.value.toFixed(2)}%`,
+      flex: 1 
+    },
+    { 
+      field: 'status', 
+      headerName: 'Status',
+      cellRenderer: (params: ValueFormatterParams) => getStatusBadge(params.value),
+      flex: 1 
+    }
+  ], [])
 
   if (isLoading) {
     return (
@@ -251,7 +337,10 @@ export function LoanPositionsHierarchy() {
                     <Fragment key={facility.id}>
                       <TableRow 
                         className="cursor-pointer hover:bg-muted/50 bg-muted/30"
-                        onClick={() => toggleFacility(position.id, facility.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();  // Prevent event from bubbling to agreement row
+                          toggleFacility(position.id, facility.id);
+                        }}
                       >
                         <TableCell className="pl-8">
                           {expanded[position.id]?.facilities[facility.id]?.isExpanded ? 
@@ -259,13 +348,31 @@ export function LoanPositionsHierarchy() {
                             <ChevronRight className="h-4 w-4" />
                           }
                         </TableCell>
-                        <TableCell className="font-medium">{facility.facilityName}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center space-x-2">
+                            <span>{facility.facilityName}</span>
+                            <NewLoanModal
+                              facilityId={facility.id}
+                              facilityName={facility.facilityName}
+                              availableAmount={facility.commitmentAmount - facility.loans.reduce((sum, loan) => sum + loan.amount, 0)}
+                              currency={facility.currency}
+                              margin={facility.margin}
+                              onSuccess={() => {
+                                // Refresh the positions data
+                                window.location.reload()
+                              }}
+                            />
+                          </div>
+                        </TableCell>
                         <TableCell>{facility.facilityType}</TableCell>
                         <TableCell>
                           <div className="space-y-1">
                             <div>{formatCurrency(facility.commitmentAmount)} (Committed)</div>
                             <div className="text-sm text-muted-foreground">
                               {formatCurrency(facility.positions.reduce((sum, pos) => sum + pos.commitment, 0))} (Available)
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {formatCurrency(facility.loans.reduce((sum, loan) => sum + loan.amount, 0))} (Outstanding)
                             </div>
                           </div>
                         </TableCell>
@@ -280,73 +387,57 @@ export function LoanPositionsHierarchy() {
                         </TableCell>
                       </TableRow>
 
-                      {/* Loan Rows */}
-                      {expanded[position.id]?.facilities[facility.id]?.isExpanded && facility.loans.map(loan => (
-                        <Fragment key={loan.id}>
-                          <TableRow 
-                            className="cursor-pointer hover:bg-muted/50 bg-muted/20"
-                            onClick={() => toggleLoan(position.id, facility.id, loan.id)}
-                          >
-                            <TableCell className="pl-12">
-                              {expanded[position.id]?.facilities[facility.id]?.loans[loan.id] ? 
-                                <ChevronDown className="h-4 w-4" /> : 
-                                <ChevronRight className="h-4 w-4" />
-                              }
-                            </TableCell>
-                            <TableCell className="font-medium">Loan #{loan.id}</TableCell>
-                            <TableCell>Loan</TableCell>
-                            <TableCell>
-                              <div className="space-y-1">
-                                <div>{formatCurrency(loan.amount)} (Original)</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {formatCurrency(loan.positions.reduce((sum, pos) => sum + pos.amount, 0))} (Outstanding)
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>{getStatusBadge(loan.status)}</TableCell>
-                            <TableCell colSpan={2}>
-                              <div className="space-y-1">
-                                <div>Positions: {loan.positions.length}</div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
+                      {/* Facility Details when expanded */}
+                      {expanded[position.id]?.facilities[facility.id]?.isExpanded && (
+                        <TableRow className="bg-muted/10">
+                          <TableCell colSpan={7} className="p-4">
+                            <div className="space-y-4">
+                              {/* Loans Table */}
+                              <Card>
+                                <CardHeader className="py-3">
+                                  <div className="flex items-center justify-between">
+                                    <CardTitle className="text-sm font-medium">Loans</CardTitle>
+                                    <NewLoanModal
+                                      facilityId={facility.id}
+                                      facilityName={facility.facilityName}
+                                      availableAmount={facility.commitmentAmount - facility.loans.reduce((sum, loan) => sum + loan.amount, 0)}
+                                      currency={facility.currency}
+                                      margin={facility.margin}
+                                      onSuccess={() => {
+                                        window.location.reload()
+                                      }}
+                                    />
+                                  </div>
+                                </CardHeader>
+                                <CardContent>
+                                  <DataGrid
+                                    rowData={facility.loans}
+                                    columnDefs={loanColumnDefs}
+                                    className="h-[300px] w-full"
+                                  />
+                                </CardContent>
+                              </Card>
 
-                          {/* Loan Details */}
-                          {expanded[position.id]?.facilities[facility.id]?.loans[loan.id] && (
-                            <TableRow className="bg-muted/10">
-                              <TableCell colSpan={7} className="p-4">
-                                <div className="grid grid-cols-1 gap-4">
-                                  <Card>
-                                    <CardHeader>
-                                      <CardTitle className="text-sm">Loan Positions</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                      <Table>
-                                        <TableHeader>
-                                          <TableRow>
-                                            <TableHead>Lender</TableHead>
-                                            <TableHead>Amount</TableHead>
-                                            <TableHead>Status</TableHead>
-                                          </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                          {loan.positions.map((position, index) => (
-                                            <TableRow key={index}>
-                                              <TableCell>{position.lender}</TableCell>
-                                              <TableCell>{formatCurrency(position.amount)}</TableCell>
-                                              <TableCell>{getStatusBadge(position.status)}</TableCell>
-                                            </TableRow>
-                                          ))}
-                                        </TableBody>
-                                      </Table>
-                                    </CardContent>
-                                  </Card>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </Fragment>
-                      ))}
+                              {/* Positions Table */}
+                              <Card>
+                                <CardHeader className="py-3">
+                                  <CardTitle className="text-sm font-medium">Lender Positions</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <DataGrid
+                                    rowData={facility.positions.map(pos => ({
+                                      ...pos,
+                                      share: (pos.commitment / facility.commitmentAmount) * 100
+                                    }))}
+                                    columnDefs={positionColumnDefs}
+                                    className="h-[300px] w-full"
+                                  />
+                                </CardContent>
+                              </Card>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </Fragment>
                   ))}
                 </Fragment>
