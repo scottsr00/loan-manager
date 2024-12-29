@@ -4,21 +4,24 @@
 mkdir -p ./prisma/backups
 chmod 755 ./prisma/backups
 
-# Ensure source database exists
-if [ ! -f "./prisma/dev.db" ]; then
-    echo "Error: Database file not found at ./prisma/dev.db"
-    exit 1
-fi
-
 # Generate timestamp
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="./prisma/backups/loans_v2_$TIMESTAMP.sql"
 
-# Create backup with timestamp
-sqlite3 "./prisma/dev.db" ".backup './prisma/backups/$TIMESTAMP.db'"
-chmod 644 "./prisma/backups/$TIMESTAMP.db" 2>/dev/null
+# Create backup
+echo "📦 Creating backup of loans_v2 database..."
+pg_dump -h localhost -U stephenscott -d loans_v2 > "$BACKUP_FILE"
+
+# Compress the backup
+echo "🗜️  Compressing backup..."
+gzip "$BACKUP_FILE"
 
 # Create/update 'latest' backup
-sqlite3 "./prisma/dev.db" ".backup './prisma/backups/latest.db'"
-chmod 644 "./prisma/backups/latest.db" 2>/dev/null
+echo "📦 Creating latest backup..."
+pg_dump -h localhost -U stephenscott -d loans_v2 > "./prisma/backups/latest.sql"
 
-echo "Backup created: ./prisma/backups/$TIMESTAMP.db"
+echo "✅ Backup completed!"
+echo "📂 Backup files:"
+echo "  - ${BACKUP_FILE}.gz"
+echo "  - ./prisma/backups/latest.sql"
+echo "📊 Backup size: $(du -h "${BACKUP_FILE}.gz" | cut -f1)"

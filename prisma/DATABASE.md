@@ -1,63 +1,83 @@
 # Database Management
 
-This document explains how to manage database migrations, backups, and restoration in this project.
+## Current Configuration
+- **Database**: PostgreSQL
+- **Database Name**: loans_v2
+- **Connection**: `postgresql://stephenscott@localhost:5432/loans_v2?schema=public`
 
-## Migrations
+## Backup
 
-Migrations are stored in `/prisma/migrations/` and are timestamped folders containing SQL changes. Each migration corresponds to schema changes and should be committed with related code changes.
+The application includes an automated backup script that creates both timestamped and latest backups.
 
-### View Migration History
-```bash
-npx prisma migrate status
-```
-
-### Create New Migration
-```bash
-npx prisma migrate dev --name descriptive_name
-```
-
-## Backups
-
-We use a custom backup script that creates timestamped SQLite database copies.
-
-### Create Backup
+### Running a Backup
 ```bash
 npm run backup-db
 ```
 
-This creates:
-- Timestamped backup: `./backups/YYYYMMDD_HHMMSS.db`
-- Latest backup: `./backups/latest.db`
+This will create:
+1. A timestamped, compressed backup: `prisma/backups/loans_v2_[TIMESTAMP].sql.gz`
+2. An uncompressed latest backup: `prisma/backups/latest.sql`
 
-## Database Reset/Restore
+### Backup Locations
+- All backups are stored in `prisma/backups/`
+- Timestamped backups are compressed with gzip
+- A 'latest' uncompressed backup is always available
 
-### Reset to Latest Migration
+## Restore
+
+### Restoring from Latest Backup
 ```bash
-npm run reset-db  # Creates backup first
+psql -h localhost -U stephenscott -d loans_v2 < prisma/backups/latest.sql
 ```
 
-### Reset to Specific Migration/Commit
-1. Find the commit hash and migration you want to restore to
-2. Create backup of current state:
-   ```bash
-   npm run backup-db
-   ```
-3. Checkout the specific commit:
-   ```bash
-   git checkout <commit-hash>
-   ```
-4. Reset database:
-   ```bash
-   npx prisma migrate reset
-   ```
-
-### Restore from Backup
+### Restoring from Timestamped Backup
 ```bash
-cp ./backups/[backup-file].db ./prisma/dev.db
+# Replace [TIMESTAMP] with the actual timestamp of the backup you want to restore
+gunzip -c prisma/backups/loans_v2_[TIMESTAMP].sql.gz | psql -h localhost -U stephenscott -d loans_v2
 ```
 
-## Best Practices
-1. Always backup before migrations or resets
-2. Commit migrations with corresponding code changes
-3. Document significant schema changes in commit messages
-4. Test migrations and rollbacks in development first 
+### Creating a Fresh Database
+If you need to create a fresh database:
+```bash
+# Create the database
+createdb -h localhost -U stephenscott loans_v2
+
+# Run migrations
+npx prisma migrate deploy
+
+# Seed the database (if needed)
+npx prisma db seed
+```
+
+## Development Workflow
+
+1. **Making Schema Changes**
+   ```bash
+   # After modifying schema.prisma
+   npx prisma migrate dev --name [description_of_change]
+   ```
+
+2. **Updating Client**
+   ```bash
+   npx prisma generate
+   ```
+
+3. **Reset Database**
+   ```bash
+   # This will backup the database first
+   npm run reset-db
+   ```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Connection Issues**
+   - Ensure PostgreSQL is running: `brew services list | grep postgresql`
+   - Check connection string in `.env`
+   - Verify user permissions: `psql -h localhost -U stephenscott -d loans_v2`
+
+2. **Backup/Restore Issues**
+   - Ensure you have proper permissions
+   - Check disk space for backups
+   - Verify PostgreSQL client tools are installed (`pg_dump`, `psql`) 
