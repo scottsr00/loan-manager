@@ -1,10 +1,9 @@
-'use client'
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ThemeToggle } from "@/components/ui/theme/ThemeToggle"
 import { Separator } from "@/components/ui/separator"
+import { DatabaseInfo } from "@/components/settings/DatabaseInfo"
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <Card>
@@ -19,6 +18,17 @@ export default function SettingsPage() {
               Customize how the application looks on your device
             </p>
             <ThemeToggle />
+          </div>
+          
+          <Separator />
+          
+          <div>
+            <h3 className="text-lg font-medium">System Information</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              View information about your system configuration
+            </p>
+            {/* @ts-expect-error Async Server Component */}
+            <DatabaseInfo />
           </div>
           
           <Separator />
