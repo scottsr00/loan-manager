@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Analytics } from '@/components/Analytics'
+import { Analytics } from '@/components/analytics/Analytics'
 import { getAnalytics } from '@/server/actions/analytics/getAnalytics'
 
 export default async function AnalyticsPage() {

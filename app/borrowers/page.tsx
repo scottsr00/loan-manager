@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
-import { BorrowersPageClient } from '@/components/BorrowersPageClient'
-import { PageLayout } from '@/components/PageLayout'
+import { BorrowersPageClient } from '@/components/borrowers/BorrowersPageClient'
+import { PageLayout } from '@/components/layout/PageLayout'
 import { Loading } from '@/components/ui/loading'
 
 export const dynamic = 'force-dynamic'

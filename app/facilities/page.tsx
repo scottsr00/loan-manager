@@ -1,7 +1,8 @@
 'use client'
 
-import { FacilityList } from '@/components/FacilityList'
-import { PageLayout } from '@/components/PageLayout'
+import { Suspense } from 'react'
+import { FacilityList } from '@/components/facilities/FacilityList'
+import { PageLayout } from '@/components/layout/PageLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function FacilitiesPage() {

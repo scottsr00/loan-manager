@@ -1,8 +1,8 @@
 "use client"
 
 import '@/lib/ag-grid-init'
-import { PageLayout, PageHeader } from '@/components/PageLayout'
-import { BorrowerList } from '@/components/BorrowerList'
+import { PageLayout, PageHeader } from '@/components/layout/PageLayout'
+import { BorrowerList } from './BorrowerList'
 import { useBorrowers } from '@/hooks/useBorrowers'
 
 export function BorrowersPageClient() {
@@ -12,10 +12,6 @@ export function BorrowersPageClient() {
     error,
     refresh
   } = useBorrowers()
-
-  console.log('Borrowers data:', borrowers)
-  console.log('Loading:', isLoading)
-  console.log('Error:', error)
 
   return (
     <PageLayout

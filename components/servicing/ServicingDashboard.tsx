@@ -32,7 +32,7 @@ import { getFacilities } from '@/server/actions/loan/getFacilities'
 import { DataGrid } from '@/components/ui/data-grid'
 import { ColDef } from 'ag-grid-community'
 import { useServicing } from '@/hooks/useServicing'
-import { ServicingActivityDetailsModal } from '@/components/ServicingActivityDetailsModal'
+import { ServicingActivityDetailsModal } from './ServicingActivityDetailsModal'
 
 interface Facility {
   id: string

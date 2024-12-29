@@ -1,5 +1,5 @@
 import { getCreditAgreements } from '@/server/actions/loan/getCreditAgreements'
-import { CreditAgreementsPageClient } from '@/components/CreditAgreementsPageClient'
+import { CreditAgreementsPageClient } from '@/components/credit-agreements/CreditAgreementsPageClient'
 
 export const dynamic = 'force-dynamic'
 

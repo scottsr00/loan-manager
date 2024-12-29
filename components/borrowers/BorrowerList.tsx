@@ -1,33 +1,31 @@
 'use client'
 
+import '@/lib/ag-grid-init'
 import { useState, useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { DataGrid } from '@/components/ui/data-grid'
-import { type ColDef, type ICellRendererParams, type RowClickedEvent } from 'ag-grid-community'
-import { BorrowerModal } from './BorrowerModal'
-import { BorrowerDetailsModal } from '@/components/borrowers/BorrowerDetailsModal'
 import { Plus } from 'lucide-react'
+import { DataGrid } from '@/components/ui/data-grid'
+import { type ColDef } from 'ag-grid-community'
+import { BorrowerDetailsModal } from './BorrowerDetailsModal'
+import { BorrowerModal } from './BorrowerModal'
 import type { Borrower } from '@/types/borrower'
 
 interface BorrowerListProps {
-  borrowers: Borrower[]
+  borrowers: any[]
+  onUpdate?: () => void
 }
 
-export function BorrowerList({ borrowers }: BorrowerListProps) {
-  const [selectedBorrower, setSelectedBorrower] = useState<Borrower | null>(null)
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+export function BorrowerList({ borrowers, onUpdate }: BorrowerListProps) {
+  const [selectedBorrower, setSelectedBorrower] = useState<any | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
       field: 'entity.legalName',
       headerName: 'Legal Name',
-      width: 250,
-      valueFormatter: (params) => {
-        const dba = params.data.entity.dba
-        return dba ? `${params.value} (DBA: ${dba})` : params.value
-      },
+      width: 200,
     },
     {
       field: 'entity.taxId',
@@ -36,7 +34,7 @@ export function BorrowerList({ borrowers }: BorrowerListProps) {
     },
     {
       field: 'entity.countryOfIncorporation',
-      headerName: 'Country of Incorporation',
+      headerName: 'Country',
       width: 150,
     },
     {
@@ -48,7 +46,17 @@ export function BorrowerList({ borrowers }: BorrowerListProps) {
       field: 'onboardingStatus',
       headerName: 'Status',
       width: 120,
-      cellRenderer: (params: ICellRendererParams) => (
+      cellRenderer: (params: any) => (
+        <Badge variant={params.value === 'COMPLETED' ? 'success' : 'secondary'}>
+          {params.value || '-'}
+        </Badge>
+      ),
+    },
+    {
+      field: 'kycStatus',
+      headerName: 'KYC Status',
+      width: 120,
+      cellRenderer: (params: any) => (
         <Badge variant={params.value === 'COMPLETED' ? 'success' : 'secondary'}>
           {params.value || '-'}
         </Badge>
@@ -56,13 +64,9 @@ export function BorrowerList({ borrowers }: BorrowerListProps) {
     },
   ], [])
 
-  const handleDetailsModalClose = () => {
-    setIsDetailsModalOpen(false)
-    setSelectedBorrower(null)
-  }
-
-  const handleEditModalClose = () => {
+  const handleModalClose = () => {
     setIsEditModalOpen(false)
+    onUpdate?.()
   }
 
   return (
@@ -82,33 +86,19 @@ export function BorrowerList({ borrowers }: BorrowerListProps) {
       <DataGrid
         rowData={borrowers}
         columnDefs={columnDefs}
-        defaultColDef={{
-          sortable: true,
-          filter: true,
-          resizable: true,
-          floatingFilter: true,
-        }}
-        onRowClick={(params: RowClickedEvent) => {
-          if (params.data) {
-            setSelectedBorrower(params.data)
-            setIsDetailsModalOpen(true)
-          }
+        onRowClick={(params) => {
+          setSelectedBorrower(params.data)
+          setDetailsOpen(true)
         }}
       />
-
       <BorrowerDetailsModal
         borrower={selectedBorrower}
-        open={isDetailsModalOpen}
-        onOpenChange={setIsDetailsModalOpen}
-        onEdit={() => {
-          setIsDetailsModalOpen(false)
-          setIsEditModalOpen(true)
-        }}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
       />
-
       <BorrowerModal
         open={isEditModalOpen}
-        onClose={handleEditModalClose}
+        onClose={handleModalClose}
         borrower={selectedBorrower}
       />
     </div>

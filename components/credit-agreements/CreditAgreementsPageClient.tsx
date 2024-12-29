@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { ScrollText } from 'lucide-react'
-import { NewCreditAgreementModal } from '@/components/NewCreditAgreementModal'
-import { CreditAgreementList } from '@/components/CreditAgreementList'
+import { NewCreditAgreementModal } from '@/components/credit-agreements/NewCreditAgreementModal'
+import { CreditAgreementList } from '@/components/credit-agreements/CreditAgreementList'
 import { getCreditAgreements } from '@/server/actions/loan/getCreditAgreements'
 import { type CreditAgreementWithRelations } from '@/server/types/credit-agreement'
 

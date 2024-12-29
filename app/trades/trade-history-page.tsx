@@ -1,4 +1,4 @@
-import { TradeHistory } from '@/components/TradeHistory'
+import { TradeHistory } from '@/components/trades/TradeHistory'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function TradeHistoryPage() {

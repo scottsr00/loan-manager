@@ -9,9 +9,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { BorrowerDetailsModal } from "@/components/borrowers/BorrowerDetailsModal"
+import { BorrowerDetailsModal } from "./BorrowerDetailsModal"
 import { useState } from "react"
 import type { Borrower } from "@/types/borrower"
+import { Badge } from "@/components/ui/badge"
 
 const BorrowerActions = ({ borrower }: { borrower: Borrower }) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
@@ -41,7 +42,7 @@ const BorrowerActions = ({ borrower }: { borrower: Borrower }) => {
   )
 }
 
-export const columns: ColumnDef<Borrower>[] = [
+export const borrowerDetailsColumns: ColumnDef<Borrower>[] = [
   {
     accessorKey: "name",
     header: "Name",
@@ -57,6 +58,18 @@ export const columns: ColumnDef<Borrower>[] = [
   {
     accessorKey: "industry",
     header: "Industry",
+  },
+  {
+    accessorKey: "onboardingStatus",
+    header: "Status",
+    cell: ({ row }) => {
+      const status = row.original.onboardingStatus
+      return (
+        <Badge variant={status === 'COMPLETED' ? 'default' : 'secondary'}>
+          {status}
+        </Badge>
+      )
+    }
   },
   {
     id: "actions",

@@ -1,4 +1,4 @@
-import { LoanPositionsHierarchy } from '@/components/LoanPositionsHierarchy'
+import { LoanPositionsHierarchy } from '@/components/positions/LoanPositionsHierarchy'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function PositionsPage() {

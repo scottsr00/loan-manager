@@ -4,7 +4,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import type { Borrower } from "@/types/borrower"
 import { Badge } from "@/components/ui/badge"
 
-export const columns: ColumnDef<Borrower>[] = [
+export const borrowerListColumns: ColumnDef<Borrower>[] = [
   {
     accessorKey: "name",
     header: "Name",

@@ -1,5 +1,5 @@
 import { getEntities } from '@/server/actions/entity'
-import { EntitiesPageClient } from '@/components/EntitiesPageClient'
+import { EntitiesPageClient } from '@/components/entities/EntitiesPageClient'
 
 export const dynamic = 'force-dynamic'
 

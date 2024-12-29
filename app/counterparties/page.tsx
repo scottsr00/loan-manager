@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { CounterpartyList } from '@/components/CounterpartyList'
-import { NewCounterpartyModal } from '@/components/NewCounterpartyModal'
-import { PageLayout } from '@/components/PageLayout'
+import { CounterpartyList } from '@/components/counterparties/CounterpartyList'
+import { NewCounterpartyModal } from '@/components/counterparties/NewCounterpartyModal'
+import { PageLayout } from '@/components/layout/PageLayout'
 import { useCounterparties } from '@/hooks/useCounterparties'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'

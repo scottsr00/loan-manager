@@ -37,7 +37,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { DatePicker } from '@/components/ui/date-picker'
-import { FacilityFormDialog } from './FacilityFormDialog'
+import { FacilityFormDialog } from '@/components/facilities/FacilityFormDialog'
 import { type EntityWithRelations } from '@/server/types/entity'
 import { creditAgreementInputSchema, facilityInputSchema, type CreditAgreementWithRelations } from '@/server/types/credit-agreement'
 import { getEntities } from '@/server/actions/entity/getEntities'

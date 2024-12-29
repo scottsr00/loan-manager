@@ -1,6 +1,6 @@
-import { PageLayout, PageHeader } from '@/components/PageLayout'
+import { PageLayout, PageHeader } from '@/components/layout/PageLayout'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { TeamManagementClient } from '@/components/TeamManagementClient'
+import { TeamManagementClient } from '@/components/team/TeamManagementClient'
 
 export default function TeamManagementPage() {
   return (

@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ThemeToggle } from "@/components/ThemeToggle"
+import { ThemeToggle } from "@/components/ui/theme/ThemeToggle"
 import { Separator } from "@/components/ui/separator"
 
 export default function SettingsPage() {

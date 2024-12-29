@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { NewLoanModal } from './NewLoanModal'
+import { NewLoanModal } from '@/components/loans/NewLoanModal'
 import { DataGrid } from '@/components/ui/data-grid'
 import { type ColDef, type ValueFormatterParams } from 'ag-grid-community'
 import '@/lib/ag-grid-init'

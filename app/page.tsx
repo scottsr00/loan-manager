@@ -1,4 +1,4 @@
-import { Analytics } from '@/components/Analytics'
+import { Analytics } from '@/components/analytics/Analytics'
 import { getAnalytics } from '@/server/actions/analytics'
 
 export const dynamic = 'force-dynamic'

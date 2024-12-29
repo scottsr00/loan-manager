@@ -1,4 +1,4 @@
-import { ServicingDashboard } from '@/components/ServicingDashboard'
+import { ServicingDashboard } from '@/components/servicing/ServicingDashboard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function ServicingPage() {

@@ -1,4 +1,4 @@
-import { LoanPositionsInventoryComponent } from '@/components/LoanPositionsInventory'
+import { LoanPositionsInventoryComponent } from '@/components/positions/LoanPositionsInventory'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function PositionsPage() {
