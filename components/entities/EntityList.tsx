@@ -1,5 +1,6 @@
 'use client'
 
+import '@/lib/ag-grid-init'
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +26,16 @@ export function EntityList({ entities }: EntityListProps) {
         const dba = params.data.dba
         return dba ? `${params.value} (DBA: ${dba})` : params.value
       },
+    },
+    {
+      field: 'isAgent',
+      headerName: 'Agent Bank',
+      width: 120,
+      cellRenderer: (params: ICellRendererParams) => (
+        params.value ? (
+          <Badge className="bg-green-500">Agent</Badge>
+        ) : null
+      ),
     },
     {
       field: 'jurisdiction',

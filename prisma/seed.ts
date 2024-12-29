@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+const { PrismaClient } = require('@prisma/client')
 
 const prisma = new PrismaClient()
 
@@ -175,6 +175,7 @@ async function main() {
       taxId: 'BANK456',
       countryOfIncorporation: 'US',
       status: 'ACTIVE',
+      isAgent: true,
       addresses: {
         create: [generateAddress(true)]
       },
@@ -192,7 +193,7 @@ async function main() {
   })
 
   // Create credit agreement with facilities and positions
-  await prisma.creditAgreement.create({
+  const creditAgreement = await prisma.creditAgreement.create({
     data: {
       agreementNumber: 'CA-2024-001',
       borrowerId: borrowerEntity.id,
@@ -253,6 +254,47 @@ async function main() {
       }
     }
   })
+
+  // Get the created facilities
+  const facilities = await prisma.facility.findMany({
+    where: {
+      creditAgreementId: creditAgreement.id
+    }
+  })
+
+  // Create loans for each facility
+  for (const facility of facilities) {
+    const loanAmount = facility.facilityType === 'TERM_LOAN' ? 3000000 : 2000000
+    
+    const loan = await prisma.loan.create({
+      data: {
+        facilityId: facility.id,
+        amount: loanAmount,
+        outstandingAmount: loanAmount,
+        currency: 'USD',
+        status: 'ACTIVE',
+        interestPeriod: '1M',
+        drawDate: new Date(),
+        baseRate: 4.5,
+        effectiveRate: 7.0,
+      }
+    })
+
+    // Create a drawdown transaction
+    await prisma.transactionHistory.create({
+      data: {
+        creditAgreementId: creditAgreement.id,
+        loanId: loan.id,
+        activityType: 'DRAWDOWN',
+        amount: loanAmount,
+        currency: 'USD',
+        status: 'COMPLETED',
+        description: `Initial drawdown for ${facility.facilityName}`,
+        effectiveDate: new Date(),
+        processedBy: 'SYSTEM'
+      }
+    })
+  }
 
   console.log('Seed data created successfully')
 }

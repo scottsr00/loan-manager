@@ -1,47 +1,68 @@
 'use server'
 
 import { prisma } from '@/server/db/client'
-import { type LoanWithRelations } from '@/server/types'
+import { type Loan, type Prisma } from '@prisma/client'
+
+type LoanWithRelations = Prisma.LoanGetPayload<{
+  include: {
+    facility: {
+      include: {
+        creditAgreement: {
+          include: {
+            borrower: true
+            lender: true
+          }
+        }
+        positions: {
+          include: {
+            lender: {
+              include: {
+                entity: true
+              }
+            }
+          }
+        }
+      }
+    }
+    transactions: true
+  }
+}>
 
 export async function getInventory(): Promise<LoanWithRelations[]> {
   try {
     const loans = await prisma.loan.findMany({
       include: {
-        lenderPositions: {
+        facility: {
           include: {
-            lender: {
-              select: {
-                legalName: true
+            creditAgreement: {
+              include: {
+                borrower: true,
+                lender: true
+              }
+            },
+            positions: {
+              include: {
+                lender: {
+                  include: {
+                    entity: true
+                  }
+                }
               }
             }
           }
         },
-        trades: {
+        transactions: {
           where: {
-            status: 'Open'
-          },
-          select: {
-            id: true,
-            quantity: true,
-            price: true,
-            tradeType: true,
-            status: true,
-            tradeDate: true
+            status: 'PENDING'
           }
         }
       },
       orderBy: {
-        dealName: 'asc'
+        createdAt: 'desc'
       }
     })
 
-    return loans.map(loan => ({
-      ...loan,
-      trades: loan.trades.map(trade => ({
-        ...trade,
-        id: trade.id.toString()
-      }))
-    }))
+    return loans
   } catch (error) {
     console.error('Error in getInventory:', error)
     throw new Error('Failed to fetch loan inventory')

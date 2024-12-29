@@ -3,6 +3,7 @@
 import { z } from 'zod'
 import { prisma } from '@/server/db/client'
 import { revalidatePath } from 'next/cache'
+import { type Prisma } from '@prisma/client'
 
 const UpdateLoanSchema = z.object({
   id: z.string().min(1, 'Loan ID is required'),
@@ -26,8 +27,11 @@ export async function updateLoan(params: UpdateLoanInput) {
     const existingLoan = await prisma.loan.findUnique({
       where: { id: validatedData.id },
       include: {
-        positions: true,
-        facility: true
+        facility: {
+          include: {
+            creditAgreement: true
+          }
+        }
       }
     })
 
@@ -64,25 +68,39 @@ export async function updateLoan(params: UpdateLoanInput) {
     }
 
     // Update the loan
-    const updatedLoan = await prisma.loan.update({
-      where: { id: validatedData.id },
-      data: {
-        amount: validatedData.amount,
-        status: validatedData.status,
-        positions: validatedData.positions ? {
-          updateMany: validatedData.positions.map(position => ({
-            where: { id: position.id },
-            data: {
-              amount: position.amount,
-              status: position.status
+    const updatedLoan = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const loan = await tx.loan.update({
+        where: { id: validatedData.id },
+        data: {
+          amount: validatedData.amount,
+          status: validatedData.status
+        },
+        include: {
+          facility: {
+            include: {
+              creditAgreement: true
             }
-          }))
-        } : undefined
-      },
-      include: {
-        positions: true,
-        facility: true
-      }
+          }
+        }
+      })
+
+      // Create transaction history record
+      await tx.transactionHistory.create({
+        data: {
+          loanId: loan.id,
+          creditAgreementId: loan.facility.creditAgreement.id,
+          activityType: 'LOAN_UPDATE',
+          amount: validatedData.amount || loan.amount,
+          currency: loan.currency,
+          status: 'COMPLETED',
+          description: `Loan updated: ${Object.keys(validatedData).filter(k => k !== 'id').join(', ')}`,
+          effectiveDate: new Date(),
+          processedBy: 'SYSTEM',
+          updatedAt: new Date()
+        }
+      })
+
+      return loan
     })
 
     revalidatePath('/loans')

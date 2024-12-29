@@ -17,6 +17,7 @@ export async function createEntity(data: EntityInput) {
         registrationNumber: validatedData.registrationNumber,
         taxId: validatedData.taxId,
         status: validatedData.status,
+        isAgent: validatedData.isAgent || false,
         dateOfIncorporation: validatedData.dateOfIncorporation,
         countryOfIncorporation: validatedData.countryOfIncorporation,
         governmentId: validatedData.governmentId,

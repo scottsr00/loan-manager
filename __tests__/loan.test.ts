@@ -3,29 +3,6 @@ import { createLoan } from '@/server/actions/loan/createLoan'
 import { updateLoan } from '@/server/actions/loan/updateLoan'
 import { z } from 'zod'
 
-const LoanPositionSchema = z.object({
-  lenderId: z.string().min(1, 'Lender ID is required'),
-  amount: z.number().positive('Position amount must be positive'),
-  status: z.enum(['ACTIVE', 'CLOSED', 'DEFAULTED']).optional().default('ACTIVE')
-})
-
-export const CreateLoanSchema = z.object({
-  facilityId: z.string().min(1, 'Facility ID is required'),
-  amount: z.number().positive('Amount must be positive'),
-  currency: z.string().optional().default('USD'),
-  status: z.enum(['ACTIVE', 'PARTIALLY_PAID', 'PAID', 'DEFAULTED', 'CLOSED']).optional().default('ACTIVE'),
-  positions: z.array(LoanPositionSchema).min(1, 'At least one position is required')
-}).refine(data => {
-  const totalPositionAmount = data.positions.reduce((sum, pos) => sum + pos.amount, 0)
-  return totalPositionAmount === data.amount
-}, {
-  message: 'Position amounts must equal loan amount',
-  path: ['positions']
-})
-
-type CreateLoanInput = z.infer<typeof CreateLoanSchema>
-type LoanPosition = z.infer<typeof LoanPositionSchema>
-
 // Mock Prisma client
 jest.mock('@/server/db/client', () => ({
   prisma: {
@@ -39,6 +16,10 @@ jest.mock('@/server/db/client', () => ({
             outstandingAmount: 1000000,
             currency: 'USD',
             status: 'ACTIVE',
+            interestPeriod: '1M',
+            drawDate: new Date(),
+            baseRate: 4.5,
+            effectiveRate: 7.0,
           }),
           update: jest.fn(),
           findUnique: jest.fn(),
@@ -77,12 +58,10 @@ describe('Loan Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    // Spy on console.error
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {
-    // Restore console.error
     consoleErrorSpy.mockRestore()
   })
 
@@ -93,14 +72,62 @@ describe('Loan Tests', () => {
       facilityId: 'facility-1',
       currency: 'USD',
       effectiveDate: new Date(),
+      interestPeriod: '1M' as const,
+      baseRate: 4.5,
+      effectiveRate: 7.0,
     }
 
     it('should create a loan with valid inputs', async () => {
+      const mockTx = {
+        loan: {
+          create: jest.fn().mockResolvedValue({
+            id: 'loan-1',
+            facilityId: 'facility-1',
+            amount: 1000000,
+            outstandingAmount: 1000000,
+            currency: 'USD',
+            status: 'ACTIVE',
+            interestPeriod: '1M',
+            drawDate: new Date(),
+            baseRate: 4.5,
+            effectiveRate: 7.0,
+          }),
+        },
+        facility: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'facility-1',
+            commitmentAmount: 2000000,
+            availableAmount: 2000000,
+            currency: 'USD',
+            loans: [],
+          }),
+        },
+        transactionHistory: {
+          create: jest.fn().mockResolvedValue({ id: 'transaction-1' }),
+        },
+      }
+
+      ;(prisma.$transaction as jest.Mock).mockImplementation((callback) => callback(mockTx))
+
       const result = await createLoan(mockValidLoan)
 
       expect(result).toHaveProperty('id', 'loan-1')
       expect(result.amount).toBe(1000000)
       expect(result.status).toBe('ACTIVE')
+      expect(result.interestPeriod).toBe('1M')
+      expect(result.baseRate).toBe(4.5)
+      expect(result.effectiveRate).toBe(7.0)
+
+      // Verify transaction history creation
+      expect(mockTx.transactionHistory.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            activityType: 'LOAN_DRAWDOWN',
+            amount: mockValidLoan.amount,
+            currency: mockValidLoan.currency,
+          }),
+        })
+      )
     })
 
     it('should validate required fields', async () => {
@@ -129,6 +156,7 @@ describe('Loan Tests', () => {
         .rejects.toThrow('Facility not found')
 
       expect(prisma.loan.create).not.toHaveBeenCalled()
+      expect(prisma.transactionHistory.create).not.toHaveBeenCalled()
     })
 
     it('should validate loan amount does not exceed available amount', async () => {
@@ -170,6 +198,9 @@ describe('Loan Tests', () => {
 
       await expect(createLoan(invalidLoan))
         .rejects.toThrow('Insufficient available amount')
+
+      expect(prisma.loan.create).not.toHaveBeenCalled()
+      expect(prisma.transactionHistory.create).not.toHaveBeenCalled()
     })
 
     it('should validate currency matches facility', async () => {
@@ -205,28 +236,43 @@ describe('Loan Tests', () => {
         .rejects.toThrow('Currency mismatch')
 
       expect(prisma.loan.create).not.toHaveBeenCalled()
+      expect(prisma.transactionHistory.create).not.toHaveBeenCalled()
     })
   })
 
   describe('updateLoan', () => {
-    const mockExistingLoan: CreateLoanInput & { id: string } = {
+    const mockExistingLoan = {
       id: 'loan-1',
       facilityId: 'facility-1',
       amount: 1000000,
+      outstandingAmount: 800000,
       currency: 'USD',
       status: 'ACTIVE',
-      positions: [
-        {
-          lenderId: 'lender-1',
-          amount: 1000000,
-          status: 'ACTIVE',
-        },
-      ],
+      interestPeriod: '1M',
+      drawDate: new Date(),
+      baseRate: 4.5,
+      effectiveRate: 7.0,
+      facility: {
+        id: 'facility-1',
+        creditAgreement: {
+          id: 'ca-1'
+        }
+      },
     }
 
     it('should update loan with valid changes', async () => {
+      const mockTx = {
+        loan: {
+          update: jest.fn().mockImplementation((args) => Promise.resolve({ ...mockExistingLoan, ...args.data })),
+          findUnique: jest.fn().mockResolvedValue(mockExistingLoan)
+        },
+        transactionHistory: {
+          create: jest.fn().mockResolvedValue({ id: 'transaction-1' })
+        }
+      }
+
+      ;(prisma.$transaction as jest.Mock).mockImplementation((callback) => callback(mockTx))
       ;(prisma.loan.findUnique as jest.Mock).mockResolvedValue(mockExistingLoan)
-      ;(prisma.loan.update as jest.Mock).mockImplementation((args) => Promise.resolve({ ...mockExistingLoan, ...args.data }))
 
       const updateData = {
         id: mockExistingLoan.id,
@@ -239,6 +285,17 @@ describe('Loan Tests', () => {
       expect(result.amount).toBe(updateData.amount)
       expect(result.status).toBe(updateData.status)
       expect(consoleErrorSpy).not.toHaveBeenCalled()
+
+      // Verify transaction history creation
+      expect(mockTx.transactionHistory.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            activityType: 'LOAN_UPDATE',
+            loanId: mockExistingLoan.id,
+            creditAgreementId: mockExistingLoan.facility.creditAgreement.id,
+          }),
+        })
+      )
     })
 
     it('should throw error if loan does not exist', async () => {
@@ -253,6 +310,7 @@ describe('Loan Tests', () => {
         'Error updating loan:',
         'Loan not found'
       )
+      expect(prisma.transactionHistory.create).not.toHaveBeenCalled()
     })
 
     it('should validate status transitions', async () => {
@@ -272,6 +330,7 @@ describe('Loan Tests', () => {
         'Error updating loan:',
         'Cannot reactivate closed loan'
       )
+      expect(prisma.transactionHistory.create).not.toHaveBeenCalled()
     })
 
     it('should validate amount is not greater than original amount', async () => {
@@ -286,6 +345,7 @@ describe('Loan Tests', () => {
         'Error updating loan:',
         'Amount cannot exceed original loan amount'
       )
+      expect(prisma.transactionHistory.create).not.toHaveBeenCalled()
     })
   })
 }) 

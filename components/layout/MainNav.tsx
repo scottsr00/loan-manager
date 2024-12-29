@@ -17,7 +17,8 @@ import {
   ScrollText,
   Files,
   Building,
-  Users2
+  Users2,
+  LayoutList
 } from 'lucide-react'
 
 const menuItems = [
@@ -32,9 +33,20 @@ const menuItems = [
     icon: Calculator
   },
   {
-    title: "Position Book",
-    href: "/positions",
-    icon: BookOpen
+    title: "Positions",
+    icon: BookOpen,
+    submenu: [
+      {
+        title: "Hierarchy View",
+        href: "/positions",
+        icon: BookOpen
+      },
+      {
+        title: "Inventory View",
+        href: "/positions/inventory",
+        icon: LayoutList
+      }
+    ]
   },
   {
     title: "Trade History",
@@ -113,6 +125,40 @@ export function MainNav() {
       <nav className="flex-1 space-y-1 p-2">
         {menuItems.map((item) => {
           const Icon = item.icon
+          if (item.submenu) {
+            return (
+              <div key={item.title} className="space-y-1">
+                <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground">
+                  <Icon className="h-4 w-4" />
+                  {item.title}
+                </div>
+                <div className="pl-4 space-y-1">
+                  {item.submenu.map((subItem) => {
+                    const SubIcon = subItem.icon
+                    const isActive = pathname === subItem.href
+                    return (
+                      <Link
+                        key={subItem.href}
+                        href={subItem.href}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150",
+                          isActive 
+                            ? "bg-primary text-primary-foreground shadow-sm" 
+                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                        )}
+                      >
+                        <SubIcon className={cn(
+                          "h-4 w-4 transition-colors",
+                          isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-accent-foreground"
+                        )} />
+                        {subItem.title}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          }
           const isActive = pathname === item.href
           return (
             <Link

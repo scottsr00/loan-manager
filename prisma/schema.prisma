@@ -23,6 +23,7 @@ model Entity {
   primaryContactEmail   String?
   primaryContactPhone   String?
   status                String            @default("ACTIVE")
+  isAgent               Boolean           @default(false)
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
   addresses             Address[]

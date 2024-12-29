@@ -49,6 +49,7 @@ export const entityInputSchema = z.object({
   primaryContactEmail: z.string().optional(),
   primaryContactPhone: z.string().optional(),
   status: z.string().default('ACTIVE'),
+  isAgent: z.boolean().default(false),
   addresses: z.array(entityAddressSchema).min(1, 'At least one address is required'),
   contacts: z.array(entityContactSchema).min(1, 'At least one contact is required'),
 })
