@@ -12,11 +12,6 @@ type MockPrisma = {
 jest.mock('@/server/db/client', () => ({
   prisma: {
     $transaction: jest.fn((callback) => callback(prisma as unknown as MockPrisma)),
-    entity: {
-      create: jest.fn(),
-      update: jest.fn(),
-      findUnique: jest.fn(),
-    },
     borrower: {
       create: jest.fn(),
       update: jest.fn(),
@@ -41,9 +36,7 @@ describe('Borrower Tests', () => {
 
   describe('createBorrower', () => {
     const mockBorrowerInput: BorrowerInput = {
-      legalName: 'Test Borrower Inc',
-      dba: 'Test Co',
-      registrationNumber: 'REG123',
+      name: 'Test Borrower Inc',
       taxId: 'TAX123',
       countryOfIncorporation: 'US',
       industrySegment: 'Technology',
@@ -56,19 +49,11 @@ describe('Borrower Tests', () => {
     }
 
     it('should create a borrower with valid inputs', async () => {
-      const mockEntity = {
-        id: 'entity-1',
-        legalName: mockBorrowerInput.legalName,
-        dba: mockBorrowerInput.dba,
-        registrationNumber: mockBorrowerInput.registrationNumber,
-        taxId: mockBorrowerInput.taxId,
-        countryOfIncorporation: mockBorrowerInput.countryOfIncorporation,
-        status: 'ACTIVE',
-      }
-
       const mockBorrower = {
         id: 'borrower-1',
-        entityId: 'entity-1',
+        name: mockBorrowerInput.name,
+        taxId: mockBorrowerInput.taxId,
+        countryOfIncorporation: mockBorrowerInput.countryOfIncorporation,
         industrySegment: mockBorrowerInput.industrySegment,
         businessType: mockBorrowerInput.businessType,
         creditRating: mockBorrowerInput.creditRating,
@@ -78,22 +63,20 @@ describe('Borrower Tests', () => {
         kycStatus: mockBorrowerInput.kycStatus,
       }
 
-      ;(prisma.entity.create as jest.Mock).mockResolvedValue(mockEntity)
       ;(prisma.borrower.create as jest.Mock).mockResolvedValue(mockBorrower)
 
       const result = await createBorrower(mockBorrowerInput)
 
       expect(result).toHaveProperty('id', 'borrower-1')
-      expect(result.entityId).toBe('entity-1')
+      expect(result.name).toBe(mockBorrowerInput.name)
       expect(result.industrySegment).toBe(mockBorrowerInput.industrySegment)
-      expect(prisma.entity.create).toHaveBeenCalledTimes(1)
       expect(prisma.borrower.create).toHaveBeenCalledTimes(1)
       expect(consoleErrorSpy).not.toHaveBeenCalled()
     })
 
     it('should validate required fields', async () => {
       const invalidInput = {
-        legalName: '',
+        name: '',
         industrySegment: '',
         businessType: '',
         onboardingStatus: 'PENDING',
@@ -101,9 +84,8 @@ describe('Borrower Tests', () => {
       } as BorrowerInput
 
       await expect(createBorrower(invalidInput))
-        .rejects.toThrow(/Legal name is required|Industry segment is required|Business type is required/)
+        .rejects.toThrow(/Name is required|Industry segment is required|Business type is required/)
 
-      expect(prisma.entity.create).not.toHaveBeenCalled()
       expect(prisma.borrower.create).not.toHaveBeenCalled()
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         'Error in createBorrower:',
@@ -120,7 +102,6 @@ describe('Borrower Tests', () => {
       await expect(createBorrower(invalidInput))
         .rejects.toThrow(/Invalid enum value/)
 
-      expect(prisma.entity.create).not.toHaveBeenCalled()
       expect(prisma.borrower.create).not.toHaveBeenCalled()
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         'Error in createBorrower:',
@@ -137,7 +118,6 @@ describe('Borrower Tests', () => {
       await expect(createBorrower(invalidInput))
         .rejects.toThrow(/Invalid enum value/)
 
-      expect(prisma.entity.create).not.toHaveBeenCalled()
       expect(prisma.borrower.create).not.toHaveBeenCalled()
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         'Error in createBorrower:',
@@ -149,7 +129,7 @@ describe('Borrower Tests', () => {
   describe('updateBorrower', () => {
     const mockExistingBorrower = {
       id: 'borrower-1',
-      entityId: 'entity-1',
+      name: 'Test Borrower Inc',
       industrySegment: 'Technology',
       businessType: 'Corporation',
       creditRating: 'BBB',
@@ -164,7 +144,7 @@ describe('Borrower Tests', () => {
       ;(prisma.borrower.update as jest.Mock).mockImplementation((args) => Promise.resolve({ ...mockExistingBorrower, ...args.data }))
 
       const updateData: BorrowerInput = {
-        legalName: 'Test Borrower Inc',
+        name: 'Test Borrower Inc',
         industrySegment: 'Technology',
         businessType: 'Corporation',
         onboardingStatus: 'IN_PROGRESS',
@@ -182,7 +162,7 @@ describe('Borrower Tests', () => {
       ;(prisma.borrower.findUnique as jest.Mock).mockResolvedValue(null)
 
       const updateData: BorrowerInput = {
-        legalName: 'Test Borrower Inc',
+        name: 'Test Borrower Inc',
         industrySegment: 'Technology',
         businessType: 'Corporation',
         onboardingStatus: 'IN_PROGRESS',
@@ -207,7 +187,7 @@ describe('Borrower Tests', () => {
       ;(prisma.borrower.findUnique as jest.Mock).mockResolvedValue(mockRejectedBorrower)
 
       const updateData: BorrowerInput = {
-        legalName: 'Test Borrower Inc',
+        name: 'Test Borrower Inc',
         industrySegment: 'Technology',
         businessType: 'Corporation',
         onboardingStatus: 'IN_PROGRESS',
@@ -232,7 +212,7 @@ describe('Borrower Tests', () => {
       ;(prisma.borrower.findUnique as jest.Mock).mockResolvedValue(mockRejectedBorrower)
 
       const updateData: BorrowerInput = {
-        legalName: 'Test Borrower Inc',
+        name: 'Test Borrower Inc',
         industrySegment: 'Technology',
         businessType: 'Corporation',
         onboardingStatus: 'PENDING',

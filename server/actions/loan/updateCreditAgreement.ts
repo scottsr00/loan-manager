@@ -70,11 +70,7 @@ export async function updateCreditAgreement(data: UpdateCreditAgreementInput) {
       },
       include: {
         borrower: true,
-        lender: {
-          include: {
-            lender: true,
-          },
-        },
+        lender: true,
         facilities: {
           include: {
             trades: {

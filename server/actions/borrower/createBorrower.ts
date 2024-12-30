@@ -27,6 +27,9 @@ export async function createBorrower(data: BorrowerInput) {
     return borrower
   } catch (error) {
     console.error('Error in createBorrower:', error)
+    if (error instanceof Error) {
+      throw error
+    }
     throw new Error('Failed to create borrower')
   }
 } 

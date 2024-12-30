@@ -63,43 +63,26 @@ export async function createCreditAgreement(
         interestRate: data.interestRate,
         description: data.description,
         facilities: {
-          create: data.facilities.map((facility: FacilityInput) => ({
-            facilityName: facility.facilityName,
-            facilityType: facility.facilityType,
-            commitmentAmount: facility.commitmentAmount,
+          create: data.facilities.map(facility => ({
+            ...facility,
             availableAmount: facility.commitmentAmount,
-            currency: facility.currency,
-            startDate: facility.startDate,
-            maturityDate: facility.maturityDate,
-            interestType: facility.interestType,
-            baseRate: facility.baseRate,
-            margin: facility.margin,
-            description: facility.description,
           }))
         }
-      } satisfies Prisma.CreditAgreementCreateInput,
+      },
       include: {
+        borrower: true,
+        lender: true,
         facilities: {
           include: {
             trades: {
               include: {
-                counterparty: true
-              }
-            }
-          }
+                counterparty: true,
+              },
+            },
+          },
         },
-        borrower: {
-          include: {
-            borrower: true
-          }
-        },
-        lender: {
-          include: {
-            lender: true
-          }
-        },
-        transactions: true
-      }
+        transactions: true,
+      },
     }) as unknown as CreditAgreementWithRelations
 
     return creditAgreement

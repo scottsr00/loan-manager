@@ -1,5 +1,22 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
 import { createLoan } from '@/server/actions/loan/createLoan'
+import { type PrismaClient, type Prisma } from '@prisma/client'
+
+type MockTx = {
+  facility: {
+    findUnique: jest.Mock
+  }
+  loan: {
+    create: jest.Mock
+  }
+  transactionHistory: {
+    create: jest.Mock
+  }
+}
+
+type MockPrismaClient = {
+  $transaction: jest.Mock
+}
 
 // Mock the prisma module
 jest.mock('@/server/db/client', () => ({
@@ -9,7 +26,7 @@ jest.mock('@/server/db/client', () => ({
 }))
 
 // Get the mocked prisma instance
-const { prisma } = jest.requireMock('@/server/db/client')
+const { prisma } = jest.requireMock('@/server/db/client') as { prisma: MockPrismaClient }
 
 describe('createLoan', () => {
   beforeEach(() => {
@@ -39,23 +56,30 @@ describe('createLoan', () => {
       interestPeriod: '1M'
     }
 
+    const mockTransactionHistory = {
+      loanId: 'loan-1',
+      activityType: 'LOAN_DRAWDOWN',
+      amount: 5000000,
+      currency: 'USD',
+      status: 'COMPLETED'
+    }
+
     // Setup mock transaction
-    const mockTx = {
+    const mockTx: MockTx = {
       facility: {
-        findUnique: jest.fn().mockResolvedValue(mockFacility)
+        findUnique: jest.fn(() => Promise.resolve(mockFacility))
       },
       loan: {
-        create: jest.fn().mockResolvedValue(mockLoan)
+        create: jest.fn(() => Promise.resolve(mockLoan))
       },
-      $queryRaw: jest.fn()
-        .mockResolvedValueOnce([{ id: 'loan-1' }])
-        .mockResolvedValueOnce([mockLoan]),
       transactionHistory: {
-        create: jest.fn().mockResolvedValue({})
+        create: jest.fn(() => Promise.resolve(mockTransactionHistory))
       }
     }
 
-    prisma.$transaction.mockImplementation(fn => fn(mockTx))
+    const mockTransactionFn = jest.fn()
+    mockTransactionFn.mockImplementation((fn: any) => fn(mockTx))
+    prisma.$transaction = mockTransactionFn
 
     // Test data
     const loanParams = {
@@ -84,12 +108,23 @@ describe('createLoan', () => {
     })
 
     // Verify loan was created
-    expect(mockTx.$queryRaw).toHaveBeenCalledTimes(2)
+    expect(mockTx.loan.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        facilityId: 'facility-1',
+        amount: 5000000,
+        outstandingAmount: 5000000,
+        currency: 'USD',
+        status: 'ACTIVE',
+        interestPeriod: '1M',
+        baseRate: 5,
+        effectiveRate: 7.5,
+      })
+    })
 
     // Verify transaction history was created
     expect(mockTx.transactionHistory.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        loan: { connect: { id: 'loan-1' } },
+        loanId: 'loan-1',
         activityType: 'LOAN_DRAWDOWN',
         amount: 5000000,
         currency: 'USD',
@@ -99,20 +134,21 @@ describe('createLoan', () => {
   })
 
   it('should throw error if facility not found', async () => {
-    const mockTx = {
+    const mockTx: MockTx = {
       facility: {
-        findUnique: jest.fn().mockResolvedValue(null)
+        findUnique: jest.fn(() => Promise.resolve(null))
       },
       loan: {
         create: jest.fn()
       },
-      $queryRaw: jest.fn(),
       transactionHistory: {
         create: jest.fn()
       }
     }
 
-    prisma.$transaction.mockImplementation(fn => fn(mockTx))
+    const mockTransactionFn = jest.fn()
+    mockTransactionFn.mockImplementation((fn: any) => fn(mockTx))
+    prisma.$transaction = mockTransactionFn
 
     const loanParams = {
       facilityId: 'non-existent',
@@ -128,26 +164,27 @@ describe('createLoan', () => {
   })
 
   it('should throw error if currency mismatch', async () => {
-    const mockTx = {
+    const mockTx: MockTx = {
       facility: {
-        findUnique: jest.fn().mockResolvedValue({
+        findUnique: jest.fn(() => Promise.resolve({
           id: 'facility-1',
           currency: 'EUR',
           commitmentAmount: 10000000,
           margin: 2.5,
           loans: []
-        })
+        }))
       },
       loan: {
         create: jest.fn()
       },
-      $queryRaw: jest.fn(),
       transactionHistory: {
         create: jest.fn()
       }
     }
 
-    prisma.$transaction.mockImplementation(fn => fn(mockTx))
+    const mockTransactionFn = jest.fn()
+    mockTransactionFn.mockImplementation((fn: any) => fn(mockTx))
+    prisma.$transaction = mockTransactionFn
 
     const loanParams = {
       facilityId: 'facility-1',
@@ -163,9 +200,9 @@ describe('createLoan', () => {
   })
 
   it('should throw error if insufficient available amount', async () => {
-    const mockTx = {
+    const mockTx: MockTx = {
       facility: {
-        findUnique: jest.fn().mockResolvedValue({
+        findUnique: jest.fn(() => Promise.resolve({
           id: 'facility-1',
           currency: 'USD',
           commitmentAmount: 10000000,
@@ -173,18 +210,19 @@ describe('createLoan', () => {
           loans: [
             { outstandingAmount: 8000000 }
           ]
-        })
+        }))
       },
       loan: {
         create: jest.fn()
       },
-      $queryRaw: jest.fn(),
       transactionHistory: {
         create: jest.fn()
       }
     }
 
-    prisma.$transaction.mockImplementation(fn => fn(mockTx))
+    const mockTransactionFn = jest.fn()
+    mockTransactionFn.mockImplementation((fn: any) => fn(mockTx))
+    prisma.$transaction = mockTransactionFn
 
     const loanParams = {
       facilityId: 'facility-1',

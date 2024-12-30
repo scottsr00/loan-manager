@@ -18,17 +18,15 @@ export async function updateBorrower(id: string, data: BorrowerInput) {
     }
 
     // Validate status transitions
-    if (existingBorrower.onboardingStatus === 'REJECTED' && 
-        validatedData.onboardingStatus !== 'REJECTED') {
+    if (existingBorrower.onboardingStatus === 'REJECTED' && validatedData.onboardingStatus !== 'REJECTED') {
       throw new Error('Cannot change status of rejected borrower')
     }
 
-    if (existingBorrower.kycStatus === 'REJECTED' && 
-        validatedData.kycStatus !== 'REJECTED') {
+    if (existingBorrower.kycStatus === 'REJECTED' && validatedData.kycStatus !== 'REJECTED') {
       throw new Error('Cannot change KYC status of rejected borrower')
     }
 
-    // Update borrower
+    // Update the borrower
     const updatedBorrower = await prisma.borrower.update({
       where: { id },
       data: {
@@ -48,6 +46,9 @@ export async function updateBorrower(id: string, data: BorrowerInput) {
     return updatedBorrower
   } catch (error) {
     console.error('Error in updateBorrower:', error)
+    if (error instanceof Error) {
+      throw error
+    }
     throw new Error('Failed to update borrower')
   }
 } 

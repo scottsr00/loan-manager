@@ -41,6 +41,9 @@ jobs:
       run: |
         mkdir -p test-results
         npm run test:ci
+
+    - name: Run Jest with coverage
+      run: npm run test:coverage
       
     - name: Upload Jest test results
       if: always()
