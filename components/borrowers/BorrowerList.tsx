@@ -12,28 +12,28 @@ import { BorrowerModal } from './BorrowerModal'
 import type { Borrower } from '@/types/borrower'
 
 interface BorrowerListProps {
-  borrowers: any[]
+  borrowers: Borrower[]
   onUpdate?: () => void
 }
 
 export function BorrowerList({ borrowers, onUpdate }: BorrowerListProps) {
-  const [selectedBorrower, setSelectedBorrower] = useState<any | null>(null)
+  const [selectedBorrower, setSelectedBorrower] = useState<Borrower | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'entity.legalName',
-      headerName: 'Legal Name',
+      field: 'name',
+      headerName: 'Name',
       width: 200,
     },
     {
-      field: 'entity.taxId',
+      field: 'taxId',
       headerName: 'Tax ID',
       width: 150,
     },
     {
-      field: 'entity.countryOfIncorporation',
+      field: 'countryOfIncorporation',
       headerName: 'Country',
       width: 150,
     },
@@ -43,29 +43,44 @@ export function BorrowerList({ borrowers, onUpdate }: BorrowerListProps) {
       width: 150,
     },
     {
+      field: 'businessType',
+      headerName: 'Business Type',
+      width: 150,
+    },
+    {
+      field: 'creditRating',
+      headerName: 'Rating',
+      width: 120,
+      valueFormatter: (params) => {
+        if (!params.value) return '-'
+        return `${params.value}${params.data.ratingAgency ? ` (${params.data.ratingAgency})` : ''}`
+      }
+    },
+    {
       field: 'onboardingStatus',
       headerName: 'Status',
       width: 120,
       cellRenderer: (params: any) => (
         <Badge variant={params.value === 'COMPLETED' ? 'success' : 'secondary'}>
-          {params.value || '-'}
+          {params.value}
         </Badge>
       ),
     },
     {
       field: 'kycStatus',
-      headerName: 'KYC Status',
+      headerName: 'KYC',
       width: 120,
       cellRenderer: (params: any) => (
-        <Badge variant={params.value === 'COMPLETED' ? 'success' : 'secondary'}>
-          {params.value || '-'}
+        <Badge variant={params.value === 'APPROVED' ? 'success' : 'secondary'}>
+          {params.value}
         </Badge>
       ),
-    },
+    }
   ], [])
 
   const handleModalClose = () => {
     setIsEditModalOpen(false)
+    setSelectedBorrower(null)
     onUpdate?.()
   }
 
@@ -95,11 +110,16 @@ export function BorrowerList({ borrowers, onUpdate }: BorrowerListProps) {
         borrower={selectedBorrower}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
+        onEdit={() => {
+          setDetailsOpen(false)
+          setIsEditModalOpen(true)
+        }}
       />
       <BorrowerModal
-        open={isEditModalOpen}
-        onClose={handleModalClose}
         borrower={selectedBorrower}
+        isOpen={isEditModalOpen}
+        onClose={handleModalClose}
+        onUpdate={onUpdate || (() => {})}
       />
     </div>
   )

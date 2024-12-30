@@ -1,354 +1,218 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { toast } from 'sonner'
-import type { Borrower } from '@/types/borrower'
-import { createBorrower } from '@/server/actions/borrower/createBorrower'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { updateBorrower } from '@/server/actions/borrower/updateBorrower'
+import { createBorrower } from '@/server/actions/borrower/createBorrower'
+import type { Borrower } from '@/types/borrower'
+import { onboardingStatusEnum, kycStatusEnum } from '@/server/types/borrower'
+import { toast } from 'sonner'
 
-const KYC_STATUSES = ['PENDING', 'IN_PROGRESS', 'APPROVED', 'REJECTED'] as const
-const ONBOARDING_STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'REJECTED'] as const
+// Explicitly define the enum values to match the database
+type OnboardingStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'REJECTED'
+type KycStatus = 'PENDING' | 'IN_PROGRESS' | 'APPROVED' | 'REJECTED'
 
-const formSchema = z.object({
-  legalName: z.string().min(1, 'Legal name is required'),
-  dba: z.string().optional(),
-  registrationNumber: z.string().optional(),
-  taxId: z.string().optional(),
-  countryOfIncorporation: z.string().optional(),
-  industrySegment: z.string().min(1, 'Industry segment is required'),
-  businessType: z.string().min(1, 'Business type is required'),
-  creditRating: z.string().optional(),
-  ratingAgency: z.string().optional(),
-  riskRating: z.string().optional(),
-  onboardingStatus: z.enum(ONBOARDING_STATUSES).default('PENDING'),
-  kycStatus: z.enum(KYC_STATUSES).default('PENDING')
-})
+const ONBOARDING_STATUSES: OnboardingStatus[] = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'REJECTED']
+const KYC_STATUSES: KycStatus[] = ['PENDING', 'IN_PROGRESS', 'APPROVED', 'REJECTED']
 
-export interface BorrowerModalProps {
-  open: boolean
-  onClose: () => void
+interface BorrowerModalProps {
   borrower?: Borrower | null
+  isOpen: boolean
+  onClose: () => void
+  onUpdate: () => void
 }
 
-export function BorrowerModal({ open, onClose, borrower }: BorrowerModalProps) {
-  const router = useRouter()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      legalName: '',
-      dba: '',
-      registrationNumber: '',
-      taxId: '',
-      countryOfIncorporation: '',
-      industrySegment: '',
-      businessType: '',
-      creditRating: '',
-      ratingAgency: '',
-      riskRating: '',
-      onboardingStatus: 'PENDING',
-      kycStatus: 'PENDING'
-    }
-  })
+export function BorrowerModal({ borrower, isOpen, onClose, onUpdate }: BorrowerModalProps) {
+  const [name, setName] = useState('')
+  const [taxId, setTaxId] = useState('')
+  const [countryOfIncorporation, setCountryOfIncorporation] = useState('')
+  const [industrySegment, setIndustrySegment] = useState('')
+  const [businessType, setBusinessType] = useState('')
+  const [creditRating, setCreditRating] = useState('')
+  const [ratingAgency, setRatingAgency] = useState('')
+  const [riskRating, setRiskRating] = useState('')
+  const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus>('PENDING')
+  const [kycStatus, setKycStatus] = useState<KycStatus>('PENDING')
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     if (borrower) {
-      setIsEditing(true)
-      form.reset({
-        legalName: borrower.entity.legalName,
-        dba: borrower.entity.dba || '',
-        registrationNumber: borrower.entity.registrationNumber || '',
-        taxId: borrower.entity.taxId || '',
-        countryOfIncorporation: borrower.entity.countryOfIncorporation || '',
-        industrySegment: borrower.industrySegment || '',
-        businessType: borrower.businessType || '',
-        creditRating: borrower.creditRating || '',
-        ratingAgency: borrower.ratingAgency || '',
-        riskRating: borrower.riskRating || '',
-        onboardingStatus: borrower.onboardingStatus as any || 'PENDING',
-        kycStatus: borrower.kycStatus as any || 'PENDING'
-      })
+      setName(borrower.name)
+      setTaxId(borrower.taxId || '')
+      setCountryOfIncorporation(borrower.countryOfIncorporation || '')
+      setIndustrySegment(borrower.industrySegment || '')
+      setBusinessType(borrower.businessType || '')
+      setCreditRating(borrower.creditRating || '')
+      setRatingAgency(borrower.ratingAgency || '')
+      setRiskRating(borrower.riskRating || '')
+      // Ensure we're using the correct enum values
+      setOnboardingStatus(borrower.onboardingStatus as OnboardingStatus)
+      setKycStatus(borrower.kycStatus as KycStatus)
     } else {
-      setIsEditing(false)
-      form.reset({
-        legalName: '',
-        dba: '',
-        registrationNumber: '',
-        taxId: '',
-        countryOfIncorporation: '',
-        industrySegment: '',
-        businessType: '',
-        creditRating: '',
-        ratingAgency: '',
-        riskRating: '',
-        onboardingStatus: 'PENDING',
-        kycStatus: 'PENDING'
-      })
+      setName('')
+      setTaxId('')
+      setCountryOfIncorporation('')
+      setIndustrySegment('')
+      setBusinessType('')
+      setCreditRating('')
+      setRatingAgency('')
+      setRiskRating('')
+      setOnboardingStatus('PENDING')
+      setKycStatus('PENDING')
     }
-  }, [borrower, form])
+  }, [borrower])
 
-  const handleSubmit = async (data: z.infer<typeof formSchema>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
     try {
-      setIsSubmitting(true)
-      if (isEditing && borrower) {
+      // Ensure we're using the correct status values
+      const data = {
+        name: name.trim(),
+        industrySegment: industrySegment.trim(),
+        businessType: businessType.trim(),
+        onboardingStatus: onboardingStatus as OnboardingStatus,
+        kycStatus: kycStatus as KycStatus,
+        ...(taxId.trim() ? { taxId: taxId.trim() } : {}),
+        ...(countryOfIncorporation.trim() ? { countryOfIncorporation: countryOfIncorporation.trim() } : {}),
+        ...(creditRating.trim() ? { creditRating: creditRating.trim() } : {}),
+        ...(ratingAgency.trim() ? { ratingAgency: ratingAgency.trim() } : {}),
+        ...(riskRating.trim() ? { riskRating: riskRating.trim() } : {})
+      }
+
+      if (borrower) {
         await updateBorrower(borrower.id, data)
         toast.success('Borrower updated successfully')
       } else {
         await createBorrower(data)
         toast.success('Borrower created successfully')
       }
+      onUpdate()
       onClose()
-      router.refresh()
     } catch (error) {
-      console.error('Error submitting form:', error)
-      toast.error('Failed to save borrower', {
-        description: 'Please try again or contact support if the issue persists.'
-      })
+      console.error('Error saving borrower:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to save borrower')
     } finally {
-      setIsSubmitting(false)
+      setIsLoading(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Borrower' : 'Create Borrower'}</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <ScrollArea className="h-[60vh] pr-4">
-              <Tabs defaultValue="business" className="w-full">
-                <TabsList className="mb-4">
-                  <TabsTrigger value="business">Business Info</TabsTrigger>
-                  <TabsTrigger value="risk">Risk & Compliance</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="business" className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="legalName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Legal Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Acme Corporation" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="dba"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>DBA</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Acme Corp" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="registrationNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Registration Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., 12345" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="taxId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tax ID</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., 12-3456789" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="countryOfIncorporation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Country of Incorporation</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., United States" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="industrySegment"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Industry Segment</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Technology" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="businessType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Business Type</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Corporation" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </TabsContent>
-
-                <TabsContent value="risk" className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="creditRating"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Credit Rating</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., AAA" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="ratingAgency"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Rating Agency</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., S&P" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="riskRating"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Risk Rating</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Low" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="onboardingStatus"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Onboarding Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select onboarding status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {ONBOARDING_STATUSES.map((status) => (
-                              <SelectItem key={status} value={status}>
-                                {status}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="kycStatus"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>KYC Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select KYC status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {KYC_STATUSES.map((status) => (
-                              <SelectItem key={status} value={status}>
-                                {status}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </TabsContent>
-              </Tabs>
-            </ScrollArea>
-
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>Saving...</>
-                ) : isEditing ? (
-                  'Save Changes'
-                ) : (
-                  'Create Borrower'
-                )}
-              </Button>
-            </div>
-          </form>
-        </Form>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogTitle>{borrower ? 'Edit Borrower' : 'New Borrower'}</DialogTitle>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="taxId">Tax ID</Label>
+            <Input
+              id="taxId"
+              value={taxId}
+              onChange={(e) => setTaxId(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="countryOfIncorporation">Country of Incorporation</Label>
+            <Input
+              id="countryOfIncorporation"
+              value={countryOfIncorporation}
+              onChange={(e) => setCountryOfIncorporation(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="industrySegment">Industry Segment</Label>
+            <Input
+              id="industrySegment"
+              value={industrySegment}
+              onChange={(e) => setIndustrySegment(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="businessType">Business Type</Label>
+            <Input
+              id="businessType"
+              value={businessType}
+              onChange={(e) => setBusinessType(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="creditRating">Credit Rating</Label>
+            <Input
+              id="creditRating"
+              value={creditRating}
+              onChange={(e) => setCreditRating(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="ratingAgency">Rating Agency</Label>
+            <Input
+              id="ratingAgency"
+              value={ratingAgency}
+              onChange={(e) => setRatingAgency(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="riskRating">Risk Rating</Label>
+            <Input
+              id="riskRating"
+              value={riskRating}
+              onChange={(e) => setRiskRating(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="onboardingStatus">Onboarding Status</Label>
+            <select
+              id="onboardingStatus"
+              value={onboardingStatus}
+              onChange={(e) => setOnboardingStatus(e.target.value as OnboardingStatus)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2"
+              required
+            >
+              {ONBOARDING_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status.replace('_', ' ')}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="kycStatus">KYC Status</Label>
+            <select
+              id="kycStatus"
+              value={kycStatus}
+              onChange={(e) => setKycStatus(e.target.value as KycStatus)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2"
+              required
+            >
+              {KYC_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status.replace('_', ' ')}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Saving...' : borrower ? 'Update' : 'Create'}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   )

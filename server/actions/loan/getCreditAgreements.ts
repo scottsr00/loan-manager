@@ -7,30 +7,22 @@ export async function getCreditAgreements(): Promise<CreditAgreementWithRelation
   try {
     const creditAgreements = await prisma.creditAgreement.findMany({
       include: {
-        borrower: {
-          include: {
-            borrower: true
-          }
-        },
-        lender: {
-          include: {
-            lender: true
-          }
-        },
+        borrower: true,
+        lender: true,
         facilities: {
           include: {
             trades: {
               include: {
-                counterparty: true,
-              },
-            },
-          },
+                counterparty: true
+              }
+            }
+          }
         },
         transactions: true
       },
       orderBy: {
-        createdAt: 'desc',
-      },
+        createdAt: 'desc'
+      }
     })
 
     if (!creditAgreements) {
@@ -63,30 +55,22 @@ export async function getAvailableLoans(): Promise<CreditAgreementWithRelations[
         },
       },
       include: {
-        borrower: {
-          include: {
-            borrower: true
-          }
-        },
-        lender: {
-          include: {
-            lender: true
-          }
-        },
+        borrower: true,
+        lender: true,
         facilities: {
           include: {
             trades: {
               include: {
-                counterparty: true,
-              },
-            },
-          },
+                counterparty: true
+              }
+            }
+          }
         },
         transactions: true
       },
       orderBy: {
-        createdAt: 'desc',
-      },
+        createdAt: 'desc'
+      }
     })
 
     if (!availableLoans) {
@@ -108,24 +92,16 @@ export async function getCreditAgreement(id: string): Promise<CreditAgreementWit
     const creditAgreement = await prisma.creditAgreement.findUnique({
       where: { id },
       include: {
-        borrower: {
-          include: {
-            borrower: true
-          }
-        },
-        lender: {
-          include: {
-            lender: true
-          }
-        },
+        borrower: true,
+        lender: true,
         facilities: {
           include: {
             trades: {
               include: {
-                counterparty: true,
-              },
-            },
-          },
+                counterparty: true
+              }
+            }
+          }
         },
         transactions: true
       }

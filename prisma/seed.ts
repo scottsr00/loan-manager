@@ -136,27 +136,12 @@ async function main() {
     })
   }
 
-  // Create borrower and lender entities
-  const borrowerEntity = await prisma.entity.create({
-    data: {
-      legalName: 'Test Company Inc.',
-      dba: 'Test Co',
-      registrationNumber: 'REG123',
-      taxId: 'TAX123',
-      countryOfIncorporation: 'US',
-      status: 'ACTIVE',
-      addresses: {
-        create: [generateAddress(true)]
-      },
-      contacts: {
-        create: [generateContact(true)]
-      }
-    }
-  })
-
+  // Create borrower
   const borrower = await prisma.borrower.create({
     data: {
-      entityId: borrowerEntity.id,
+      name: 'Test Company Inc.',
+      taxId: 'TAX123',
+      countryOfIncorporation: 'US',
       industrySegment: 'Technology',
       businessType: 'Corporation',
       creditRating: 'BBB',
@@ -196,7 +181,7 @@ async function main() {
   const creditAgreement = await prisma.creditAgreement.create({
     data: {
       agreementNumber: 'CA-2024-001',
-      borrowerId: borrowerEntity.id,
+      borrowerId: borrower.id,
       lenderId: lenderEntity.id,
       amount: 10000000,
       currency: 'USD',

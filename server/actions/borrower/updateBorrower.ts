@@ -10,10 +10,7 @@ export async function updateBorrower(id: string, data: BorrowerInput) {
 
     // Get existing borrower
     const existingBorrower = await prisma.borrower.findUnique({
-      where: { id },
-      include: {
-        entity: true
-      }
+      where: { id }
     })
 
     if (!existingBorrower) {
@@ -35,34 +32,22 @@ export async function updateBorrower(id: string, data: BorrowerInput) {
     const updatedBorrower = await prisma.borrower.update({
       where: { id },
       data: {
+        name: validatedData.name,
+        taxId: validatedData.taxId || null,
+        countryOfIncorporation: validatedData.countryOfIncorporation || null,
         industrySegment: validatedData.industrySegment,
         businessType: validatedData.businessType,
         creditRating: validatedData.creditRating || null,
         ratingAgency: validatedData.ratingAgency || null,
         riskRating: validatedData.riskRating || null,
         onboardingStatus: validatedData.onboardingStatus,
-        kycStatus: validatedData.kycStatus,
-        entity: {
-          update: {
-            legalName: validatedData.legalName,
-            dba: validatedData.dba || null,
-            registrationNumber: validatedData.registrationNumber || null,
-            taxId: validatedData.taxId || null,
-            countryOfIncorporation: validatedData.countryOfIncorporation || null,
-          }
-        }
-      },
-      include: {
-        entity: true
+        kycStatus: validatedData.kycStatus
       }
     })
 
     return updatedBorrower
   } catch (error) {
     console.error('Error in updateBorrower:', error)
-    if (error instanceof Error) {
-      throw error
-    }
     throw new Error('Failed to update borrower')
   }
 } 

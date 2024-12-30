@@ -3,9 +3,7 @@ import { z } from 'zod'
 
 // Base Prisma Types with Relations
 export type CreditAgreementWithRelations = CreditAgreement & {
-  borrower: Entity & {
-    borrower: Borrower | null
-  }
+  borrower: Borrower
   lender: Entity & {
     lender: Lender | null
   }

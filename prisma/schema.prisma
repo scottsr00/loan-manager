@@ -28,9 +28,7 @@ model Entity {
   updatedAt              DateTime          @updatedAt
   addresses              Address[]
   beneficialOwners       BeneficialOwner[]
-  borrower               Borrower?
   contacts               Contact[]
-  borrowerAgreements     CreditAgreement[] @relation("BorrowerCreditAgreements")
   lenderAgreements       CreditAgreement[] @relation("LenderCreditAgreements")
   lender                 Lender?
 }
@@ -87,20 +85,20 @@ model BeneficialOwner {
 }
 
 model Borrower {
-  id               String   @id @default(cuid())
-  entityId         String   @unique
-  industrySegment  String?
-  businessType     String?
-  creditRating     String?
-  ratingAgency     String?
-  riskRating       String?
-  onboardingStatus String   @default("PENDING")
-  kycStatus        String   @default("PENDING")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  entity           Entity   @relation(fields: [entityId], references: [id])
-
-  @@index([entityId])
+  id                    String            @id @default(cuid())
+  name                  String
+  taxId                 String?
+  countryOfIncorporation String?
+  industrySegment       String?
+  businessType          String?
+  creditRating          String?
+  ratingAgency          String?
+  riskRating            String?
+  onboardingStatus      String            @default("PENDING")
+  kycStatus             String            @default("PENDING")
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  creditAgreements      CreditAgreement[]
 }
 
 model Lender {
@@ -130,7 +128,7 @@ model CreditAgreement {
   description     String?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
-  borrower        Entity               @relation("BorrowerCreditAgreements", fields: [borrowerId], references: [id])
+  borrower        Borrower             @relation(fields: [borrowerId], references: [id])
   lender          Entity               @relation("LenderCreditAgreements", fields: [lenderId], references: [id])
   facilities      Facility[]
   transactions    TransactionHistory[]

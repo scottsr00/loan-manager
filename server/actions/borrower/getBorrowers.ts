@@ -6,23 +6,6 @@ import type { Borrower } from '@/types/borrower'
 export async function getBorrowers(): Promise<Borrower[]> {
   try {
     const borrowers = await prisma.borrower.findMany({
-      include: {
-        entity: {
-          include: {
-            addresses: {
-              where: {
-                isPrimary: true
-              }
-            },
-            contacts: {
-              where: {
-                isPrimary: true
-              }
-            },
-            beneficialOwners: true
-          }
-        }
-      },
       orderBy: {
         createdAt: 'desc'
       }

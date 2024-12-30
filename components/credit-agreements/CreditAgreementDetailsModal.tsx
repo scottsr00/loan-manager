@@ -273,13 +273,13 @@ export function CreditAgreementDetailsModal({
                     >
                       <SelectTrigger>
                         <SelectValue>
-                          {borrowers.find((b) => b.id === creditAgreement.borrowerId)?.entity.legalName}
+                          {borrowers.find((b) => b.id === creditAgreement.borrowerId)?.name}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {borrowers.map((borrower) => (
                           <SelectItem key={borrower.id} value={borrower.id}>
-                            {borrower.entity.legalName}
+                            {borrower.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -287,13 +287,13 @@ export function CreditAgreementDetailsModal({
                   </div>
                 ) : (
                   <>
-                    <p>{creditAgreement.borrower?.legalName || 'N/A'}</p>
+                    <p>{creditAgreement.borrower?.name || 'N/A'}</p>
                     <div className="flex gap-2 mt-1">
-                      {creditAgreement.borrower?.dba && (
-                        <Badge variant="outline">{creditAgreement.borrower.dba}</Badge>
+                      {creditAgreement.borrower?.industrySegment && (
+                        <Badge variant="outline">{creditAgreement.borrower.industrySegment}</Badge>
                       )}
-                      <Badge variant={creditAgreement.borrower?.status === 'ACTIVE' ? 'success' : 'secondary'}>
-                        {creditAgreement.borrower?.status || 'N/A'}
+                      <Badge variant={creditAgreement.borrower?.onboardingStatus === 'ACTIVE' ? 'success' : 'secondary'}>
+                        {creditAgreement.borrower?.onboardingStatus || 'N/A'}
                       </Badge>
                     </div>
                   </>

@@ -35,7 +35,7 @@ export async function updateCreditAgreement(data: UpdateCreditAgreementInput) {
     // Validate facility commitments against new amount
     if (data.amount) {
       const totalCommitments = existingAgreement.facilities.reduce(
-        (sum, facility) => sum + facility.commitmentAmount,
+        (sum: number, facility: { commitmentAmount: number }) => sum + facility.commitmentAmount,
         0
       )
       if (totalCommitments > data.amount) {
@@ -46,7 +46,7 @@ export async function updateCreditAgreement(data: UpdateCreditAgreementInput) {
     // Validate maturity date against facility maturity dates
     if (data.maturityDate) {
       const hasInvalidFacility = existingAgreement.facilities.some(
-        (facility) => facility.maturityDate > data.maturityDate
+        (facility: { maturityDate: Date }) => facility.maturityDate > (data.maturityDate as Date)
       )
       if (hasInvalidFacility) {
         throw new Error('Credit agreement maturity date cannot be earlier than facility maturity dates')
@@ -69,11 +69,7 @@ export async function updateCreditAgreement(data: UpdateCreditAgreementInput) {
         borrowerId: data.borrowerId,
       },
       include: {
-        borrower: {
-          include: {
-            borrower: true,
-          },
-        },
+        borrower: true,
         lender: {
           include: {
             lender: true,

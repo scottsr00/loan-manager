@@ -18,8 +18,7 @@ export async function getEntities(): Promise<EntityWithRelations[]> {
           }
         },
         beneficialOwners: true,
-        lender: true,
-        borrower: true
+        lender: true
       },
       orderBy: {
         createdAt: 'desc'

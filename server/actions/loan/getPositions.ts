@@ -84,7 +84,9 @@ interface PrismaQueryResult extends CreditAgreement {
     }>
     trades: Array<Trade & {
       counterparty: {
+        id: string
         name: string
+        status: string
       }
     }>
     loans: Array<{
@@ -117,7 +119,13 @@ export async function getPositions(): Promise<PositionResponse[]> {
             loans: true,
             trades: {
               include: {
-                counterparty: true
+                counterparty: {
+                  select: {
+                    id: true,
+                    name: true,
+                    status: true
+                  }
+                }
               }
             }
           }
@@ -147,7 +155,9 @@ export async function getPositions(): Promise<PositionResponse[]> {
         }>
         trades: Array<Trade & {
           counterparty: {
+            id: string
             name: string
+            status: string
           }
         }>
         loans: Array<{

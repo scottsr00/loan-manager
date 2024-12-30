@@ -84,7 +84,7 @@ export function CreditAgreementList({ creditAgreements, onUpdate }: CreditAgreem
       width: 200,
     },
     {
-      field: 'borrower.legalName',
+      field: 'borrower.name',
       headerName: 'Borrower',
       width: 200,
     },
