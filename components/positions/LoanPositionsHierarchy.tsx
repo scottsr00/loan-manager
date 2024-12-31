@@ -14,6 +14,8 @@ import { type ColDef, type ValueFormatterParams } from 'ag-grid-community'
 import '@/lib/ag-grid-init'
 import { getTransactions } from '@/server/actions/transaction/getTransactions'
 import { Button } from "@/components/ui/button"
+import { CreditAgreementDetailsModal } from '@/components/credit-agreements/CreditAgreementDetailsModal'
+import { FacilityDetailsModal } from '@/components/facilities/FacilityDetailsModal'
 
 interface FacilityPosition {
   lender: string;
@@ -251,7 +253,9 @@ export function LoanPositionsHierarchy() {
       positions?: boolean;
       servicing?: boolean;
     };
-  }>({});
+  }>({})
+  const [selectedAgreement, setSelectedAgreement] = useState<string | null>(null)
+  const [selectedFacility, setSelectedFacility] = useState<string | null>(null)
 
   console.log('Positions:', positions)
   console.log('Expanded state:', expanded)
@@ -454,18 +458,17 @@ export function LoanPositionsHierarchy() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8"></TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead>Agreement Number</TableHead>
+                <TableHead>Borrower</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>Maturity Date</TableHead>
+                <TableHead>Agent</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(positions as PositionResponse[]).map(position => (
+              {positions.map((position) => (
                 <Fragment key={position.id}>
-                  {/* Credit Agreement Row */}
                   <TableRow 
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => toggleAgreement(position.id)}
@@ -476,21 +479,43 @@ export function LoanPositionsHierarchy() {
                         <ChevronRight className="h-4 w-4" />
                       }
                     </TableCell>
-                    <TableCell className="font-medium">{position.agreementNumber}</TableCell>
-                    <TableCell>Credit Agreement</TableCell>
-                    <TableCell>{formatCurrency(position.amount)}</TableCell>
+                    <TableCell className="font-medium">
+                      {position.agreementNumber}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div>{position.borrower.name}</div>
+                        <Badge variant="outline">{position.borrower.type}</Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>{formatCurrency(position.amount)} {position.currency}</TableCell>
                     <TableCell>{getStatusBadge(position.status)}</TableCell>
-                    <TableCell>{new Date(position.startDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{new Date(position.maturityDate).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div>{position.agent.name}</div>
+                        <Badge variant="outline">{position.agent.type}</Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedAgreement(position.id)
+                        }}
+                      >
+                        Details
+                      </Button>
+                    </TableCell>
                   </TableRow>
 
-                  {/* Facility Rows */}
-                  {expanded[position.id]?.isExpanded && position.facilities.map(facility => (
+                  {expanded[position.id]?.isExpanded && position.facilities.map((facility) => (
                     <Fragment key={facility.id}>
                       <TableRow 
                         className="cursor-pointer hover:bg-muted/50 bg-muted/30"
                         onClick={(e) => {
-                          e.stopPropagation();  // Prevent event from bubbling to agreement row
+                          e.stopPropagation();
                           toggleFacility(position.id, facility.id);
                         }}
                       >
@@ -515,7 +540,6 @@ export function LoanPositionsHierarchy() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>{getStatusBadge(facility.status)}</TableCell>
                         <TableCell colSpan={2}>
                           <div className="space-y-1">
                             <div>{facility.interestType}</div>
@@ -523,6 +547,18 @@ export function LoanPositionsHierarchy() {
                               {facility.baseRate} + {facility.margin}%
                             </div>
                           </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedFacility(facility.id)
+                            }}
+                          >
+                            Details
+                          </Button>
                         </TableCell>
                       </TableRow>
 
@@ -619,6 +655,19 @@ export function LoanPositionsHierarchy() {
           </Table>
         </ScrollArea>
       </CardContent>
+
+      <CreditAgreementDetailsModal
+        creditAgreementId={selectedAgreement || ''}
+        open={!!selectedAgreement}
+        onOpenChange={(open) => !open && setSelectedAgreement(null)}
+        onUpdate={() => window.location.reload()}
+      />
+
+      <FacilityDetailsModal
+        facilityId={selectedFacility || ''}
+        open={!!selectedFacility}
+        onOpenChange={(open) => !open && setSelectedFacility(null)}
+      />
     </Card>
   )
 } 

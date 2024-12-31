@@ -17,7 +17,7 @@ interface CreditAgreementListProps {
 }
 
 export function CreditAgreementList({ creditAgreements, onUpdate }: CreditAgreementListProps) {
-  const [selectedCreditAgreement, setSelectedCreditAgreement] = useState<CreditAgreementWithRelations | null>(null)
+  const [selectedCreditAgreementId, setSelectedCreditAgreementId] = useState<string | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [expandedAgreement, setExpandedAgreement] = useState<CreditAgreementWithRelations | null>(null)
 
@@ -137,7 +137,7 @@ export function CreditAgreementList({ creditAgreements, onUpdate }: CreditAgreem
           size="sm"
           onClick={(e) => {
             e.stopPropagation()
-            setSelectedCreditAgreement(params.data)
+            setSelectedCreditAgreementId(params.data.id)
             setDetailsOpen(true)
           }}
         >
@@ -204,7 +204,7 @@ export function CreditAgreementList({ creditAgreements, onUpdate }: CreditAgreem
       )}
 
       <CreditAgreementDetailsModal
-        creditAgreement={selectedCreditAgreement}
+        creditAgreementId={selectedCreditAgreementId || ''}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
         onUpdate={onUpdate}
