@@ -1,6 +1,6 @@
 'use server'
 
-import { db } from '@/server/db'
+import { prisma } from '@/server/db/client'
 import { type CreditAgreementInput, type CreditAgreementWithRelations, type FacilityInput } from '@/server/types/credit-agreement'
 import { Prisma } from '@prisma/client'
 
@@ -27,7 +27,7 @@ export async function createCreditAgreement(
     }
 
     // Validate borrower exists
-    const borrower = await db.borrower.findUnique({
+    const borrower = await prisma.borrower.findUnique({
       where: { id: data.borrowerId }
     })
     if (!borrower) {
@@ -35,14 +35,14 @@ export async function createCreditAgreement(
     }
 
     // Validate lender exists
-    const lender = await db.lender.findUnique({
+    const lender = await prisma.lender.findUnique({
       where: { id: data.lenderId }
     })
     if (!lender) {
       throw new Error('Lender not found')
     }
 
-    const creditAgreement = await db.creditAgreement.create({
+    const creditAgreement = await prisma.creditAgreement.create({
       data: {
         agreementNumber: data.agreementNumber,
         borrower: {

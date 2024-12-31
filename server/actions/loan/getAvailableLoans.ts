@@ -6,17 +6,12 @@ export async function getAvailableLoans() {
   try {
     const loans = await prisma.loan.findMany({
       where: {
-        priorPeriodPaymentStatus: 'Current'
+        status: 'ACTIVE',
       },
       include: {
-        trades: {
-          where: {
-            status: 'Open'
-          }
-        },
-        lenderPositions: {
+        facility: {
           include: {
-            lender: true
+            creditAgreement: true
           }
         }
       },
@@ -27,7 +22,7 @@ export async function getAvailableLoans() {
 
     return loans.map(loan => ({
       id: loan.id,
-      name: `${loan.dealName} - ${loan.currentBalance} (${loan.agentBank})`
+      name: `${loan.facility.creditAgreement.agreementName} - ${loan.amount}`
     }))
   } catch (error) {
     console.error('Error in getAvailableLoans:', error)

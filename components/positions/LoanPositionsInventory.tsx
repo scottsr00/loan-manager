@@ -13,6 +13,9 @@ import { NewLoanModal } from '@/components/loans/NewLoanModal'
 import { Button } from '@/components/ui/button'
 import { Info, Loader2 } from 'lucide-react'
 import { type Loan, type Trade, type FacilityPosition, type Prisma } from '@prisma/client'
+import { getTransactions } from '@/server/actions/transaction/getTransactions'
+import { format } from 'date-fns'
+import { formatCurrency } from '@/lib/utils'
 
 interface ExpandedState {
   [key: string]: boolean;
@@ -49,11 +52,107 @@ type LoanWithTrades = Prisma.LoanGetPayload<{
   }
 }>
 
+interface ServicingTableProps {
+  facilityId: string
+}
+
+function ServicingTable({ facilityId }: ServicingTableProps) {
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+        return <Badge className="bg-green-500">Active</Badge>
+      case 'COMPLETED':
+        return <Badge className="bg-green-500">Completed</Badge>
+      case 'PENDING':
+        return <Badge className="bg-yellow-500">Pending</Badge>
+      default:
+        return <Badge>{status}</Badge>
+    }
+  }
+
+  useEffect(() => {
+    const loadTransactions = async () => {
+      try {
+        const data = await getTransactions({ facilityId })
+        setTransactions(data)
+      } catch (error) {
+        console.error('Error loading transactions:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadTransactions()
+  }, [facilityId])
+
+  if (isLoading) {
+    return <div className="p-4">Loading servicing history...</div>
+  }
+
+  return (
+    <div className="mt-4">
+      <h3 className="text-lg font-semibold mb-2">Servicing History</h3>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Date</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>Balance</TableHead>
+            <TableHead>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {transactions.map((transaction) => (
+            <TableRow key={transaction.id}>
+              <TableCell>{format(new Date(transaction.effectiveDate), 'MMM d, yyyy')}</TableCell>
+              <TableCell>{transaction.activityType}</TableCell>
+              <TableCell>{formatCurrency(transaction.amount)}</TableCell>
+              <TableCell>{transaction.loan ? formatCurrency(transaction.loan.outstandingAmount) : '-'}</TableCell>
+              <TableCell>{getStatusBadge(transaction.status)}</TableCell>
+            </TableRow>
+          ))}
+          {transactions.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center text-muted-foreground">
+                No servicing history found
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
 export function LoanPositionsInventoryComponent() {
   const [loans, setLoans] = useState<LoanWithTrades[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({})
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+        return <Badge className="bg-green-500">Active</Badge>
+      case 'CLOSED':
+        return <Badge className="bg-red-500">Closed</Badge>
+      case 'PENDING':
+        return <Badge className="bg-yellow-500">Pending</Badge>
+      default:
+        return <Badge>{status}</Badge>
+    }
+  }
 
   const loadData = async () => {
     try {
@@ -109,23 +208,6 @@ export function LoanPositionsInventoryComponent() {
     })
   }, [positionsWithDetailedTrades])
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return <Badge className="bg-green-500">Active</Badge>
-      case 'CLOSED':
-        return <Badge className="bg-red-500">Closed</Badge>
-      case 'PENDING':
-        return <Badge className="bg-yellow-500">Pending</Badge>
-      default:
-        return <Badge>{status}</Badge>
-    }
-  }
-
   const toggleRowExpansion = (loanId: string) => {
     setExpandedRows((prevExpandedRows) => {
       const newExpandedRows = { ...prevExpandedRows }
@@ -152,57 +234,66 @@ export function LoanPositionsInventoryComponent() {
   const getExpandedView = (position: LoanWithTrades) => {
     const isAgent = position.facility.creditAgreement.lender.isAgent
     const totalFacilityAmount = position.facility.positions.reduce((sum, pos) => sum + pos.amount, 0)
+    const ourPosition = position.facility.positions.find(
+      pos => pos.lender.entity.isAgent
+    )
 
-    if (isAgent) {
-      return (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="p-2">Lender</TableHead>
-              <TableHead className="p-2">Share %</TableHead>
-              <TableHead className="p-2">Amount</TableHead>
-              <TableHead className="p-2">Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {position.facility.positions.map((pos) => (
-              <TableRow key={pos.id}>
-                <TableCell className="p-2">{pos.lender.entity.legalName}</TableCell>
-                <TableCell className="p-2">{pos.share.toFixed(2)}%</TableCell>
-                <TableCell className="p-2">{formatCurrency(pos.amount)}</TableCell>
-                <TableCell className="p-2">{getStatusBadge(pos.status)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )
-    } else {
-      const ourPosition = position.facility.positions.find(
-        pos => pos.lender.entity.isAgent
-      )
-      
-      return (
-        <div className="p-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between">
-              <span className="text-sm font-medium">Total Facility Amount:</span>
-              <span>{formatCurrency(totalFacilityAmount)}</span>
+    return (
+      <div>
+        {isAgent ? (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="p-2">Lender</TableHead>
+                  <TableHead className="p-2">Share %</TableHead>
+                  <TableHead className="p-2">Amount</TableHead>
+                  <TableHead className="p-2">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {position.facility.positions.map((pos) => (
+                  <Fragment key={pos.id}>
+                    <TableRow>
+                      <TableCell className="p-2">{pos.lender.entity.legalName}</TableCell>
+                      <TableCell className="p-2">{pos.share.toFixed(2)}%</TableCell>
+                      <TableCell className="p-2">{formatCurrency(pos.amount)}</TableCell>
+                      <TableCell className="p-2">{getStatusBadge(pos.status)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell colSpan={4} className="p-0 bg-muted/5">
+                        <ServicingTable facilityId={position.facility.id} />
+                      </TableCell>
+                    </TableRow>
+                  </Fragment>
+                ))}
+              </TableBody>
+            </Table>
+          </>
+        ) : (
+          <div className="p-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between">
+                <span className="text-sm font-medium">Total Facility Amount:</span>
+                <span>{formatCurrency(totalFacilityAmount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium">NxtBank Share:</span>
+                <span>{ourPosition ? `${ourPosition.share.toFixed(2)}%` : 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium">Our Position:</span>
+                <span>{ourPosition ? formatCurrency(ourPosition.amount) : 'N/A'}</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                * As a participant, we only have visibility into our share of the facility
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-sm font-medium">NxtBank Share:</span>
-              <span>{ourPosition ? `${ourPosition.share.toFixed(2)}%` : 'N/A'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm font-medium">Our Position:</span>
-              <span>{ourPosition ? formatCurrency(ourPosition.amount) : 'N/A'}</span>
-            </div>
-            <div className="text-xs text-gray-500 mt-2">
-              * As a participant, we only have visibility into our share of the facility
-            </div>
+            <ServicingTable facilityId={position.facility.id} />
           </div>
-        </div>
-      )
-    }
+        )}
+      </div>
+    )
   }
 
   if (isLoading) {
@@ -270,7 +361,7 @@ export function LoanPositionsInventoryComponent() {
                         }
                       </TableCell>
                       <TableCell>{getAgentBadge(position)}</TableCell>
-                      <TableCell>{position.facility.creditAgreement.borrower.legalName}</TableCell>
+                      <TableCell>{position.facility.creditAgreement.borrower.name}</TableCell>
                       <TableCell>{position.facilityId}</TableCell>
                       <TableCell>{formatCurrency(totalFacilityAmount)}</TableCell>
                       <TableCell>{ourPosition ? formatCurrency(ourPosition.amount) : 'N/A'}</TableCell>

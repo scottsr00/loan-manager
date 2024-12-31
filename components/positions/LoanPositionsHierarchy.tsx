@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useState, useMemo } from 'react'
+import { Fragment, useState, useMemo, useEffect } from 'react'
 import { usePositions } from '@/hooks/usePositions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -12,6 +12,8 @@ import { NewLoanModal } from '@/components/loans/NewLoanModal'
 import { DataGrid } from '@/components/ui/data-grid'
 import { type ColDef, type ValueFormatterParams } from 'ag-grid-community'
 import '@/lib/ag-grid-init'
+import { getTransactions } from '@/server/actions/transaction/getTransactions'
+import { Button } from "@/components/ui/button"
 
 interface FacilityPosition {
   lender: string;
@@ -97,9 +99,159 @@ interface ExpandedState {
   };
 }
 
+interface ServicingTableProps {
+  facilityId: string
+}
+
+function TableExpander({ isExpanded, onToggle }: { isExpanded: boolean; onToggle: () => void }) {
+  return (
+    <div className="flex justify-end mb-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onToggle}
+        className="text-xs"
+      >
+        {isExpanded ? (
+          <>
+            <ChevronDown className="h-4 w-4 mr-1" />
+            Collapse
+          </>
+        ) : (
+          <>
+            <ChevronRight className="h-4 w-4 mr-1" />
+            Expand
+          </>
+        )}
+      </Button>
+    </div>
+  )
+}
+
+function ServicingTable({ facilityId }: ServicingTableProps) {
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  const servicingColumnDefs = useMemo<ColDef[]>(() => [
+    {
+      field: 'effectiveDate',
+      headerName: 'Date',
+      valueFormatter: (params: ValueFormatterParams) => 
+        params.value ? new Date(params.value).toLocaleDateString() : '',
+      flex: 1
+    },
+    {
+      field: 'activityType',
+      headerName: 'Type',
+      valueFormatter: (params: ValueFormatterParams) => {
+        const types: Record<string, string> = {
+          'PRINCIPAL_PAYMENT': 'Principal Payment',
+          'INTEREST_PAYMENT': 'Interest Payment',
+          'UNSCHEDULED_PAYMENT': 'Unscheduled Payment',
+          'RATE_RESET': 'Rate Reset',
+          'PAYDOWN': 'Paydown',
+          'DRAWDOWN': 'Drawdown'
+        };
+        return types[params.value] || params.value;
+      },
+      flex: 1
+    },
+    {
+      field: 'description',
+      headerName: 'Description',
+      flex: 2
+    },
+    {
+      field: 'amount',
+      headerName: 'Amount',
+      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
+      flex: 1
+    },
+    {
+      field: 'loan.outstandingAmount',
+      headerName: 'Balance',
+      valueFormatter: (params: ValueFormatterParams) => 
+        params.value ? formatCurrency(params.value) : '-',
+      flex: 1
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      cellRenderer: (params: ValueFormatterParams) => {
+        const status = params.value?.toUpperCase();
+        let variant: "default" | "secondary" | "destructive" | "outline" = "outline";
+        
+        switch (status) {
+          case 'COMPLETED':
+            variant = "default";
+            break;
+          case 'PENDING':
+            variant = "secondary";
+            break;
+          case 'FAILED':
+            variant = "destructive";
+            break;
+        }
+        
+        return <Badge variant={variant}>{params.value || 'Unknown'}</Badge>;
+      },
+      flex: 1
+    },
+    {
+      field: 'processedBy',
+      headerName: 'Processed By',
+      flex: 1
+    }
+  ], [])
+
+  useEffect(() => {
+    const loadTransactions = async () => {
+      try {
+        console.log('Loading transactions for facility:', facilityId)
+        const data = await getTransactions({ facilityId })
+        console.log('Loaded transactions:', data)
+        setTransactions(data)
+      } catch (error) {
+        console.error('Error loading transactions:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadTransactions()
+  }, [facilityId])
+
+  if (isLoading) {
+    return <div className="p-4">Loading servicing history...</div>
+  }
+
+  return (
+    <div>
+      <TableExpander isExpanded={isExpanded} onToggle={() => setIsExpanded(!isExpanded)} />
+      <DataGrid
+        rowData={transactions}
+        columnDefs={servicingColumnDefs}
+        className={`w-full transition-all duration-200 ${isExpanded ? 'h-[300px]' : 'h-[150px]'}`}
+        defaultColDef={{
+          sortable: true,
+          filter: true,
+          resizable: true
+        }}
+      />
+    </div>
+  )
+}
+
 export function LoanPositionsHierarchy() {
   const { positions, isLoading, error } = usePositions()
   const [expanded, setExpanded] = useState<ExpandedState>({})
+  const [expandedTables, setExpandedTables] = useState<{
+    [facilityId: string]: {
+      loans?: boolean;
+      positions?: boolean;
+      servicing?: boolean;
+    };
+  }>({});
 
   console.log('Positions:', positions)
   console.log('Expanded state:', expanded)
@@ -349,20 +501,7 @@ export function LoanPositionsHierarchy() {
                           }
                         </TableCell>
                         <TableCell className="font-medium">
-                          <div className="flex items-center space-x-2">
-                            <span>{facility.facilityName}</span>
-                            <NewLoanModal
-                              facilityId={facility.id}
-                              facilityName={facility.facilityName}
-                              availableAmount={facility.commitmentAmount - facility.loans.reduce((sum, loan) => sum + loan.amount, 0)}
-                              currency={facility.currency}
-                              margin={facility.margin}
-                              onSuccess={() => {
-                                // Refresh the positions data
-                                window.location.reload()
-                              }}
-                            />
-                          </div>
+                          {facility.facilityName}
                         </TableCell>
                         <TableCell>{facility.facilityType}</TableCell>
                         <TableCell>
@@ -390,11 +529,11 @@ export function LoanPositionsHierarchy() {
                       {/* Facility Details when expanded */}
                       {expanded[position.id]?.facilities[facility.id]?.isExpanded && (
                         <TableRow className="bg-muted/10">
-                          <TableCell colSpan={7} className="p-4">
-                            <div className="space-y-4">
+                          <TableCell colSpan={7} className="p-2">
+                            <div className="space-y-2">
                               {/* Loans Table */}
                               <Card>
-                                <CardHeader className="py-3">
+                                <CardHeader className="py-2 px-4 pb-0">
                                   <div className="flex items-center justify-between">
                                     <CardTitle className="text-sm font-medium">Loans</CardTitle>
                                     <NewLoanModal
@@ -409,29 +548,63 @@ export function LoanPositionsHierarchy() {
                                     />
                                   </div>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="pt-0 p-2">
+                                  <TableExpander 
+                                    isExpanded={expandedTables[facility.id]?.loans ?? false}
+                                    onToggle={() => setExpandedTables(prev => ({
+                                      ...prev,
+                                      [facility.id]: {
+                                        ...prev[facility.id],
+                                        loans: !(prev[facility.id]?.loans ?? false)
+                                      }
+                                    }))}
+                                  />
                                   <DataGrid
                                     rowData={facility.loans}
                                     columnDefs={loanColumnDefs}
-                                    className="h-[300px] w-full"
+                                    className={`w-full transition-all duration-200 ${
+                                      expandedTables[facility.id]?.loans ? 'h-[300px]' : 'h-[150px]'
+                                    }`}
                                   />
                                 </CardContent>
                               </Card>
 
                               {/* Positions Table */}
                               <Card>
-                                <CardHeader className="py-3">
+                                <CardHeader className="py-2 px-4 pb-0">
                                   <CardTitle className="text-sm font-medium">Lender Positions</CardTitle>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="pt-0 p-2">
+                                  <TableExpander 
+                                    isExpanded={expandedTables[facility.id]?.positions ?? false}
+                                    onToggle={() => setExpandedTables(prev => ({
+                                      ...prev,
+                                      [facility.id]: {
+                                        ...prev[facility.id],
+                                        positions: !(prev[facility.id]?.positions ?? false)
+                                      }
+                                    }))}
+                                  />
                                   <DataGrid
                                     rowData={facility.positions.map(pos => ({
                                       ...pos,
                                       share: (pos.commitment / facility.commitmentAmount) * 100
                                     }))}
                                     columnDefs={positionColumnDefs}
-                                    className="h-[300px] w-full"
+                                    className={`w-full transition-all duration-200 ${
+                                      expandedTables[facility.id]?.positions ? 'h-[300px]' : 'h-[150px]'
+                                    }`}
                                   />
+                                </CardContent>
+                              </Card>
+
+                              {/* Servicing History */}
+                              <Card>
+                                <CardHeader className="py-2 px-4 pb-0">
+                                  <CardTitle className="text-sm font-medium">Servicing History</CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-0 p-2">
+                                  <ServicingTable facilityId={facility.id} />
                                 </CardContent>
                               </Card>
                             </div>

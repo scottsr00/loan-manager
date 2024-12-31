@@ -1,11 +1,12 @@
 'use client'
 
+import '@/lib/ag-grid-init'
 import { useState, useMemo } from 'react'
 import { useTrades } from '@/hooks/useTrades'
 import { Button } from "@/components/ui/button"
 import { TradeDetailsModal } from './TradeDetailsModal'
 import { BookTradeModal } from './BookTradeModal'
-import { DataGrid } from './ui/data-grid'
+import { DataGrid } from '@/components/ui/data-grid'
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
