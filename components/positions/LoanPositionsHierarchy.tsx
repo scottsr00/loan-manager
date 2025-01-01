@@ -16,6 +16,7 @@ import { getTransactions } from '@/server/actions/transaction/getTransactions'
 import { Button } from "@/components/ui/button"
 import { CreditAgreementDetailsModal } from '@/components/credit-agreements/CreditAgreementDetailsModal'
 import { FacilityDetailsModal } from '@/components/facilities/FacilityDetailsModal'
+import { Decimal } from 'decimal.js'
 
 interface FacilityPosition {
   lender: string;
@@ -47,8 +48,8 @@ interface Loan {
   status: string;
   interestPeriod: string;
   drawDate: Date;
-  baseRate: number;
-  effectiveRate: number;
+  baseRate: string;
+  effectiveRate: string;
   positions: LoanPosition[];
 }
 
@@ -61,7 +62,7 @@ interface Facility {
   status: string;
   interestType: string;
   baseRate: string;
-  margin: number;
+  margin: string;
   positions: FacilityPosition[];
   trades: Trade[];
   loans: Loan[];
@@ -84,6 +85,7 @@ interface PositionResponse {
   status: string;
   startDate: Date;
   maturityDate: Date;
+  interestRate: string;
   facilities: Facility[];
 }
 
@@ -461,6 +463,7 @@ export function LoanPositionsHierarchy() {
                 <TableHead>Agreement Number</TableHead>
                 <TableHead>Borrower</TableHead>
                 <TableHead>Amount</TableHead>
+                <TableHead>Contract Rate</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Agent</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -489,6 +492,7 @@ export function LoanPositionsHierarchy() {
                       </div>
                     </TableCell>
                     <TableCell>{formatCurrency(position.amount)} {position.currency}</TableCell>
+                    <TableCell>{Number(position.interestRate).toFixed(5)}%</TableCell>
                     <TableCell>{getStatusBadge(position.status)}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
@@ -540,14 +544,16 @@ export function LoanPositionsHierarchy() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell colSpan={2}>
+                        <TableCell>
                           <div className="space-y-1">
                             <div>{facility.interestType}</div>
                             <div className="text-sm text-muted-foreground">
-                              {facility.baseRate} + {facility.margin}%
+                              {facility.baseRate} + {Number(facility.margin).toFixed(5)}%
                             </div>
                           </div>
                         </TableCell>
+                        <TableCell>{getStatusBadge(facility.status)}</TableCell>
+                        <TableCell></TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="ghost"
@@ -565,7 +571,7 @@ export function LoanPositionsHierarchy() {
                       {/* Facility Details when expanded */}
                       {expanded[position.id]?.facilities[facility.id]?.isExpanded && (
                         <TableRow className="bg-muted/10">
-                          <TableCell colSpan={7} className="p-2">
+                          <TableCell colSpan={8} className="p-2">
                             <div className="space-y-2">
                               {/* Loans Table */}
                               <Card>

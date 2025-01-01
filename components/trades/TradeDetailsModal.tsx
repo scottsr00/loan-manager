@@ -1,146 +1,165 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useTradeComments } from '@/hooks/useTrades'
-import { formatCurrency } from '@/lib/utils'
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Loader2 } from 'lucide-react'
-import type { TradeHistoryItem } from '@/server/types'
+import { formatCurrency } from '@/lib/utils'
+import { format } from 'date-fns'
+import { getTrade } from '@/server/actions/trade/getTrades'
+import { type TradeWithRelations, TradeStatus, type TradeTransaction } from '@/server/types/trade'
 
 interface TradeDetailsModalProps {
-  trade: TradeHistoryItem | null
+  tradeId: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function TradeDetailsModal({
-  trade,
-  open,
-  onOpenChange,
-}: TradeDetailsModalProps) {
-  const [newComment, setNewComment] = useState('')
-  const { comments, isLoading, isError, addComment } = useTradeComments(trade?.id || '')
+function getStatusBadge(status: string) {
+  switch (status) {
+    case 'COMPLETED':
+      return <Badge variant="success">Completed</Badge>
+    case 'PENDING':
+      return <Badge variant="secondary">Pending</Badge>
+    case 'FAILED':
+      return <Badge variant="destructive">Failed</Badge>
+    default:
+      return <Badge variant="outline">{status}</Badge>
+  }
+}
+
+function TransactionHistory({ transactions }: { transactions: TradeTransaction[] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Transaction History</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Activity</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Processed By</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {transactions.map((transaction) => (
+              <TableRow key={transaction.id}>
+                <TableCell>{format(new Date(transaction.effectiveDate), 'PP')}</TableCell>
+                <TableCell>{transaction.activityType}</TableCell>
+                <TableCell>{formatCurrency(transaction.amount)}</TableCell>
+                <TableCell>{getStatusBadge(transaction.status)}</TableCell>
+                <TableCell>{transaction.description}</TableCell>
+                <TableCell>{transaction.processedBy}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function TradeDetailsModal({ tradeId, open, onOpenChange }: TradeDetailsModalProps) {
+  const [trade, setTrade] = useState<TradeWithRelations | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (trade) {
-      console.log('Trade in modal:', trade)
+    if (open && tradeId) {
+      setIsLoading(true)
+      getTrade(tradeId)
+        .then(data => {
+          setTrade(data)
+          setIsLoading(false)
+        })
+        .catch(error => {
+          console.error('Error loading trade:', error)
+          setIsLoading(false)
+        })
+    } else {
+      setTrade(null)
+      setIsLoading(true)
     }
-  }, [trade])
-
-  const handleAddComment = async () => {
-    if (!newComment.trim() || !trade?.id) return
-    await addComment(newComment)
-    setNewComment('')
-  }
+  }, [tradeId, open])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Trade Details</DialogTitle>
-          <DialogDescription>
-            View and manage trade information
-          </DialogDescription>
         </DialogHeader>
 
-        {trade && (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : !trade ? (
+          <div className="py-4 text-center text-muted-foreground">
+            Trade not found
+          </div>
+        ) : (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-sm font-medium mb-1">Facility</h4>
-                <p className="text-sm text-muted-foreground">
-                  {trade.facility?.creditAgreement?.agreementName || 'N/A'}
-                </p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium mb-1">Amount</h4>
-                <p className="text-sm text-muted-foreground">
-                  {typeof trade.amount === 'number' ? formatCurrency(trade.amount) : 'N/A'}
-                </p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium mb-1">Price</h4>
-                <p className="text-sm text-muted-foreground">
-                  {typeof trade.price === 'number' ? `${trade.price.toFixed(2)}%` : 'N/A'}
-                </p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium mb-1">Counterparty</h4>
-                <p className="text-sm text-muted-foreground">
-                  {trade.counterparty?.legalName || 'N/A'}
-                </p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium mb-1">Status</h4>
-                <Badge variant={trade.status === 'SETTLED' ? 'success' : 'destructive'}>
-                  {trade.status}
-                </Badge>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium mb-1">Trade Date</h4>
-                <p className="text-sm text-muted-foreground">
-                  {trade.tradeDate ? new Date(trade.tradeDate).toLocaleDateString() : 'N/A'}
-                </p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium mb-1">Settlement Date</h4>
-                <p className="text-sm text-muted-foreground">
-                  {trade.settlementDate ? new Date(trade.settlementDate).toLocaleDateString() : 'N/A'}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="text-sm font-medium">Comments</h4>
-                <div className="flex items-center gap-2">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    className="min-h-[80px]"
-                  />
-                  <Button onClick={handleAddComment}>Add</Button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                {isLoading ? (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : isError ? (
-                  <p className="text-sm text-destructive text-center">
-                    Error loading comments. Please try again later.
-                  </p>
-                ) : !comments?.length ? (
-                  <p className="text-sm text-muted-foreground text-center">
-                    No comments yet
-                  </p>
-                ) : (
-                  comments.map((comment) => (
-                    <div key={comment.id} className="border rounded-lg p-3">
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-sm font-medium">System</span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(comment.createdAt).toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="text-sm">{comment.comment}</p>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Trade Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Facility Details</h4>
+                    <div className="space-y-1">
+                      <p>{trade.facility.facilityName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Agreement: {trade.facility.creditAgreement.agreementNumber}
+                      </p>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-2">Trade Status</h4>
+                    <div className="space-y-1">
+                      <div>{getStatusBadge(trade.status)}</div>
+                      <p className="text-sm text-muted-foreground">
+                        Created: {format(new Date(trade.createdAt), 'PPp')}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-2">Seller</h4>
+                    <p>{trade.seller.entity.legalName}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-2">Buyer</h4>
+                    <p>{trade.buyer.entity.legalName}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-2">Trade Details</h4>
+                    <div className="space-y-1">
+                      <p>Par Amount: {formatCurrency(trade.parAmount)}</p>
+                      <p>Price: {trade.price.toFixed(2)}%</p>
+                      <p>Settlement Amount: {formatCurrency(trade.settlementAmount)}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-2">Dates</h4>
+                    <div className="space-y-1">
+                      <p>Trade Date: {format(new Date(trade.tradeDate), 'PP')}</p>
+                      <p>Settlement Date: {format(new Date(trade.settlementDate), 'PP')}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <ScrollArea className="h-[400px]">
+              <TransactionHistory transactions={trade.transactions} />
+            </ScrollArea>
           </div>
         )}
       </DialogContent>

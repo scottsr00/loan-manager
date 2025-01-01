@@ -109,6 +109,8 @@ model Lender {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   facilityPositions FacilityPosition[]
+  salesTrades       Trade[]            @relation("SellerTrades")
+  purchaseTrades    Trade[]            @relation("BuyerTrades")
   entity            Entity             @relation(fields: [entityId], references: [id])
 
   @@index([entityId])
@@ -124,7 +126,7 @@ model CreditAgreement {
   currency        String               @default("USD")
   startDate       DateTime
   maturityDate    DateTime
-  interestRate    Float
+  interestRate    Decimal             @db.Decimal(7,5)
   description     String?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
@@ -149,7 +151,8 @@ model Facility {
   maturityDate         DateTime
   interestType         String
   baseRate             String
-  margin               Float
+  margin              Decimal               @db.Decimal(7,5)
+  status              String                @default("ACTIVE")
   description          String?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
@@ -202,8 +205,8 @@ model Loan {
   status            String               @default("ACTIVE")
   interestPeriod    String               @default("1M")
   drawDate          DateTime             @default(now())
-  baseRate          Float                @default(0.0)
-  effectiveRate     Float                @default(0.0)
+  baseRate          Decimal              @db.Decimal(7,5)
+  effectiveRate     Decimal              @db.Decimal(7,5)
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   facility          Facility             @relation(fields: [facilityId], references: [id])
@@ -215,20 +218,24 @@ model Loan {
 model Trade {
   id             String               @id @default(cuid())
   facilityId     String
-  counterpartyId String
+  sellerLenderId String
+  buyerLenderId  String
   tradeDate      DateTime
   settlementDate DateTime
-  amount         Float
-  price          Float
+  parAmount      Float                // Original face value being traded
+  price          Float                // Price as percentage of par (e.g., 98.5)
+  settlementAmount Float              // Actual payment amount (parAmount * price/100)
   status         String               @default("PENDING")
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
-  counterparty   Counterparty         @relation(fields: [counterpartyId], references: [id])
   facility       Facility             @relation(fields: [facilityId], references: [id])
+  seller         Lender               @relation("SellerTrades", fields: [sellerLenderId], references: [id])
+  buyer          Lender               @relation("BuyerTrades", fields: [buyerLenderId], references: [id])
   transactions   TransactionHistory[]
 
   @@index([facilityId])
-  @@index([counterpartyId])
+  @@index([sellerLenderId])
+  @@index([buyerLenderId])
 }
 
 model TransactionHistory {

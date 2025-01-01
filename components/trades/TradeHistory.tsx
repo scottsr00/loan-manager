@@ -5,19 +5,19 @@ import { useState, useMemo } from 'react'
 import { useTrades } from '@/hooks/useTrades'
 import { Button } from "@/components/ui/button"
 import { TradeDetailsModal } from './TradeDetailsModal'
-import { BookTradeModal } from './BookTradeModal'
+import { NewTradeModal } from './NewTradeModal'
 import { DataGrid } from '@/components/ui/data-grid'
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
-import type { TradeHistoryItem } from '@/server/types'
+import { type TradeWithRelations, TradeStatus } from '@/server/types/trade'
 import type { ColDef, RowClickedEvent } from 'ag-grid-community'
 
 export function TradeHistory() {
-  const { trades, isLoading, isError, book } = useTrades()
-  const [selectedTrade, setSelectedTrade] = useState<TradeHistoryItem | null>(null)
+  const { trades, isLoading, isError, mutate } = useTrades()
+  const [selectedTrade, setSelectedTrade] = useState<string | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-  const [isBookTradeOpen, setIsBookTradeOpen] = useState(false)
+  const [isNewTradeOpen, setIsNewTradeOpen] = useState(false)
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
@@ -68,11 +68,14 @@ export function TradeHistory() {
       field: 'status',
       headerName: 'Status',
       flex: 1,
-      cellRenderer: (params: { value: 'PENDING' | 'SETTLED' }) => (
-        <Badge variant={params.value === 'SETTLED' ? 'success' : 'destructive'}>
-          {params.value}
-        </Badge>
-      ),
+      cellRenderer: (params: { value: keyof typeof TradeStatus }) => {
+        const status = String(params.value)
+        return (
+          <Badge variant={status === 'CLOSED' ? 'success' : 'secondary'}>
+            {status}
+          </Badge>
+        )
+      },
     },
   ], [])
 
@@ -96,7 +99,15 @@ export function TradeHistory() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold tracking-tight">Trade History</h2>
-        <Button onClick={() => setIsBookTradeOpen(true)}>Book Trade</Button>
+        <NewTradeModal
+          open={isNewTradeOpen}
+          onOpenChange={setIsNewTradeOpen}
+          onSuccess={() => {
+            setIsNewTradeOpen(false)
+            mutate()
+          }}
+          trigger={<Button>New Trade</Button>}
+        />
       </div>
 
       <DataGrid
@@ -105,24 +116,18 @@ export function TradeHistory() {
         onGridReady={params => {
           params.api.sizeColumnsToFit()
         }}
-        onRowClick={(event: RowClickedEvent<TradeHistoryItem>) => {
+        onRowClick={(event: RowClickedEvent<TradeWithRelations>) => {
           if (event.data) {
-            setSelectedTrade(event.data)
+            setSelectedTrade(event.data.id)
             setIsDetailsOpen(true)
           }
         }}
       />
 
       <TradeDetailsModal
-        trade={selectedTrade}
+        tradeId={selectedTrade || ''}
         open={isDetailsOpen}
         onOpenChange={setIsDetailsOpen}
-      />
-
-      <BookTradeModal
-        open={isBookTradeOpen}
-        onOpenChange={setIsBookTradeOpen}
-        onTradeBooked={book}
       />
     </div>
   )

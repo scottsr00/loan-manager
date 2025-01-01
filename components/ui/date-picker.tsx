@@ -16,50 +16,34 @@ import {
 export interface DatePickerProps {
   value?: Date
   onChange?: (date: Date | undefined) => void
+  disabled?: boolean | ((date: Date) => boolean)
   className?: string
 }
 
-export function DatePicker({ value, onChange, className }: DatePickerProps) {
-  const [isOpen, setIsOpen] = React.useState(false)
-
-  const handleSelect = React.useCallback((date: Date | undefined) => {
-    onChange?.(date)
-    setIsOpen(false)
-  }, [onChange])
-
+export function DatePicker({ value, onChange, disabled, className }: DatePickerProps) {
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover>
       <PopoverTrigger asChild>
         <Button
-          type="button"
-          variant={"outline"}
+          variant="outline"
           className={cn(
-            "w-full pl-3 text-left font-normal",
+            "w-full justify-start text-left font-normal",
             !value && "text-muted-foreground",
             className
           )}
-          onClick={(e) => {
-            e.stopPropagation()
-            setIsOpen(true)
-          }}
+          disabled={typeof disabled === "boolean" ? disabled : false}
         >
+          <CalendarIcon className="mr-2 h-4 w-4" />
           {value ? format(value, "PPP") : <span>Pick a date</span>}
-          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent 
-        className="w-auto p-0" 
-        align="start" 
-        side="bottom" 
-        sideOffset={4}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
           selected={value}
-          onSelect={handleSelect}
+          onSelect={onChange}
+          disabled={disabled}
           initialFocus
-          disabled={false}
         />
       </PopoverContent>
     </Popover>

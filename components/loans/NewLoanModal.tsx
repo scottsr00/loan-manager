@@ -31,9 +31,10 @@ export function NewLoanModal({ facilityId, facilityName, availableAmount, curren
   const handleBaseRateChange = (value: string) => {
     setBaseRate(value)
     const baseRateNum = parseFloat(value)
+    const marginNum = Number(margin)
     if (!isNaN(baseRateNum)) {
       // Calculate with 5 decimal places
-      setEffectiveRate(Number((baseRateNum + margin).toFixed(5)))
+      setEffectiveRate(Number((baseRateNum + marginNum).toFixed(5)))
     } else {
       setEffectiveRate(null)
     }
@@ -46,6 +47,7 @@ export function NewLoanModal({ facilityId, facilityName, availableAmount, curren
     try {
       const amountValue = parseFloat(amount)
       const baseRateValue = Number(parseFloat(baseRate).toFixed(5))
+      const marginNum = Number(margin)
 
       if (isNaN(amountValue) || amountValue <= 0) {
         throw new Error('Please enter a valid amount')
@@ -67,7 +69,7 @@ export function NewLoanModal({ facilityId, facilityName, availableAmount, curren
         description: `Loan drawdown from ${facilityName}`,
         interestPeriod,
         baseRate: baseRateValue,
-        effectiveRate: effectiveRate ?? undefined
+        effectiveRate: Number((baseRateValue + marginNum).toFixed(5))
       })
 
       toast.success('Loan Created', {
@@ -152,7 +154,13 @@ export function NewLoanModal({ facilityId, facilityName, availableAmount, curren
               value={effectiveRate !== null ? effectiveRate.toFixed(5) : ''}
               disabled
             />
-            <p className="text-sm text-muted-foreground">Base Rate + {margin.toFixed(5)}% Margin</p>
+            <div className="text-sm text-muted-foreground">
+              Base Rate: {baseRate}%
+              <br />
+              Margin: {Number(margin).toFixed(5)}%
+              <br />
+              Effective Rate: {effectiveRate !== null ? effectiveRate.toFixed(5) : ''}%
+            </div>
           </div>
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

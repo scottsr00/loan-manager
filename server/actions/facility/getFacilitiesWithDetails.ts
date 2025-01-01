@@ -1,4 +1,15 @@
-import { prisma } from '@/server/db/client'
+'use server'
+
+import { prisma } from '@/lib/prisma'
+import type { Facility, Loan } from '@prisma/client'
+
+interface FacilityWithRelations extends Facility {
+  loans: Pick<Loan, 'outstandingAmount'>[]
+  servicingActivities: { id: string }[]
+  creditAgreement: {
+    agreementName: string
+  }
+}
 
 export async function getFacilitiesWithDetails() {
   try {
@@ -28,11 +39,11 @@ export async function getFacilitiesWithDetails() {
       },
     })
 
-    return facilities.map(facility => ({
+    return facilities.map((facility: FacilityWithRelations) => ({
       ...facility,
-      totalOutstanding: facility.loans.reduce((sum, loan) => sum + loan.outstandingAmount, 0),
+      totalOutstanding: facility.loans.reduce((sum: number, loan) => sum + loan.outstandingAmount, 0),
       pendingActivities: facility.servicingActivities.length,
-      utilization: (facility.loans.reduce((sum, loan) => sum + loan.outstandingAmount, 0) / facility.commitmentAmount) * 100,
+      utilization: (facility.loans.reduce((sum: number, loan) => sum + loan.outstandingAmount, 0) / facility.commitmentAmount) * 100,
     }))
   } catch (error) {
     console.error('Error in getFacilitiesWithDetails:', error)

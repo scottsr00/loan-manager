@@ -20,6 +20,7 @@ interface PositionResponse {
   status: string
   startDate: Date
   maturityDate: Date
+  interestRate: number
   facilities: {
     id: string
     facilityName: string
@@ -106,9 +107,17 @@ interface PrismaQueryResult extends CreditAgreement {
 export async function getPositions(): Promise<PositionResponse[]> {
   try {
     const creditAgreements = await prisma.creditAgreement.findMany({
-      include: {
+      select: {
+        id: true,
+        agreementNumber: true,
         borrower: true,
         lender: true,
+        amount: true,
+        currency: true,
+        status: true,
+        startDate: true,
+        maturityDate: true,
+        interestRate: true,
         facilities: {
           include: {
             positions: {
@@ -161,16 +170,17 @@ export async function getPositions(): Promise<PositionResponse[]> {
       status: agreement.status,
       startDate: agreement.startDate,
       maturityDate: agreement.maturityDate,
+      interestRate: agreement.interestRate.toString(),
       facilities: (agreement.facilities || []).map((facility: any) => ({
         id: facility.id,
         facilityName: facility.facilityName,
         facilityType: facility.facilityType,
         commitmentAmount: facility.commitmentAmount,
         currency: facility.currency,
-        status: 'ACTIVE',
+        status: facility.status,
         interestType: facility.interestType,
         baseRate: facility.baseRate,
-        margin: facility.margin,
+        margin: facility.margin.toString(),
         positions: facility.positions.map((pos: any) => ({
           lender: pos.lender?.entity?.legalName || 'Unknown',
           commitment: pos.amount,
@@ -193,8 +203,8 @@ export async function getPositions(): Promise<PositionResponse[]> {
           status: loan.status,
           interestPeriod: loan.interestPeriod,
           drawDate: loan.drawDate,
-          baseRate: loan.baseRate,
-          effectiveRate: loan.effectiveRate,
+          baseRate: loan.baseRate.toString(),
+          effectiveRate: loan.effectiveRate.toString(),
           positions: facility.positions.map((pos: any) => ({
             lender: pos.lender?.entity?.legalName || 'Unknown',
             amount: (loan.amount * pos.share),
