@@ -10,21 +10,31 @@ import {
   TransactionStatus 
 } from '@/server/types/trade'
 import { revalidatePath } from 'next/cache'
+import type { PrismaClient, FacilityPosition, Prisma } from '@prisma/client'
+
+type TransactionClient = Omit<
+  PrismaClient, 
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>
 
 async function validateTradeConfirmation(tradeId: string) {
   const trade = await prisma.trade.findUnique({
     where: { id: tradeId },
     include: {
       facility: true,
-      buyer: true
+      buyerCounterparty: {
+        include: {
+          entity: true
+        }
+      }
     }
   })
 
   if (!trade) throw new Error('Trade not found')
 
   // Check buyer status
-  if (trade.buyer.status !== 'ACTIVE') {
-    throw new Error('Buyer is not an active lender')
+  if (trade.buyerCounterparty.entity.status !== 'ACTIVE') {
+    throw new Error('Buyer is not active')
   }
 
   // Check settlement date
@@ -37,7 +47,12 @@ async function validateTradeSettlement(tradeId: string) {
   const trade = await prisma.trade.findUnique({
     where: { id: tradeId },
     include: {
-      facility: true
+      facility: true,
+      sellerCounterparty: {
+        include: {
+          entity: true
+        }
+      }
     }
   })
 
@@ -47,7 +62,11 @@ async function validateTradeSettlement(tradeId: string) {
   const sellerPosition = await prisma.facilityPosition.findFirst({
     where: {
       facilityId: trade.facilityId,
-      lenderId: trade.sellerLenderId,
+      lender: {
+        entity: {
+          id: trade.sellerCounterparty.entity.id
+        }
+      },
       status: 'ACTIVE'
     }
   })
@@ -57,36 +76,47 @@ async function validateTradeSettlement(tradeId: string) {
   }
 }
 
-async function updatePositions(tradeId: string) {
+async function processPositionUpdates(tradeId: string) {
   const trade = await prisma.trade.findUnique({
     where: { id: tradeId },
     include: {
-      facility: true
+      facility: true,
+      sellerCounterparty: {
+        include: {
+          entity: true
+        }
+      },
+      buyerCounterparty: {
+        include: {
+          entity: true
+        }
+      }
     }
   })
 
   if (!trade) throw new Error('Trade not found')
+  if (!trade.facility) throw new Error('Facility not found')
 
-  await prisma.$transaction(async (tx: PrismaTransaction) => {
-    // Get total facility commitment for share calculation
-    const facility = await tx.facility.findUnique({
-      where: { id: trade.facilityId }
-    })
-    if (!facility) throw new Error('Facility not found')
-
-    // Update seller position
+  await prisma.$transaction(async (tx: TransactionClient) => {
+    // Get seller position
     const sellerPosition = await tx.facilityPosition.findFirst({
       where: {
         facilityId: trade.facilityId,
-        lenderId: trade.sellerLenderId,
+        lender: {
+          entity: {
+            id: trade.sellerCounterparty.entity.id
+          }
+        },
         status: 'ACTIVE'
       }
     })
     if (!sellerPosition) throw new Error('Seller position not found')
 
+    // Calculate new seller amount
     const newSellerAmount = sellerPosition.amount - trade.parAmount
-    const newSellerShare = (newSellerAmount / facility.commitmentAmount) * 100
+    const newSellerShare = (newSellerAmount / trade.facility.commitmentAmount) * 100
 
+    // Update seller position
     await tx.facilityPosition.update({
       where: { id: sellerPosition.id },
       data: {
@@ -95,33 +125,44 @@ async function updatePositions(tradeId: string) {
       }
     })
 
-    // Create transaction for seller position update
-    await tx.transactionHistory.create({
+    // Create seller position history record
+    await prisma.lenderPositionHistory.create({
       data: {
-        tradeId: trade.id,
-        activityType: TradeActivityType.POSITION_UPDATED,
-        amount: -trade.parAmount,
-        status: TransactionStatus.COMPLETED,
-        description: `Seller position reduced by ${trade.parAmount}`,
-        effectiveDate: new Date(),
-        processedBy: 'SYSTEM'
+        facilityId: trade.facilityId,
+        lenderId: trade.sellerCounterparty.entity.id,
+        changeType: 'TRADE',
+        previousOutstandingAmount: sellerPosition.amount,
+        newOutstandingAmount: newSellerAmount,
+        previousAccruedInterest: 0, // TODO: Track accrued interest
+        newAccruedInterest: 0,
+        changeAmount: -trade.parAmount,
+        userId: 'SYSTEM',
+        notes: `Sold ${formatAmount(trade.parAmount)} at ${trade.price.toFixed(2)}%`,
+        activityType: 'TRADE',
+        tradeId: trade.id
       }
     })
 
-    // Update or create buyer position
-    const buyerPosition = await tx.facilityPosition.findFirst({
+    // Get or create buyer position
+    let buyerPosition = await tx.facilityPosition.findFirst({
       where: {
         facilityId: trade.facilityId,
-        lenderId: trade.buyerLenderId,
+        lender: {
+          entity: {
+            id: trade.buyerCounterparty.entity.id
+          }
+        },
         status: 'ACTIVE'
       }
     })
 
+    let previousBuyerAmount = 0
     if (buyerPosition) {
+      previousBuyerAmount = buyerPosition.amount
       const newBuyerAmount = buyerPosition.amount + trade.parAmount
-      const newBuyerShare = (newBuyerAmount / facility.commitmentAmount) * 100
+      const newBuyerShare = (newBuyerAmount / trade.facility.commitmentAmount) * 100
 
-      await tx.facilityPosition.update({
+      buyerPosition = await tx.facilityPosition.update({
         where: { id: buyerPosition.id },
         data: {
           amount: newBuyerAmount,
@@ -129,11 +170,19 @@ async function updatePositions(tradeId: string) {
         }
       })
     } else {
-      const newBuyerShare = (trade.parAmount / facility.commitmentAmount) * 100
-      await tx.facilityPosition.create({
+      const newBuyerShare = (trade.parAmount / trade.facility.commitmentAmount) * 100
+      buyerPosition = await tx.facilityPosition.create({
         data: {
-          facilityId: trade.facilityId,
-          lenderId: trade.buyerLenderId,
+          facility: {
+            connect: {
+              id: trade.facilityId
+            }
+          },
+          lender: {
+            connect: {
+              entityId: trade.buyerCounterparty.entity.id
+            }
+          },
           amount: trade.parAmount,
           share: newBuyerShare,
           status: 'ACTIVE'
@@ -141,16 +190,21 @@ async function updatePositions(tradeId: string) {
       })
     }
 
-    // Create transaction for buyer position update
-    await tx.transactionHistory.create({
+    // Create buyer position history record
+    await prisma.lenderPositionHistory.create({
       data: {
-        tradeId: trade.id,
-        activityType: TradeActivityType.POSITION_UPDATED,
-        amount: trade.parAmount,
-        status: TransactionStatus.COMPLETED,
-        description: `Buyer position increased by ${trade.parAmount}`,
-        effectiveDate: new Date(),
-        processedBy: 'SYSTEM'
+        facilityId: trade.facilityId,
+        lenderId: trade.buyerCounterparty.entity.id,
+        changeType: 'TRADE',
+        previousOutstandingAmount: previousBuyerAmount,
+        newOutstandingAmount: buyerPosition.amount,
+        previousAccruedInterest: 0, // TODO: Track accrued interest
+        newAccruedInterest: 0,
+        changeAmount: trade.parAmount,
+        userId: 'SYSTEM',
+        notes: `Bought ${formatAmount(trade.parAmount)} at ${trade.price.toFixed(2)}%`,
+        activityType: 'TRADE',
+        tradeId: trade.id
       }
     })
   })
@@ -189,7 +243,7 @@ export async function updateTradeStatus(input: TradeUpdate) {
         if (currentTrade.status !== TradeStatus.SETTLED) {
           throw new Error('Trade must be in SETTLED status to close')
         }
-        await updatePositions(id)
+        await processPositionUpdates(id)
         break
     }
 
@@ -215,12 +269,12 @@ export async function updateTradeStatus(input: TradeUpdate) {
             creditAgreement: true
           }
         },
-        seller: {
+        sellerCounterparty: {
           include: {
             entity: true
           }
         },
-        buyer: {
+        buyerCounterparty: {
           include: {
             entity: true
           }
@@ -235,4 +289,11 @@ export async function updateTradeStatus(input: TradeUpdate) {
     console.error('Error in updateTradeStatus:', error)
     throw error instanceof Error ? error : new Error('Failed to update trade status')
   }
+}
+
+function formatAmount(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(amount)
 } 

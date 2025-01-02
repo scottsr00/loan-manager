@@ -64,20 +64,23 @@ model Address {
 }
 
 model Contact {
-  id        String   @id @default(cuid())
-  entityId  String
-  type      String
-  firstName String
-  lastName  String
-  title     String?
-  email     String?
-  phone     String?
-  isPrimary Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  entity    Entity   @relation(fields: [entityId], references: [id])
+  id            String   @id @default(cuid())
+  entityId      String?
+  counterpartyId String?
+  type          String
+  firstName     String
+  lastName      String
+  title         String?
+  email         String?
+  phone         String?
+  isPrimary     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  entity        Entity?  @relation(fields: [entityId], references: [id])
+  counterparty  Counterparty? @relation(fields: [counterpartyId], references: [id])
 
   @@index([entityId])
+  @@index([counterpartyId])
 }
 
 model BeneficialOwner {
@@ -230,22 +233,23 @@ model Loan {
 }
 
 model Trade {
-  id                    String            @id @default(cuid())
+  id                    String                @id @default(cuid())
   facilityId            String
   sellerCounterpartyId  String
   buyerCounterpartyId   String
-  tradeDate             DateTime          @default(now())
-  settlementDate        DateTime
-  parAmount             Float
-  price                 Float
-  description          String?
-  status               String            @default("PENDING")
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
-  facility             Facility          @relation(fields: [facilityId], references: [id])
-  sellerCounterparty   Counterparty      @relation("SellerCounterpartyTrades", fields: [sellerCounterpartyId], references: [id])
-  buyerCounterparty    Counterparty      @relation("BuyerCounterpartyTrades", fields: [buyerCounterpartyId], references: [id])
+  tradeDate            DateTime
+  settlementDate       DateTime
+  parAmount            Float
+  price                Float
+  settlementAmount     Float
+  status               String                @default("PENDING")
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  facility             Facility              @relation(fields: [facilityId], references: [id])
+  sellerCounterparty   Counterparty         @relation("SellerCounterpartyTrades", fields: [sellerCounterpartyId], references: [id])
+  buyerCounterparty    Counterparty         @relation("BuyerCounterpartyTrades", fields: [buyerCounterpartyId], references: [id])
   transactions         TransactionHistory[]
+  positionHistory      LenderPositionHistory[]
 
   @@index([facilityId])
   @@index([sellerCounterpartyId])
@@ -279,37 +283,38 @@ model TransactionHistory {
 }
 
 model ServicingActivity {
-  id           String               @id @default(cuid())
-  facilityId   String
-  activityType String
-  dueDate      DateTime
-  description  String?
-  amount       Float
-  status       String               @default("PENDING")
-  completedAt  DateTime?
-  completedBy  String?
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
-  facility     Facility             @relation(fields: [facilityId], references: [id])
-  transactions TransactionHistory[]
+  id                String                @id @default(cuid())
+  facilityId        String
+  activityType      String
+  dueDate           DateTime
+  description       String?
+  amount            Float
+  status            String                @default("PENDING")
+  completedAt       DateTime?
+  completedBy       String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  facility          Facility              @relation(fields: [facilityId], references: [id])
+  transactions      TransactionHistory[]
+  positionHistory   LenderPositionHistory[]
 
   @@index([facilityId])
 }
 
 model Counterparty {
-  id                    String            @id @default(cuid())
-  entityId              String            @unique
-  name                  String
-  type                  CounterpartyType  @relation(fields: [typeId], references: [id])
-  typeId                String
-  status                String            @default("ACTIVE")
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-  entity                Entity            @relation(fields: [entityId], references: [id])
-  addresses             Address[]
-  contacts              CounterpartyContact[]
-  salesTrades          Trade[]           @relation("SellerCounterpartyTrades")
-  purchaseTrades       Trade[]           @relation("BuyerCounterpartyTrades")
+  id                   String                @id @default(cuid())
+  entityId             String                @unique
+  typeId               String
+  status               String                @default("ACTIVE")
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  entity               Entity                @relation(fields: [entityId], references: [id])
+  type                 CounterpartyType      @relation(fields: [typeId], references: [id])
+  addresses            Address[]
+  contacts             Contact[]
+  counterpartyContacts CounterpartyContact[]
+  salesTrades          Trade[]              @relation("SellerCounterpartyTrades")
+  purchaseTrades       Trade[]              @relation("BuyerCounterpartyTrades")
   servicingAssignments ServicingAssignment[]
 
   @@index([entityId])
@@ -317,26 +322,26 @@ model Counterparty {
 }
 
 model CounterpartyType {
-  id           String        @id @default(cuid())
-  name         String        @unique
-  description  String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  name          String
+  description   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   counterparties Counterparty[]
 }
 
 model CounterpartyContact {
   id             String      @id @default(cuid())
   counterpartyId String
-  type           String
-  firstName      String
-  lastName       String
-  title          String?
-  email          String?
-  phone          String?
-  isPrimary      Boolean     @default(false)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  type          String
+  firstName     String
+  lastName      String
+  title         String?
+  email         String?
+  phone         String?
+  isPrimary     Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   counterparty   Counterparty @relation(fields: [counterpartyId], references: [id])
 
   @@index([counterpartyId])
@@ -408,7 +413,6 @@ model LenderPositionHistory {
   changeAmount           Float
   userId                 String
   notes                  String?
-  activityType           ActivityType
   servicingActivityId    String?
   tradeId               String?
   createdAt              DateTime          @default(now())

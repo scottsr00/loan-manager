@@ -63,42 +63,7 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
         }
       })
 
-      // 4. Update facility positions and create position history records
-      const positionUpdates = await Promise.all(loan.facility.positions.map(async (position) => {
-        const share = position.amount / availableAmount
-        const decreaseShare = validatedParams.amount * share
-        const newAmount = position.amount - decreaseShare
-
-        const updatedPosition = await tx.facilityPosition.update({
-          where: { id: position.id },
-          data: { amount: newAmount }
-        })
-
-        // Create position history record
-        await tx.lenderPositionHistory.create({
-          data: {
-            facilityId: loan.facility!.id,
-            lenderId: position.lender.entity.id,
-            changeType: 'PAYDOWN',
-            previousOutstandingAmount: position.amount,
-            newOutstandingAmount: newAmount,
-            previousAccruedInterest: 0, // TODO: Track accrued interest
-            newAccruedInterest: 0,
-            changeAmount: decreaseShare,
-            userId: 'SYSTEM',
-            notes: `Principal payment of ${formatAmount(decreaseShare)} (${(share * 100).toFixed(2)}% of ${formatAmount(validatedParams.amount)})`
-          }
-        })
-
-        return {
-          lenderId: position.lender.entity.id,
-          previousAmount: position.amount,
-          newAmount: updatedPosition.amount,
-          share: share * 100 // Convert to percentage
-        }
-      }))
-
-      // 5. Create servicing activity record ONLY if not already linked to one
+      // 4. Create servicing activity record ONLY if not already linked to one
       let servicingActivity;
       if (!params.servicingActivityId) {
         servicingActivity = await tx.servicingActivity.create({
@@ -108,9 +73,9 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
             amount: validatedParams.amount,
             dueDate: validatedParams.paymentDate,
             description: validatedParams.description || `Principal payment of ${formatAmount(validatedParams.amount)}`,
-            status: 'COMPLETED',
-            completedAt: new Date(),
-            completedBy: 'SYSTEM'
+            status: 'PENDING',
+            completedAt: null,
+            completedBy: null
           }
         })
       } else {
@@ -123,7 +88,7 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
         throw new Error('Failed to find or create servicing activity')
       }
 
-      // 6. Create transaction history record
+      // 5. Create transaction history record
       const transactionHistory = await tx.transactionHistory.create({
         data: {
           creditAgreementId: loan.facility.creditAgreementId,
@@ -132,7 +97,7 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
           activityType: 'PRINCIPAL_PAYMENT',
           amount: validatedParams.amount,
           currency: loan.currency,
-          status: 'COMPLETED',
+          status: 'PENDING',
           description: validatedParams.description || `Principal payment of ${formatAmount(validatedParams.amount)}`,
           effectiveDate: validatedParams.paymentDate,
           processedBy: 'SYSTEM'
@@ -142,6 +107,17 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
       // Revalidate the servicing and transactions pages to reflect the changes
       revalidatePath('/servicing')
       revalidatePath('/transactions')
+
+      // 6. Calculate position updates but don't apply them yet
+      const positionUpdates = loan.facility.positions.map(position => {
+        const share = position.amount / availableAmount
+        return {
+          lenderId: position.lender.entity.id,
+          previousAmount: position.amount,
+          newAmount: position.amount - (validatedParams.amount * share),
+          share: share * 100 // Convert to percentage
+        }
+      })
 
       return {
         success: true,

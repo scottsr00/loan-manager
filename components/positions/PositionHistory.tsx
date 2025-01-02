@@ -35,6 +35,8 @@ export function PositionHistory({ facilityId, selectedActivity, lenderId, startD
     const loadHistory = async () => {
       try {
         setIsLoading(true)
+        if (!facilityId) return
+
         const data = await getPositionHistory({ 
           facilityId, 
           lenderId, 
@@ -66,69 +68,44 @@ export function PositionHistory({ facilityId, selectedActivity, lenderId, startD
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'changeDateTime',
-      headerName: 'Date',
-      flex: 1,
-      valueFormatter: (params: ValueFormatterParams) => format(new Date(params.value), 'PPP'),
-      filter: 'agDateColumnFilter'
-    },
-    {
-      field: 'facility.facilityName',
-      headerName: 'Facility',
-      flex: 1,
-      valueGetter: (params: ValueGetterParams) => params.data?.facility?.facilityName || 'N/A'
-    },
-    {
       field: 'lender.legalName',
       headerName: 'Lender',
       flex: 1,
       valueGetter: (params: ValueGetterParams) => params.data?.lender?.legalName || 'N/A'
     },
     {
+      field: 'changeDateTime',
+      headerName: 'Last Updated',
+      flex: 1,
+      valueFormatter: (params: ValueFormatterParams) => format(new Date(params.value), 'PPP'),
+      filter: 'agDateColumnFilter'
+    },
+    {
       field: 'changeType',
-      headerName: 'Type',
+      headerName: 'Last Change',
       flex: 1,
       cellRenderer: (params: ICellRendererParams) => getChangeTypeBadge(params.value)
     },
     {
-      field: 'previousOutstandingAmount',
-      headerName: 'Previous Outstanding',
-      flex: 1,
-      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
-      filter: 'agNumberColumnFilter'
-    },
-    {
       field: 'newOutstandingAmount',
-      headerName: 'New Outstanding',
-      flex: 1,
-      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
-      filter: 'agNumberColumnFilter'
-    },
-    {
-      field: 'previousAccruedInterest',
-      headerName: 'Previous Interest',
+      headerName: 'Outstanding Amount',
       flex: 1,
       valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
       filter: 'agNumberColumnFilter'
     },
     {
       field: 'newAccruedInterest',
-      headerName: 'New Interest',
+      headerName: 'Accrued Interest',
       flex: 1,
       valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
       filter: 'agNumberColumnFilter'
     },
     {
       field: 'changeAmount',
-      headerName: 'Change Amount',
+      headerName: 'Last Change Amount',
       flex: 1,
       valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
       filter: 'agNumberColumnFilter'
-    },
-    {
-      field: 'userId',
-      headerName: 'User',
-      flex: 1
     },
     {
       field: 'notes',
