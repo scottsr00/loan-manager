@@ -13,7 +13,8 @@ export async function getFacility(id: string): Promise<FacilityWithRelations | n
             borrower: {
               select: {
                 id: true,
-                name: true
+                legalName: true,
+                dba: true
               }
             },
             lender: {
@@ -93,7 +94,8 @@ export async function getFacilities(): Promise<FacilityWithRelations[]> {
             borrower: {
               select: {
                 id: true,
-                name: true
+                legalName: true,
+                dba: true
               }
             },
             lender: {
@@ -150,9 +152,6 @@ export async function getFacilities(): Promise<FacilityWithRelations[]> {
             }
           }
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
       }
     })
 

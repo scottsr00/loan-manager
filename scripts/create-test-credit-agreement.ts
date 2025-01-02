@@ -3,38 +3,45 @@ const prisma = new PrismaClient()
 
 async function createTestCreditAgreement() {
   try {
-    // Create a borrower entity if it doesn't exist
-    const borrower = await prisma.entity.findFirst({
+    // Create a borrower entity and associated Borrower record
+    const borrowerEntity = await prisma.entity.findFirst({
       where: {
         legalName: 'Test Company Inc.'
       }
     }) || await prisma.entity.create({
       data: {
+        id: 'TEST-BORROWER-001', // Using a predictable ID for testing
         legalName: 'Test Company Inc.',
         dba: 'Test Co',
-        registrationNumber: 'REG123',
         taxId: 'TAX123',
         countryOfIncorporation: 'US',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        borrower: {
+          create: {
+            status: 'ACTIVE',
+            industrySegment: 'TECHNOLOGY',
+            businessType: 'CORPORATION',
+            onboardingStatus: 'COMPLETED',
+            kycStatus: 'APPROVED'
+          }
+        }
       }
     })
 
     // Create a lender entity and associated Lender record
     const lenderEntity = await prisma.entity.create({
       data: {
+        id: 'TEST-LENDER-001', // Using a predictable ID for testing
         legalName: 'Bank of Test',
         dba: 'Test Bank',
-        registrationNumber: 'BANK123',
         taxId: 'BANK456',
         countryOfIncorporation: 'US',
-        status: 'ACTIVE'
-      }
-    })
-
-    const lender = await prisma.lender.create({
-      data: {
-        entityId: lenderEntity.id,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lender: {
+          create: {
+            status: 'ACTIVE'
+          }
+        }
       }
     })
 
@@ -42,13 +49,13 @@ async function createTestCreditAgreement() {
     const creditAgreement = await prisma.creditAgreement.create({
       data: {
         agreementNumber: 'CA-2024-001',
-        borrowerId: borrower.id,
+        borrowerId: borrowerEntity.id,
         lenderId: lenderEntity.id,
         amount: 10000000,
         currency: 'USD',
         status: 'ACTIVE',
         startDate: new Date(),
-        maturityDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+        maturityDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
         interestRate: 5.5,
         facilities: {
           create: [
@@ -62,17 +69,7 @@ async function createTestCreditAgreement() {
               maturityDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
               interestType: 'FLOATING',
               baseRate: 'SOFR',
-              margin: 2.5,
-              positions: {
-                create: [
-                  {
-                    lenderId: lender.id,
-                    amount: 6000000,
-                    share: 100,
-                    status: 'ACTIVE'
-                  }
-                ]
-              }
+              margin: 2.5
             },
             {
               facilityName: 'Revolving Credit Facility',
@@ -84,17 +81,7 @@ async function createTestCreditAgreement() {
               maturityDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
               interestType: 'FLOATING',
               baseRate: 'SOFR',
-              margin: 3.0,
-              positions: {
-                create: [
-                  {
-                    lenderId: lender.id,
-                    amount: 4000000,
-                    share: 100,
-                    status: 'ACTIVE'
-                  }
-                ]
-              }
+              margin: 3.0
             }
           ]
         }
@@ -102,15 +89,7 @@ async function createTestCreditAgreement() {
       include: {
         borrower: true,
         lender: true,
-        facilities: {
-          include: {
-            positions: {
-              include: {
-                lender: true
-              }
-            }
-          }
-        }
+        facilities: true
       }
     })
 

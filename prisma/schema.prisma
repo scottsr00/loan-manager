@@ -17,14 +17,21 @@ model Entity {
   isAgent               Boolean           @default(false)
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
+  
+  // Common relationships
   addresses              Address[]
-  contacts               Contact[]
-  counterparty           Counterparty?
-  lender                 Lender?
-  borrower              Borrower?
+  contacts              Contact[]
   kyc                    KYC?
   beneficialOwners       BeneficialOwner[]
-  creditAgreements       CreditAgreement[] @relation("LenderCreditAgreements")
+  
+  // Role relationships
+  borrower              Borrower?
+  lender                Lender?
+  counterparty          Counterparty?
+  
+  // Credit Agreement relationships
+  borrowerAgreements    CreditAgreement[] @relation("BorrowerCreditAgreements")
+  lenderAgreements      CreditAgreement[] @relation("LenderCreditAgreements")
   positionHistory        LenderPositionHistory[]
 }
 
@@ -102,20 +109,18 @@ model BeneficialOwner {
 model Borrower {
   id                    String            @id @default(cuid())
   entityId              String            @unique
-  name                  String
-  taxId                 String?
-  countryOfIncorporation String?
   industrySegment       String?
   businessType          String?
   creditRating          String?
   ratingAgency          String?
   riskRating            String?
   onboardingStatus      String            @default("PENDING")
-  kycStatus             String            @default("PENDING")
+  kycStatus            String            @default("PENDING")
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
+  
+  // Relations
   entity                Entity            @relation(fields: [entityId], references: [id])
-  creditAgreements      CreditAgreement[]
 
   @@index([entityId])
 }
@@ -147,7 +152,8 @@ model CreditAgreement {
   description     String?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
-  borrower        Borrower             @relation(fields: [borrowerId], references: [id])
+  
+  borrower        Entity               @relation("BorrowerCreditAgreements", fields: [borrowerId], references: [id])
   lender          Entity               @relation("LenderCreditAgreements", fields: [lenderId], references: [id])
   facilities      Facility[]
   transactions    TransactionHistory[]
@@ -163,6 +169,7 @@ model Facility {
   creditAgreementId    String
   commitmentAmount     Float
   availableAmount      Float
+  outstandingAmount    Float                @default(0)
   currency             String                @default("USD")
   startDate            DateTime
   maturityDate         DateTime
@@ -185,16 +192,18 @@ model Facility {
 }
 
 model FacilityPosition {
-  id         String   @id @default(cuid())
-  facilityId String
-  lenderId   String
-  amount     Float
-  share      Float
-  status     String   @default("ACTIVE")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  facility   Facility @relation(fields: [facilityId], references: [id])
-  lender     Lender   @relation(fields: [lenderId], references: [id])
+  id                String   @id @default(cuid())
+  facilityId        String
+  lenderId          String
+  commitmentAmount  Float    // Total amount the lender has committed to lend
+  undrawnAmount     Float    // The portion of the commitment that has not yet been drawn
+  drawnAmount       Float    @default(0)  // The amount that has been drawn (outstanding balance)
+  share             Float    // Percentage share of the facility
+  status            String   @default("ACTIVE")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  facility          Facility @relation(fields: [facilityId], references: [id])
+  lender            Lender   @relation(fields: [lenderId], references: [id])
 
   @@index([facilityId])
   @@index([lenderId])
@@ -243,6 +252,7 @@ model Trade {
   price                Float
   settlementAmount     Float
   status               String                @default("PENDING")
+  facilityOutstandingAmount Float?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   facility             Facility              @relation(fields: [facilityId], references: [id])
@@ -271,24 +281,26 @@ model TradeStatusChange {
 }
 
 model TransactionHistory {
-  id                  String             @id @default(cuid())
-  creditAgreementId   String?
-  loanId              String?
-  tradeId             String?
-  servicingActivityId String?
-  activityType        String
-  amount              Float
-  currency            String             @default("USD")
-  status              String             @default("PENDING")
-  description         String?
-  effectiveDate       DateTime
-  processedBy         String
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  creditAgreement     CreditAgreement?   @relation(fields: [creditAgreementId], references: [id])
-  loan                Loan?              @relation(fields: [loanId], references: [id])
-  servicingActivity   ServicingActivity? @relation(fields: [servicingActivityId], references: [id])
-  trade               Trade?             @relation(fields: [tradeId], references: [id])
+  id                      String             @id @default(cuid())
+  creditAgreementId       String?
+  loanId                  String?
+  tradeId                String?
+  servicingActivityId     String?
+  activityType           String
+  amount                 Float
+  currency               String             @default("USD")
+  status                 String             @default("PENDING")
+  description            String?
+  effectiveDate         DateTime
+  processedBy           String
+  facilityOutstandingAmount Float?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  creditAgreement       CreditAgreement?   @relation(fields: [creditAgreementId], references: [id])
+  loan                  Loan?              @relation(fields: [loanId], references: [id])
+  servicingActivity     ServicingActivity? @relation(fields: [servicingActivityId], references: [id])
+  trade                Trade?             @relation(fields: [tradeId], references: [id])
 
   @@index([creditAgreementId])
   @@index([loanId])
@@ -306,6 +318,7 @@ model ServicingActivity {
   status            String                @default("PENDING")
   completedAt       DateTime?
   completedBy       String?
+  facilityOutstandingAmount Float?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
   facility          Facility              @relation(fields: [facilityId], references: [id])
@@ -407,6 +420,7 @@ enum PositionChangeType {
   PAYDOWN
   ACCRUAL
   TRADE
+  DRAWDOWN
 }
 
 enum ActivityType {
@@ -420,8 +434,12 @@ model LenderPositionHistory {
   lenderId               String
   changeDateTime         DateTime          @default(now())
   changeType             PositionChangeType
-  previousOutstandingAmount Float
-  newOutstandingAmount   Float
+  previousCommitmentAmount Float
+  newCommitmentAmount     Float
+  previousUndrawnAmount   Float
+  newUndrawnAmount       Float
+  previousDrawnAmount     Float
+  newDrawnAmount         Float
   previousAccruedInterest Float
   newAccruedInterest     Float
   changeAmount           Float
@@ -431,12 +449,12 @@ model LenderPositionHistory {
   tradeId               String?
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
-  
+
   // Relations
   facility               Facility          @relation(fields: [facilityId], references: [id])
   lender                 Entity            @relation(fields: [lenderId], references: [id])
   servicingActivity      ServicingActivity? @relation(fields: [servicingActivityId], references: [id])
-  trade                 Trade?            @relation(fields: [tradeId], references: [id])
+  trade                  Trade?            @relation(fields: [tradeId], references: [id])
 
   @@index([facilityId])
   @@index([lenderId])

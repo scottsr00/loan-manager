@@ -325,13 +325,13 @@ export function CreditAgreementDetailsModal({
                       >
                         <SelectTrigger>
                           <SelectValue>
-                            {borrowers.find((b) => b.id === creditAgreement.borrowerId)?.name}
+                            {creditAgreement.borrower?.legalName}
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {borrowers.map((borrower) => (
                             <SelectItem key={borrower.id} value={borrower.id}>
-                              {borrower.name}
+                              {borrower.entity.legalName}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -339,13 +339,13 @@ export function CreditAgreementDetailsModal({
                     </div>
                   ) : (
                     <>
-                      <p>{creditAgreement.borrower?.name || 'N/A'}</p>
+                      <p>{creditAgreement.borrower?.legalName || 'N/A'}</p>
                       <div className="flex gap-2 mt-1">
-                        {creditAgreement.borrower?.industrySegment && (
-                          <Badge variant="outline">{creditAgreement.borrower.industrySegment}</Badge>
+                        {creditAgreement.borrower?.borrower?.industrySegment && (
+                          <Badge variant="outline">{creditAgreement.borrower.borrower.industrySegment}</Badge>
                         )}
-                        <Badge variant={creditAgreement.borrower?.onboardingStatus === 'ACTIVE' ? 'success' : 'secondary'}>
-                          {creditAgreement.borrower?.onboardingStatus || 'N/A'}
+                        <Badge variant={creditAgreement.borrower?.borrower?.onboardingStatus === 'ACTIVE' ? 'success' : 'secondary'}>
+                          {creditAgreement.borrower?.borrower?.onboardingStatus || 'N/A'}
                         </Badge>
                       </div>
                     </>

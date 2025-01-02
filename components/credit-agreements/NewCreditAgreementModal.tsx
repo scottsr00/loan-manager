@@ -40,7 +40,8 @@ import { DatePicker } from '@/components/ui/date-picker'
 import { FacilityFormDialog } from '@/components/facilities/FacilityFormDialog'
 import { type EntityWithRelations } from '@/server/types/entity'
 import { creditAgreementInputSchema, facilityInputSchema, type CreditAgreementWithRelations } from '@/server/types/credit-agreement'
-import { getEntities } from '@/server/actions/entity/getEntities'
+import { useBorrowers } from '@/hooks/useBorrowers'
+import { useLenders } from '@/hooks/useLenders'
 
 type CreditAgreementFormValues = z.infer<typeof creditAgreementInputSchema>
 type FacilityFormValues = z.infer<typeof facilityInputSchema>
@@ -67,28 +68,8 @@ export function NewCreditAgreementModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [facilities, setFacilities] = useState<FacilityFormValues[]>([])
-  const [entities, setEntities] = useState<EntityWithRelations[]>([])
-  const [isLoadingEntities, setIsLoadingEntities] = useState(true)
-  
-  // Load entities on mount
-  useEffect(() => {
-    const loadEntities = async () => {
-      try {
-        setIsLoadingEntities(true)
-        const fetchedEntities = await getEntities()
-        setEntities(fetchedEntities)
-      } catch (error) {
-        console.error('Error loading entities:', error)
-        toast.error('Failed to load entities. Please try again later.')
-      } finally {
-        setIsLoadingEntities(false)
-      }
-    }
-    loadEntities()
-  }, [])
-
-  const bankEntities = entities.filter(entity => entity.lender !== null)
-  const borrowerEntities = entities.filter(entity => entity.borrower !== null)
+  const { borrowers, isLoading: isLoadingBorrowers } = useBorrowers()
+  const { lenders, isLoading: isLoadingLenders } = useLenders()
 
   const form = useForm<CreditAgreementFormValues>({
     resolver: zodResolver(creditAgreementInputSchema),
@@ -190,16 +171,17 @@ export function NewCreditAgreementModal({
                         <RequiredLabel>
                           <FormLabel>Borrower</FormLabel>
                         </RequiredLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingEntities}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingBorrowers}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder={isLoadingEntities ? "Loading..." : "Select borrower"} />
+                              <SelectValue placeholder={isLoadingBorrowers ? "Loading..." : "Select borrower"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {borrowerEntities.map(entity => (
-                              <SelectItem key={entity.id} value={entity.id}>
-                                {entity.legalName}
+                            {borrowers.map(borrower => (
+                              <SelectItem key={borrower.id} value={borrower.entity.id}>
+                                {borrower.entity.legalName}
+                                {borrower.entity.dba && ` (${borrower.entity.dba})`}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -217,16 +199,17 @@ export function NewCreditAgreementModal({
                         <RequiredLabel>
                           <FormLabel>Lender</FormLabel>
                         </RequiredLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingEntities}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingLenders}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder={isLoadingEntities ? "Loading..." : "Select lender"} />
+                              <SelectValue placeholder={isLoadingLenders ? "Loading..." : "Select lender"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {bankEntities.map(entity => (
-                              <SelectItem key={entity.id} value={entity.id}>
-                                {entity.legalName}
+                            {lenders.map(lender => (
+                              <SelectItem key={lender.id} value={lender.entity.id}>
+                                {lender.entity.legalName}
+                                {lender.entity.dba && ` (${lender.entity.dba})`}
                               </SelectItem>
                             ))}
                           </SelectContent>

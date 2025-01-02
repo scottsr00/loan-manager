@@ -26,18 +26,24 @@ export async function createCreditAgreement(
     }
 
     // Validate borrower exists
-    const borrower = await prisma.borrower.findUnique({
-      where: { id: data.borrowerId }
+    const borrowerEntity = await prisma.entity.findUnique({
+      where: { id: data.borrowerId },
+      include: {
+        borrower: true
+      }
     })
-    if (!borrower) {
+    if (!borrowerEntity || !borrowerEntity.borrower) {
       throw new Error('Borrower not found')
     }
 
     // Validate lender exists
-    const lender = await prisma.lender.findUnique({
-      where: { id: data.lenderId }
+    const lenderEntity = await prisma.entity.findUnique({
+      where: { id: data.lenderId },
+      include: {
+        lender: true
+      }
     })
-    if (!lender) {
+    if (!lenderEntity || !lenderEntity.lender) {
       throw new Error('Lender not found')
     }
 
@@ -46,12 +52,12 @@ export async function createCreditAgreement(
         agreementNumber: data.agreementNumber,
         borrower: {
           connect: {
-            id: data.borrowerId
+            id: borrowerEntity.id
           }
         },
         lender: {
           connect: {
-            id: data.lenderId
+            id: lenderEntity.id
           }
         },
         status: data.status,
@@ -65,6 +71,16 @@ export async function createCreditAgreement(
           create: data.facilities.map(facility => ({
             ...facility,
             availableAmount: facility.commitmentAmount,
+            positions: {
+              create: {
+                lenderId: lenderEntity.lender.id,
+                commitmentAmount: facility.commitmentAmount,
+                undrawnAmount: facility.commitmentAmount,  // Initially, all commitment is undrawn
+                drawnAmount: 0,  // Initially, no amount is drawn
+                share: 100, // Initial lender has 100% share
+                status: 'ACTIVE'
+              }
+            }
           }))
         }
       },
@@ -77,6 +93,15 @@ export async function createCreditAgreement(
         },
         facilities: {
           include: {
+            positions: {
+              include: {
+                lender: {
+                  include: {
+                    entity: true
+                  }
+                }
+              }
+            },
             trades: {
               include: {
                 sellerCounterparty: {
@@ -102,8 +127,7 @@ export async function createCreditAgreement(
               }
             }
           }
-        },
-        transactions: true
+        }
       }
     })
 

@@ -1,3 +1,2 @@
-export * from './getEntities'
-export * from './getEntityTypes'
-export * from './createEntity' 
+export { createEntity } from './createEntity'
+export { updateEntity } from './updateEntity' 

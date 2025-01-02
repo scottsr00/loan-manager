@@ -400,9 +400,25 @@ export function LoanPositionsHierarchy() {
       flex: 1 
     },
     { 
+      field: 'undrawnAmount', 
+      headerName: 'Undrawn',
+      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
+      flex: 1 
+    },
+    { 
+      field: 'drawnAmount', 
+      headerName: 'Drawn',
+      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
+      flex: 1 
+    },
+    { 
       field: 'share', 
       headerName: 'Share %',
-      valueFormatter: (params: ValueFormatterParams) => `${params.value.toFixed(2)}%`,
+      valueFormatter: (params: ValueFormatterParams) => {
+        const commitment = params.data.commitment || 0;
+        const facilityCommitment = params.data.facilityCommitmentAmount || 0;
+        return `${((commitment / facilityCommitment) * 100).toFixed(2)}%`;
+      },
       flex: 1 
     },
     { 
@@ -520,10 +536,10 @@ export function LoanPositionsHierarchy() {
                           <div className="space-y-1">
                             <div>{formatCurrency(facility.commitmentAmount)} (Committed)</div>
                             <div className="text-sm text-muted-foreground">
-                              {formatCurrency(facility.positions.reduce((sum, pos) => sum + pos.commitment, 0))} (Available)
+                              {formatCurrency(facility.commitmentAmount - facility.loans.reduce((sum, loan) => sum + (loan.outstandingAmount || 0), 0))} (Available)
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {formatCurrency(facility.loans.reduce((sum, loan) => sum + loan.amount, 0))} (Outstanding)
+                              {formatCurrency(facility.loans.reduce((sum, loan) => sum + (loan.outstandingAmount || 0), 0))} (Outstanding)
                             </div>
                           </div>
                         </TableCell>
@@ -564,7 +580,7 @@ export function LoanPositionsHierarchy() {
                                     <NewLoanModal
                                       facilityId={facility.id}
                                       facilityName={facility.facilityName}
-                                      availableAmount={facility.commitmentAmount - facility.loans.reduce((sum, loan) => sum + loan.amount, 0)}
+                                      availableAmount={facility.commitmentAmount - facility.loans.reduce((sum, loan) => sum + (loan.outstandingAmount || 0), 0)}
                                       currency={facility.currency}
                                       margin={facility.margin}
                                       onSuccess={() => {
@@ -613,7 +629,9 @@ export function LoanPositionsHierarchy() {
                                   <DataGrid
                                     rowData={facility.positions.map(pos => ({
                                       ...pos,
-                                      share: (pos.commitment / facility.commitmentAmount) * 100
+                                      commitment: pos.commitment || 0,
+                                      facilityCommitmentAmount: facility.commitmentAmount,
+                                      share: pos.commitment ? (pos.commitment / facility.commitmentAmount) * 100 : 0
                                     }))}
                                     columnDefs={positionColumnDefs}
                                     className={`w-full transition-all duration-200 ${

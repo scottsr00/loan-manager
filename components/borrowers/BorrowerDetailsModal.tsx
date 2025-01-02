@@ -30,12 +30,12 @@ export function BorrowerDetailsModal({ borrower, open, onOpenChange, onEdit }: B
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-4">
-              <span>{borrower.name}</span>
+              <span>{borrower.entity.legalName}</span>
               <div className="flex gap-2">
                 <Badge variant={borrower.onboardingStatus === 'COMPLETED' ? 'success' : 'secondary'}>
                   {borrower.onboardingStatus}
                 </Badge>
-                <Badge variant={borrower.kycStatus === 'COMPLETED' ? 'success' : 'secondary'}>
+                <Badge variant={borrower.kycStatus === 'APPROVED' ? 'success' : 'secondary'}>
                   {borrower.kycStatus}
                 </Badge>
               </div>
@@ -53,16 +53,16 @@ export function BorrowerDetailsModal({ borrower, open, onOpenChange, onEdit }: B
             <div className="space-y-4">
               <h4 className="font-medium">Basic Information</h4>
               <div className="grid grid-cols-2 gap-4">
-                {borrower.taxId && (
+                {borrower.entity.taxId && (
                   <div>
                     <Label className="text-muted-foreground">Tax ID</Label>
-                    <div>{borrower.taxId}</div>
+                    <div>{borrower.entity.taxId}</div>
                   </div>
                 )}
-                {borrower.countryOfIncorporation && (
+                {borrower.entity.countryOfIncorporation && (
                   <div>
                     <Label className="text-muted-foreground">Country of Incorporation</Label>
-                    <div>{borrower.countryOfIncorporation}</div>
+                    <div>{borrower.entity.countryOfIncorporation}</div>
                   </div>
                 )}
                 {borrower.industrySegment && (
@@ -115,18 +115,18 @@ export function BorrowerDetailsModal({ borrower, open, onOpenChange, onEdit }: B
                 <div>
                   <Label className="text-muted-foreground">KYC Status</Label>
                   <div>
-                    <Badge variant={borrower.kycStatus === 'COMPLETED' ? 'success' : 'secondary'}>
+                    <Badge variant={borrower.kycStatus === 'APPROVED' ? 'success' : 'secondary'}>
                       {borrower.kycStatus}
                     </Badge>
                   </div>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Created At</Label>
-                  <div>{format(borrower.createdAt, 'PPP')}</div>
+                  <div>{format(new Date(borrower.createdAt), 'PPP')}</div>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Last Updated</Label>
-                  <div>{format(borrower.updatedAt, 'PPP')}</div>
+                  <div>{format(new Date(borrower.updatedAt), 'PPP')}</div>
                 </div>
               </div>
             </div>

@@ -1,11 +1,18 @@
 'use server'
 
 import { prisma } from '@/server/db/client'
-import type { Borrower } from '@/types/borrower'
+import type { Borrower, Entity } from '@prisma/client'
 
-export async function getBorrowers(): Promise<Borrower[]> {
+export type BorrowerWithEntity = Borrower & {
+  entity: Entity
+}
+
+export async function getBorrowers(): Promise<BorrowerWithEntity[]> {
   try {
     const borrowers = await prisma.borrower.findMany({
+      include: {
+        entity: true
+      },
       orderBy: {
         createdAt: 'desc'
       }

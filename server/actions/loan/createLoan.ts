@@ -1,6 +1,6 @@
 'use server'
 
-import { type Prisma, type Loan } from '@prisma/client'
+import { type Prisma, type PrismaClient, type Loan, type FacilityPosition, type Lender, type Entity, PositionChangeType } from '@prisma/client'
 import { prisma } from '@/server/db/client'
 
 interface CreateLoanParams {
@@ -14,16 +14,33 @@ interface CreateLoanParams {
   effectiveRate?: number
 }
 
+type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use'>
+
+type FacilityPositionWithRelations = FacilityPosition & {
+  lender: Lender & {
+    entity: Entity
+  }
+}
+
 export async function createLoan(params: CreateLoanParams) {
   const { facilityId, amount, currency, effectiveDate, description, interestPeriod, baseRate } = params
 
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx: TransactionClient) => {
       // First verify the facility exists and has enough available amount
       const facility = await tx.facility.findUnique({
         where: { id: facilityId },
         include: {
-          loans: true
+          loans: true,
+          positions: {
+            include: {
+              lender: {
+                include: {
+                  entity: true
+                }
+              }
+            }
+          }
         }
       })
 
@@ -37,7 +54,7 @@ export async function createLoan(params: CreateLoanParams) {
       }
 
       // Calculate total outstanding loans
-      const totalOutstanding = facility.loans.reduce((sum, loan) => sum + loan.outstandingAmount, 0)
+      const totalOutstanding = facility.loans.reduce((sum: number, loan: Loan) => sum + loan.outstandingAmount, 0)
       const availableAmount = facility.commitmentAmount - totalOutstanding
 
       if (amount > availableAmount) {
@@ -76,6 +93,61 @@ export async function createLoan(params: CreateLoanParams) {
           updatedAt: new Date()
         }
       })
+
+      // Update facility positions and create position history records
+      await Promise.all(facility.positions.map(async (position) => {
+        // Calculate position's share of the draw based on their share percentage
+        const drawShare = position.share / 100 * amount
+
+        // Get current position with all fields
+        const currentPosition = await tx.facilityPosition.findUnique({
+          where: { id: position.id },
+          include: {
+            lender: {
+              include: {
+                entity: true
+              }
+            }
+          }
+        })
+
+        if (!currentPosition) {
+          throw new Error(`Position ${position.id} not found`)
+        }
+
+        // Calculate new amounts
+        const newDrawnAmount = position.drawnAmount + drawShare
+        const newUndrawnAmount = position.undrawnAmount - drawShare
+
+        // Update position amounts
+        await tx.facilityPosition.update({
+          where: { id: position.id },
+          data: {
+            drawnAmount: newDrawnAmount,
+            undrawnAmount: newUndrawnAmount
+          }
+        })
+
+        // Create position history record
+        await tx.lenderPositionHistory.create({
+          data: {
+            facilityId,
+            lenderId: currentPosition.lender.entity.id,  // Use the entity ID instead of lender ID
+            changeType: PositionChangeType.DRAWDOWN,
+            changeAmount: drawShare,
+            userId: 'SYSTEM',
+            notes: description || 'Initial loan drawdown',
+            previousCommitmentAmount: position.commitmentAmount,
+            newCommitmentAmount: position.commitmentAmount,
+            previousUndrawnAmount: position.undrawnAmount,
+            newUndrawnAmount: newUndrawnAmount,
+            previousDrawnAmount: position.drawnAmount,
+            newDrawnAmount: newDrawnAmount,
+            previousAccruedInterest: 0,
+            newAccruedInterest: 0
+          }
+        })
+      }))
 
       // Create a transaction record
       await tx.transactionHistory.create({

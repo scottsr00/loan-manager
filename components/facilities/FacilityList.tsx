@@ -10,6 +10,7 @@ import { getFacilities } from '@/server/actions/loan/getFacilities'
 import { formatCurrency } from '@/lib/utils'
 import { FacilityDetailsModal } from './FacilityDetailsModal'
 import { PositionHistoryModal } from '@/components/positions/PositionHistoryModal'
+import { ScrollText } from 'lucide-react'
 import '@/lib/ag-grid-init'
 
 export function FacilityList() {
@@ -151,6 +152,20 @@ export function FacilityList() {
 
   if (error) {
     return <div className="text-destructive">{error}</div>
+  }
+
+  if (!isLoading && facilities.length === 0) {
+    return (
+      <div className="flex h-[450px] shrink-0 items-center justify-center rounded-md border border-dashed">
+        <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
+          <ScrollText className="h-10 w-10 text-muted-foreground" />
+          <h3 className="mt-4 text-lg font-semibold">No facilities</h3>
+          <p className="mb-4 mt-2 text-sm text-muted-foreground">
+            No facilities have been created yet. Create a credit agreement and add facilities to get started.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

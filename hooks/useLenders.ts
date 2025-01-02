@@ -3,13 +3,17 @@
 import { useState, useEffect } from 'react'
 import { getLenders } from '@/server/actions/lender/getLenders'
 
-interface Lender {
+interface LenderWithEntity {
   id: string
-  legalName: string
+  entity: {
+    id: string
+    legalName: string
+    dba: string | null
+  }
 }
 
 export function useLenders() {
-  const [lenders, setLenders] = useState<Lender[]>([])
+  const [lenders, setLenders] = useState<LenderWithEntity[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 

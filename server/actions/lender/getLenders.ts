@@ -7,28 +7,29 @@ interface LenderWithEntity extends Lender {
   entity: {
     id: string
     legalName: string
+    dba: string | null
   }
 }
 
 export async function getLenders() {
-  const lenders = await prisma.lender.findMany({
-    include: {
-      entity: {
-        select: {
-          id: true,
-          legalName: true
+  try {
+    const lenders = await prisma.lender.findMany({
+      where: {
+        status: 'ACTIVE'
+      },
+      include: {
+        entity: true
+      },
+      orderBy: {
+        entity: {
+          legalName: 'asc'
         }
       }
-    },
-    orderBy: {
-      entity: {
-        legalName: 'asc'
-      }
-    }
-  })
+    })
 
-  return lenders.map((lender: LenderWithEntity) => ({
-    id: lender.id,
-    legalName: lender.entity.legalName
-  }))
+    return lenders
+  } catch (error) {
+    console.error('Error in getLenders:', error)
+    return []
+  }
 } 

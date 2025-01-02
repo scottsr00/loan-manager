@@ -8,19 +8,37 @@ export async function createBorrower(data: BorrowerInput) {
     // Validate input data
     const validatedData = borrowerInputSchema.parse(data)
 
+    // Verify the entity exists
+    const entity = await prisma.entity.findUnique({
+      where: { id: validatedData.entityId }
+    })
+
+    if (!entity) {
+      throw new Error('Entity not found')
+    }
+
+    // Check if entity already has a borrower role
+    const existingBorrower = await prisma.borrower.findUnique({
+      where: { entityId: validatedData.entityId }
+    })
+
+    if (existingBorrower) {
+      throw new Error('Entity already has a borrower role')
+    }
+
     // Create the borrower
     const borrower = await prisma.borrower.create({
       data: {
-        name: validatedData.name,
-        taxId: validatedData.taxId || null,
-        countryOfIncorporation: validatedData.countryOfIncorporation || null,
+        entityId: validatedData.entityId,
         industrySegment: validatedData.industrySegment,
         businessType: validatedData.businessType,
         creditRating: validatedData.creditRating || null,
         ratingAgency: validatedData.ratingAgency || null,
         riskRating: validatedData.riskRating || null,
-        onboardingStatus: validatedData.onboardingStatus,
-        kycStatus: validatedData.kycStatus
+        onboardingStatus: validatedData.onboardingStatus
+      },
+      include: {
+        entity: true
       }
     })
 

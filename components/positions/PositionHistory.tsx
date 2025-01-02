@@ -93,10 +93,18 @@ export function PositionHistory({ facilityId, selectedActivity, lenderId, startD
       cellRenderer: (params: ICellRendererParams) => getChangeTypeBadge(params.value)
     },
     {
-      field: 'facility.outstandingAmount',
+      field: 'facilityOutstandingAmount',
       headerName: 'Facility Outstanding',
       flex: 1,
-      valueGetter: (params: ValueGetterParams) => params.data?.facility?.outstandingAmount || 0,
+      valueGetter: (params: ValueGetterParams) => {
+        if (params.data?.trade) {
+          return params.data.trade.facilityOutstandingAmount
+        }
+        if (params.data?.servicingActivity) {
+          return params.data.servicingActivity.facilityOutstandingAmount
+        }
+        return 0
+      },
       valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
       filter: 'agNumberColumnFilter'
     },
@@ -113,7 +121,7 @@ export function PositionHistory({ facilityId, selectedActivity, lenderId, startD
       flex: 1,
       valueGetter: (params: ValueGetterParams) => {
         const lenderOutstanding = params.data?.newOutstandingAmount || 0
-        const facilityOutstanding = params.data?.facility?.outstandingAmount || 0
+        const facilityOutstanding = params.data?.trade?.facilityOutstandingAmount || params.data?.servicingActivity?.facilityOutstandingAmount || 0
         return facilityOutstanding > 0 ? (lenderOutstanding / facilityOutstanding * 100).toFixed(2) : 0
       },
       valueFormatter: (params: ValueFormatterParams) => `${params.value}%`,

@@ -1,12 +1,12 @@
 'use server'
 
 import { prisma } from '@/server/db/client'
-import { type BorrowerInput, borrowerInputSchema } from '@/server/types/borrower'
+import { type BorrowerUpdateInput, borrowerUpdateSchema } from '@/server/types/borrower'
 
-export async function updateBorrower(id: string, data: BorrowerInput) {
+export async function updateBorrower(id: string, data: BorrowerUpdateInput) {
   try {
     // Validate input data
-    const validatedData = borrowerInputSchema.parse(data)
+    const validatedData = borrowerUpdateSchema.parse(data)
 
     // Get existing borrower
     const existingBorrower = await prisma.borrower.findUnique({
@@ -30,9 +30,6 @@ export async function updateBorrower(id: string, data: BorrowerInput) {
     const updatedBorrower = await prisma.borrower.update({
       where: { id },
       data: {
-        name: validatedData.name,
-        taxId: validatedData.taxId || null,
-        countryOfIncorporation: validatedData.countryOfIncorporation || null,
         industrySegment: validatedData.industrySegment,
         businessType: validatedData.businessType,
         creditRating: validatedData.creditRating || null,

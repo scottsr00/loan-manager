@@ -43,7 +43,8 @@ export type FacilityWithRelations = Facility & {
   creditAgreement: CreditAgreement & {
     borrower: {
       id: string
-      name: string
+      legalName: string
+      dba?: string | null
     }
     lender: {
       id: string

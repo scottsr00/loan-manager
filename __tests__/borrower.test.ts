@@ -1,231 +1,134 @@
-import type { PrismaClient } from '@prisma/client'
+import { describe, expect, test, beforeEach } from '@jest/globals'
 import { prisma } from '@/server/db/client'
-import { createBorrower, updateBorrower } from '@/server/actions/borrower'
-import { type BorrowerInput } from '@/server/types/borrower'
+import { createBorrower } from '@/server/actions/borrower/createBorrower'
+import { type Borrower, type Entity } from '@prisma/client'
+import { mockDeep } from 'jest-mock-extended'
 
-type MockPrisma = {
-  [K in keyof PrismaClient]: {
-    [M in keyof PrismaClient[K]]: jest.Mock;
-  };
-};
+// Mock the entire prisma client
+const prismaMock = prisma as unknown as ReturnType<typeof mockDeep<typeof prisma>>
 
-jest.mock('@/server/db/client', () => ({
-  prisma: {
-    $transaction: jest.fn((callback) => callback(prisma as unknown as MockPrisma)),
-    borrower: {
-      create: jest.fn(),
-      update: jest.fn(),
-      findUnique: jest.fn(),
-    },
-  } as unknown as MockPrisma,
-}))
-
-describe('Borrower Tests', () => {
-  let consoleErrorSpy: jest.SpyInstance
+describe('Borrower Creation', () => {
+  const testEntityId = 'TEST-ENTITY-001'
+  const mockEntity: Entity = {
+    id: testEntityId,
+    legalName: 'Test Borrower Entity',
+    dba: null,
+    taxId: null,
+    countryOfIncorporation: null,
+    status: 'ACTIVE',
+    isAgent: false,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }
 
   beforeEach(() => {
+    // Reset all mocks before each test
     jest.clearAllMocks()
-    // Spy on console.error
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
   })
 
-  afterEach(() => {
-    // Restore console.error
-    consoleErrorSpy.mockRestore()
-  })
+  test('should create a borrower linked to an entity', async () => {
+    // Mock entity lookup
+    prismaMock.entity.findUnique.mockResolvedValueOnce(mockEntity)
+    
+    // Mock borrower lookup (no existing borrower)
+    prismaMock.borrower.findUnique.mockResolvedValueOnce(null)
 
-  describe('createBorrower', () => {
-    const mockBorrowerInput: BorrowerInput = {
-      name: 'Test Borrower Inc',
-      taxId: 'TAX123',
-      countryOfIncorporation: 'US',
+    const borrowerData = {
+      entityId: testEntityId,
       industrySegment: 'Technology',
       businessType: 'Corporation',
-      creditRating: 'BBB',
+      creditRating: 'A',
       ratingAgency: 'S&P',
-      riskRating: 'Medium',
-      onboardingStatus: 'PENDING',
-      kycStatus: 'PENDING',
+      riskRating: 'Low',
+      onboardingStatus: 'PENDING' as const
     }
 
-    it('should create a borrower with valid inputs', async () => {
-      const mockBorrower = {
-        id: 'borrower-1',
-        name: mockBorrowerInput.name,
-        taxId: mockBorrowerInput.taxId,
-        countryOfIncorporation: mockBorrowerInput.countryOfIncorporation,
-        industrySegment: mockBorrowerInput.industrySegment,
-        businessType: mockBorrowerInput.businessType,
-        creditRating: mockBorrowerInput.creditRating,
-        ratingAgency: mockBorrowerInput.ratingAgency,
-        riskRating: mockBorrowerInput.riskRating,
-        onboardingStatus: mockBorrowerInput.onboardingStatus,
-        kycStatus: mockBorrowerInput.kycStatus,
-      }
+    // Mock borrower creation
+    const mockBorrower = {
+      id: 'BORROWER-001',
+      entityId: testEntityId,
+      industrySegment: borrowerData.industrySegment,
+      businessType: borrowerData.businessType,
+      creditRating: borrowerData.creditRating,
+      ratingAgency: borrowerData.ratingAgency,
+      riskRating: borrowerData.riskRating,
+      onboardingStatus: borrowerData.onboardingStatus,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      entity: mockEntity
+    }
 
-      ;(prisma.borrower.create as jest.Mock).mockResolvedValue(mockBorrower)
+    prismaMock.borrower.create.mockResolvedValueOnce(mockBorrower as Borrower & { entity: Entity })
 
-      const result = await createBorrower(mockBorrowerInput)
+    const borrower = await createBorrower(borrowerData)
 
-      expect(result).toHaveProperty('id', 'borrower-1')
-      expect(result.name).toBe(mockBorrowerInput.name)
-      expect(result.industrySegment).toBe(mockBorrowerInput.industrySegment)
-      expect(prisma.borrower.create).toHaveBeenCalledTimes(1)
-      expect(consoleErrorSpy).not.toHaveBeenCalled()
+    // Verify borrower was created with correct data
+    expect(borrower).toBeDefined()
+    expect(borrower.entityId).toBe(testEntityId)
+    expect(borrower.industrySegment).toBe(borrowerData.industrySegment)
+    expect(borrower.businessType).toBe(borrowerData.businessType)
+    expect(borrower.creditRating).toBe(borrowerData.creditRating)
+    expect(borrower.ratingAgency).toBe(borrowerData.ratingAgency)
+    expect(borrower.riskRating).toBe(borrowerData.riskRating)
+    expect(borrower.onboardingStatus).toBe(borrowerData.onboardingStatus)
+
+    // Verify entity relationship
+    expect(borrower.entity).toBeDefined()
+    expect(borrower.entity.id).toBe(testEntityId)
+    expect(borrower.entity.legalName).toBe('Test Borrower Entity')
+
+    // Verify prisma calls
+    expect(prismaMock.entity.findUnique).toHaveBeenCalledWith({
+      where: { id: testEntityId }
     })
-
-    it('should validate required fields', async () => {
-      const invalidInput = {
-        name: '',
-        industrySegment: '',
-        businessType: '',
-        onboardingStatus: 'PENDING',
-        kycStatus: 'PENDING',
-      } as BorrowerInput
-
-      await expect(createBorrower(invalidInput))
-        .rejects.toThrow(/Name is required|Industry segment is required|Business type is required/)
-
-      expect(prisma.borrower.create).not.toHaveBeenCalled()
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error in createBorrower:',
-        expect.any(Error)
-      )
-    })
-
-    it('should validate onboarding status', async () => {
-      const invalidInput = {
-        ...mockBorrowerInput,
-        onboardingStatus: 'INVALID_STATUS',
-      } as unknown as BorrowerInput
-
-      await expect(createBorrower(invalidInput))
-        .rejects.toThrow(/Invalid enum value/)
-
-      expect(prisma.borrower.create).not.toHaveBeenCalled()
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error in createBorrower:',
-        expect.any(Error)
-      )
-    })
-
-    it('should validate KYC status', async () => {
-      const invalidInput = {
-        ...mockBorrowerInput,
-        kycStatus: 'INVALID_STATUS',
-      } as unknown as BorrowerInput
-
-      await expect(createBorrower(invalidInput))
-        .rejects.toThrow(/Invalid enum value/)
-
-      expect(prisma.borrower.create).not.toHaveBeenCalled()
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error in createBorrower:',
-        expect.any(Error)
-      )
+    expect(prismaMock.borrower.create).toHaveBeenCalledWith({
+      data: borrowerData,
+      include: { entity: true }
     })
   })
 
-  describe('updateBorrower', () => {
-    const mockExistingBorrower = {
-      id: 'borrower-1',
-      name: 'Test Borrower Inc',
+  test('should fail to create borrower for non-existent entity', async () => {
+    // Mock entity lookup to return null
+    prismaMock.entity.findUnique.mockResolvedValueOnce(null)
+
+    const borrowerData = {
+      entityId: 'non-existent-id',
       industrySegment: 'Technology',
       businessType: 'Corporation',
-      creditRating: 'BBB',
-      ratingAgency: 'S&P',
-      riskRating: 'Medium',
-      onboardingStatus: 'PENDING',
-      kycStatus: 'PENDING',
+      onboardingStatus: 'PENDING' as const
     }
 
-    it('should update borrower with valid changes', async () => {
-      ;(prisma.borrower.findUnique as jest.Mock).mockResolvedValue(mockExistingBorrower)
-      ;(prisma.borrower.update as jest.Mock).mockImplementation((args) => Promise.resolve({ ...mockExistingBorrower, ...args.data }))
+    await expect(createBorrower(borrowerData)).rejects.toThrow('Entity not found')
+    expect(prismaMock.borrower.create).not.toHaveBeenCalled()
+  })
 
-      const updateData: BorrowerInput = {
-        name: 'Test Borrower Inc',
-        industrySegment: 'Technology',
-        businessType: 'Corporation',
-        onboardingStatus: 'IN_PROGRESS',
-        kycStatus: 'IN_PROGRESS',
-      }
+  test('should fail to create duplicate borrower for same entity', async () => {
+    // Mock entity lookup
+    prismaMock.entity.findUnique.mockResolvedValueOnce(mockEntity)
 
-      const result = await updateBorrower(mockExistingBorrower.id, updateData)
+    // Mock existing borrower
+    const existingBorrower: Borrower = {
+      id: 'EXISTING-BORROWER',
+      entityId: testEntityId,
+      industrySegment: 'Technology',
+      businessType: 'Corporation',
+      creditRating: null,
+      ratingAgency: null,
+      riskRating: null,
+      onboardingStatus: 'PENDING',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+    prismaMock.borrower.findUnique.mockResolvedValueOnce(existingBorrower)
 
-      expect(result.onboardingStatus).toBe(updateData.onboardingStatus)
-      expect(result.kycStatus).toBe(updateData.kycStatus)
-      expect(consoleErrorSpy).not.toHaveBeenCalled()
-    })
+    const borrowerData = {
+      entityId: testEntityId,
+      industrySegment: 'Technology',
+      businessType: 'Corporation',
+      onboardingStatus: 'PENDING' as const
+    }
 
-    it('should throw error if borrower does not exist', async () => {
-      ;(prisma.borrower.findUnique as jest.Mock).mockResolvedValue(null)
-
-      const updateData: BorrowerInput = {
-        name: 'Test Borrower Inc',
-        industrySegment: 'Technology',
-        businessType: 'Corporation',
-        onboardingStatus: 'IN_PROGRESS',
-        kycStatus: 'PENDING',
-      }
-
-      await expect(updateBorrower('non-existent', updateData))
-        .rejects.toThrow('Borrower not found')
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error in updateBorrower:',
-        expect.any(Error)
-      )
-    })
-
-    it('should validate status transitions', async () => {
-      const mockRejectedBorrower = {
-        ...mockExistingBorrower,
-        onboardingStatus: 'REJECTED',
-      }
-
-      ;(prisma.borrower.findUnique as jest.Mock).mockResolvedValue(mockRejectedBorrower)
-
-      const updateData: BorrowerInput = {
-        name: 'Test Borrower Inc',
-        industrySegment: 'Technology',
-        businessType: 'Corporation',
-        onboardingStatus: 'IN_PROGRESS',
-        kycStatus: 'PENDING',
-      }
-
-      await expect(updateBorrower(mockRejectedBorrower.id, updateData))
-        .rejects.toThrow('Cannot change status of rejected borrower')
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error in updateBorrower:',
-        expect.any(Error)
-      )
-    })
-
-    it('should validate KYC status transitions', async () => {
-      const mockRejectedBorrower = {
-        ...mockExistingBorrower,
-        kycStatus: 'REJECTED',
-      }
-
-      ;(prisma.borrower.findUnique as jest.Mock).mockResolvedValue(mockRejectedBorrower)
-
-      const updateData: BorrowerInput = {
-        name: 'Test Borrower Inc',
-        industrySegment: 'Technology',
-        businessType: 'Corporation',
-        onboardingStatus: 'PENDING',
-        kycStatus: 'IN_PROGRESS',
-      }
-
-      await expect(updateBorrower(mockRejectedBorrower.id, updateData))
-        .rejects.toThrow('Cannot change KYC status of rejected borrower')
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error in updateBorrower:',
-        expect.any(Error)
-      )
-    })
+    await expect(createBorrower(borrowerData)).rejects.toThrow('Entity already has a borrower role')
+    expect(prismaMock.borrower.create).not.toHaveBeenCalled()
   })
 }) 

@@ -79,7 +79,10 @@ export async function updateServicingActivity(params: UpdateServicingActivityPar
   try {
     // First check if the servicing activity exists
     const existingActivity = await prisma.servicingActivity.findUnique({
-      where: { id: params.id }
+      where: { id: params.id },
+      include: {
+        facility: true
+      }
     })
 
     if (!existingActivity) {
@@ -97,6 +100,18 @@ export async function updateServicingActivity(params: UpdateServicingActivityPar
         status: params.status,
         completedAt: params.status === 'COMPLETED' ? new Date() : null,
         completedBy: params.status === 'COMPLETED' ? params.completedBy : null,
+        facilityOutstandingAmount: params.status === 'COMPLETED' ? existingActivity.facility.outstandingAmount : null,
+        transactions: params.status === 'COMPLETED' ? {
+          create: {
+            activityType: existingActivity.activityType,
+            amount: existingActivity.amount,
+            status: 'COMPLETED',
+            description: existingActivity.description || 'Servicing activity completed',
+            effectiveDate: new Date(),
+            processedBy: params.completedBy || 'SYSTEM',
+            facilityOutstandingAmount: existingActivity.facility.outstandingAmount
+          }
+        } : undefined
       }
     })
 

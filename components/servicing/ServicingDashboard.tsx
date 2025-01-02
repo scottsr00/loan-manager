@@ -52,6 +52,7 @@ interface ServicingActivityType {
   amount: number
   completedAt?: Date | null
   completedBy?: string | null
+  facilityOutstandingAmount?: number | null
   facility?: {
     facilityName: string
     creditAgreement?: {
@@ -116,6 +117,12 @@ export function ServicingDashboard() {
       width: 150,
       valueFormatter: (params: any) => formatCurrency(params.value),
     },
+    {
+      field: 'facilityOutstandingAmount',
+      headerName: 'Facility Outstanding',
+      width: 150,
+      valueFormatter: (params: any) => params.value ? formatCurrency(params.value) : '-',
+    }
   ], [])
 
   useEffect(() => {

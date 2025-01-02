@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { updateBorrower } from '@/server/actions/borrower/updateBorrower'
 import { createBorrower } from '@/server/actions/borrower/createBorrower'
+import { createEntity, updateEntity } from '@/server/actions/entity'
 import type { Borrower } from '@/types/borrower'
 import { onboardingStatusEnum, kycStatusEnum } from '@/server/types/borrower'
 import { toast } from 'sonner'
@@ -40,9 +41,9 @@ export function BorrowerModal({ borrower, isOpen, onClose, onUpdate }: BorrowerM
 
   useEffect(() => {
     if (borrower) {
-      setName(borrower.name)
-      setTaxId(borrower.taxId || '')
-      setCountryOfIncorporation(borrower.countryOfIncorporation || '')
+      setName(borrower.entity.legalName)
+      setTaxId(borrower.entity.taxId || '')
+      setCountryOfIncorporation(borrower.entity.countryOfIncorporation || '')
       setIndustrySegment(borrower.industrySegment || '')
       setBusinessType(borrower.businessType || '')
       setCreditRating(borrower.creditRating || '')
@@ -69,25 +70,60 @@ export function BorrowerModal({ borrower, isOpen, onClose, onUpdate }: BorrowerM
     e.preventDefault()
     setIsLoading(true)
     try {
-      // Ensure we're using the correct status values
-      const data = {
-        name: name.trim(),
+      let entityId = borrower?.entity?.id
+
+      // Create or update entity
+      const entityData = {
+        legalName: name.trim(),
+        status: 'ACTIVE',
+        addresses: [{
+          type: 'BUSINESS',
+          street1: 'TBD',
+          city: 'TBD',
+          country: countryOfIncorporation.trim() || 'US',
+          isPrimary: true
+        }],
+        contacts: [{
+          type: 'PRIMARY',
+          firstName: 'TBD',
+          lastName: 'TBD',
+          title: 'Primary Contact',
+          isPrimary: true
+        }],
+        ...(taxId.trim() ? { taxId: taxId.trim() } : {}),
+        ...(countryOfIncorporation.trim() ? { countryOfIncorporation: countryOfIncorporation.trim() } : {})
+      }
+
+      if (borrower) {
+        // Update existing entity
+        await updateEntity(borrower.entity.id, entityData)
+      } else {
+        // Create new entity
+        const entity = await createEntity(entityData)
+        entityId = entity.id
+      }
+
+      // Common borrower data
+      const commonBorrowerData = {
         industrySegment: industrySegment.trim(),
         businessType: businessType.trim(),
         onboardingStatus: onboardingStatus as OnboardingStatus,
         kycStatus: kycStatus as KycStatus,
-        ...(taxId.trim() ? { taxId: taxId.trim() } : {}),
-        ...(countryOfIncorporation.trim() ? { countryOfIncorporation: countryOfIncorporation.trim() } : {}),
         ...(creditRating.trim() ? { creditRating: creditRating.trim() } : {}),
         ...(ratingAgency.trim() ? { ratingAgency: ratingAgency.trim() } : {}),
         ...(riskRating.trim() ? { riskRating: riskRating.trim() } : {})
       }
 
       if (borrower) {
-        await updateBorrower(borrower.id, data)
+        // Update existing borrower
+        await updateBorrower(borrower.id, commonBorrowerData)
         toast.success('Borrower updated successfully')
       } else {
-        await createBorrower(data)
+        // Create new borrower with entityId
+        await createBorrower({
+          ...commonBorrowerData,
+          entityId: entityId!
+        })
         toast.success('Borrower created successfully')
       }
       onUpdate()
@@ -106,7 +142,7 @@ export function BorrowerModal({ borrower, isOpen, onClose, onUpdate }: BorrowerM
         <DialogTitle>{borrower ? 'Edit Borrower' : 'New Borrower'}</DialogTitle>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">Legal Name</Label>
             <Input
               id="name"
               value={name}

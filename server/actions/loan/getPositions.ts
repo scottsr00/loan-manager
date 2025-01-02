@@ -47,7 +47,9 @@ type FacilityPositionWithRelations = {
   id: string
   facilityId: string
   lenderId: string
-  amount: number
+  commitmentAmount: number
+  undrawnAmount: number
+  drawnAmount: number
   share: number
   status: string
   createdAt: Date
@@ -206,7 +208,9 @@ export async function getPositions(): Promise<Position[]> {
         margin: facility.margin,
         positions: facility.positions.map(position => ({
           lender: position.lender.entity.legalName,
-          commitment: position.amount,
+          commitment: position.commitmentAmount,
+          undrawnAmount: position.undrawnAmount,
+          drawnAmount: position.drawnAmount,
           status: position.status
         })),
         trades: facility.trades.map(trade => ({

@@ -126,7 +126,8 @@ export async function closeTrade(tradeId: string, userId: string) {
         userId,
         activityType: 'TRADE',
         tradeId: trade.id,
-        notes: `Trade closed - Sold ${trade.parAmount} to ${trade.buyerCounterparty.entity.legalName}`
+        notes: `Trade closed - Sold ${trade.parAmount} to ${trade.buyerCounterparty.entity.legalName}`,
+        facilityOutstandingAmount: trade.facility.outstandingAmount
       })
 
       // Record position history for buyer
@@ -142,7 +143,22 @@ export async function closeTrade(tradeId: string, userId: string) {
         userId,
         activityType: 'TRADE',
         tradeId: trade.id,
-        notes: `Trade closed - Bought ${trade.parAmount} from ${trade.sellerCounterparty.entity.legalName}`
+        notes: `Trade closed - Bought ${trade.parAmount} from ${trade.sellerCounterparty.entity.legalName}`,
+        facilityOutstandingAmount: trade.facility.outstandingAmount
+      })
+
+      // Create transaction history record
+      const transaction = await tx.transactionHistory.create({
+        data: {
+          tradeId: trade.id,
+          activityType: 'TRADE_SETTLEMENT',
+          amount: trade.parAmount,
+          status: 'COMPLETED',
+          description: `Trade closed - ${trade.parAmount} transferred from ${trade.sellerCounterparty.entity.legalName} to ${trade.buyerCounterparty.entity.legalName}`,
+          effectiveDate: new Date(),
+          processedBy: userId,
+          facilityOutstandingAmount: trade.facility.outstandingAmount
+        }
       })
 
       // Update trade status to closed
@@ -150,16 +166,7 @@ export async function closeTrade(tradeId: string, userId: string) {
         where: { id: trade.id },
         data: {
           status: 'CLOSED',
-          transactions: {
-            create: {
-              activityType: 'TRADE_CLOSED',
-              amount: trade.parAmount,
-              status: 'COMPLETED',
-              description: 'Trade closed and positions updated',
-              effectiveDate: new Date(),
-              processedBy: userId
-            }
-          }
+          facilityOutstandingAmount: trade.facility.outstandingAmount
         },
         include: {
           facility: true,

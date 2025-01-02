@@ -4,10 +4,8 @@ import { Prisma } from '@prisma/client'
 
 // Base Prisma Types with Relations
 export type CreditAgreementWithRelations = CreditAgreement & {
-  borrower: Borrower
-  lender: Entity & {
-    lender: Lender | null
-  }
+  borrower: Entity
+  lender: Entity
   facilities: (Facility & {
     trades: {
       id: string
@@ -22,20 +20,8 @@ export type CreditAgreementWithRelations = CreditAgreement & {
       status: string
       createdAt: Date
       updatedAt: Date
-      sellerCounterparty: {
-        id: string
-        entity: {
-          id: string
-          legalName: string
-        }
-      }
-      buyerCounterparty: {
-        id: string
-        entity: {
-          id: string
-          legalName: string
-        }
-      }
+      sellerCounterparty: Entity
+      buyerCounterparty: Entity
     }[]
   })[]
   transactions: TransactionHistory[]

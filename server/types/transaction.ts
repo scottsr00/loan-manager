@@ -31,7 +31,8 @@ export const transactionHistorySchema = z.object({
   status: z.string().default('PENDING'),
   description: z.string(),
   effectiveDate: z.date(),
-  processedBy: z.string()
+  processedBy: z.string(),
+  facilityOutstandingAmount: z.number().optional()
 })
 
 export type TransactionHistoryInput = z.infer<typeof transactionHistorySchema>
@@ -49,6 +50,7 @@ export interface TransactionHistory {
   description: string | null
   effectiveDate: Date
   processedBy: string
+  facilityOutstandingAmount: number | null
   createdAt: Date
   updatedAt: Date
   creditAgreement?: {

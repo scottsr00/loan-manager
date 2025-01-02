@@ -7,6 +7,33 @@ import type { PrismaClient } from '@prisma/client'
 
 type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use'>
 
+interface FacilityPosition {
+  id: string
+  amount: number
+  commitmentAmount: number
+  lender: {
+    entity: {
+      id: string
+    }
+  }
+}
+
+interface Facility {
+  id: string
+  creditAgreementId: string
+  positions: FacilityPosition[]
+  facilityType: {
+    name: string
+  }
+}
+
+interface Loan {
+  id: string
+  outstandingAmount: number
+  currency: string
+  facility: Facility
+}
+
 export async function processPaydown(params: PaydownInput): Promise<PaydownResult> {
   if (!params) {
     throw new Error('Paydown parameters are required')
@@ -33,11 +60,12 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
                   }
                 }
               },
-              creditAgreement: true
+              creditAgreement: true,
+              facilityType: true
             }
           }
         }
-      })
+      }) as Loan | null
 
       if (!loan) {
         throw new Error(`Loan with ID ${validatedParams.loanId} not found`)
@@ -52,16 +80,35 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
       }
 
       // 2. Calculate new amounts
-      const availableAmount = loan.facility.positions.reduce((sum: number, pos) => sum + pos.amount, 0)
+      const availableAmount = loan.facility.positions.reduce((sum: number, pos: FacilityPosition) => sum + pos.amount, 0)
       const newAvailableAmount = availableAmount - validatedParams.amount
 
-      // 3. Update loan outstanding amount
+      // Check if we should reduce commitment (for non-revolvers)
+      const isRevolver = loan.facility.facilityType.name === 'REVOLVER'
+
+      // 3. Update loan outstanding amount and facility positions
       const updatedLoan = await tx.loan.update({
         where: { id: loan.id },
         data: { 
           outstandingAmount: loan.outstandingAmount - validatedParams.amount 
         }
       })
+
+      // Update facility positions
+      await Promise.all(loan.facility.positions.map(async (position: FacilityPosition) => {
+        const share = position.amount / availableAmount
+        const changeAmount = validatedParams.amount * share
+        const newAmount = position.amount - changeAmount
+
+        await tx.facilityPosition.update({
+          where: { id: position.id },
+          data: { 
+            amount: newAmount,
+            // For non-revolvers, reduce the commitment by the same amount
+            ...(isRevolver ? {} : { commitmentAmount: position.commitmentAmount - changeAmount })
+          }
+        })
+      }))
 
       // 4. Create servicing activity record ONLY if not already linked to one
       let servicingActivity;
@@ -108,13 +155,14 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
       revalidatePath('/servicing')
       revalidatePath('/transactions')
 
-      // 6. Calculate position updates but don't apply them yet
-      const positionUpdates = loan.facility.positions.map(position => {
+      // 6. Calculate position updates for the response
+      const positionUpdates = loan.facility.positions.map((position: FacilityPosition) => {
         const share = position.amount / availableAmount
+        const changeAmount = validatedParams.amount * share
         return {
           lenderId: position.lender.entity.id,
           previousAmount: position.amount,
-          newAmount: position.amount - (validatedParams.amount * share),
+          newAmount: position.amount - changeAmount,
           share: share * 100 // Convert to percentage
         }
       })

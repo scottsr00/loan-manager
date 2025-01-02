@@ -32,4 +32,15 @@ export interface Borrower {
   kycStatus: string
   createdAt: Date
   updatedAt: Date
+  entityId: string
+  entity: {
+    id: string
+    legalName: string
+    dba: string | null
+    taxId: string | null
+    countryOfIncorporation: string | null
+    status: string
+    createdAt: Date
+    updatedAt: Date
+  }
 } 

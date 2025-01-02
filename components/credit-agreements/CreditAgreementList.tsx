@@ -84,9 +84,10 @@ export function CreditAgreementList({ creditAgreements, onUpdate }: CreditAgreem
       width: 200,
     },
     {
-      field: 'borrower.name',
+      field: 'borrower.legalName',
       headerName: 'Borrower',
       width: 200,
+      valueGetter: (params) => params.data?.borrower?.legalName || 'N/A'
     },
     {
       field: 'amount',

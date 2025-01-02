@@ -8,35 +8,13 @@ export async function getCreditAgreements(): Promise<CreditAgreementWithRelation
     const creditAgreements = await prisma.creditAgreement.findMany({
       include: {
         borrower: true,
-        lender: {
-          include: {
-            lender: true
-          }
-        },
+        lender: true,
         facilities: {
           include: {
             trades: {
               include: {
-                sellerCounterparty: {
-                  include: {
-                    entity: {
-                      select: {
-                        id: true,
-                        legalName: true
-                      }
-                    }
-                  }
-                },
-                buyerCounterparty: {
-                  include: {
-                    entity: {
-                      select: {
-                        id: true,
-                        legalName: true
-                      }
-                    }
-                  }
-                }
+                sellerCounterparty: true,
+                buyerCounterparty: true
               }
             }
           }
@@ -48,7 +26,7 @@ export async function getCreditAgreements(): Promise<CreditAgreementWithRelation
       }
     })
 
-    return creditAgreements
+    return creditAgreements.filter((ca: CreditAgreementWithRelations) => ca.borrower && ca.lender)
   } catch (error) {
     console.error('Error fetching credit agreements:', error)
     throw error
@@ -72,35 +50,13 @@ export async function getAvailableLoans(): Promise<CreditAgreementWithRelations[
       },
       include: {
         borrower: true,
-        lender: {
-          include: {
-            lender: true
-          }
-        },
+        lender: true,
         facilities: {
           include: {
             trades: {
               include: {
-                sellerCounterparty: {
-                  include: {
-                    entity: {
-                      select: {
-                        id: true,
-                        legalName: true
-                      }
-                    }
-                  }
-                },
-                buyerCounterparty: {
-                  include: {
-                    entity: {
-                      select: {
-                        id: true,
-                        legalName: true
-                      }
-                    }
-                  }
-                }
+                sellerCounterparty: true,
+                buyerCounterparty: true
               }
             }
           }
@@ -112,11 +68,12 @@ export async function getAvailableLoans(): Promise<CreditAgreementWithRelations[
       }
     })
 
-    if (!availableLoans) {
+    const validLoans = availableLoans.filter((loan: CreditAgreementWithRelations) => loan.borrower && loan.lender)
+    if (!validLoans.length) {
       throw new Error('No available loans found')
     }
 
-    return availableLoans
+    return validLoans
   } catch (error) {
     console.error('Error fetching available loans:', error)
     throw error
@@ -129,35 +86,13 @@ export async function getCreditAgreement(id: string): Promise<CreditAgreementWit
       where: { id },
       include: {
         borrower: true,
-        lender: {
-          include: {
-            lender: true
-          }
-        },
+        lender: true,
         facilities: {
           include: {
             trades: {
               include: {
-                sellerCounterparty: {
-                  include: {
-                    entity: {
-                      select: {
-                        id: true,
-                        legalName: true
-                      }
-                    }
-                  }
-                },
-                buyerCounterparty: {
-                  include: {
-                    entity: {
-                      select: {
-                        id: true,
-                        legalName: true
-                      }
-                    }
-                  }
-                }
+                sellerCounterparty: true,
+                buyerCounterparty: true
               }
             }
           }
@@ -166,7 +101,7 @@ export async function getCreditAgreement(id: string): Promise<CreditAgreementWit
       }
     })
 
-    if (!creditAgreement) {
+    if (!creditAgreement || !creditAgreement.borrower || !creditAgreement.lender) {
       return null
     }
 

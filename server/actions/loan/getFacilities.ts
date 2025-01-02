@@ -1,6 +1,19 @@
 'use server'
 
 import { prisma } from '@/server/db/client'
+import { type Facility, type Entity } from '@prisma/client'
+
+interface FacilityWithRelations extends Facility {
+  creditAgreement: {
+    borrower: Entity | null
+    lender: Entity | null
+  } | null
+  servicingActivities: any[]
+  trades: any[]
+  loans: {
+    outstandingAmount: number | null
+  }[]
+}
 
 export async function getFacilities() {
   try {
@@ -8,11 +21,7 @@ export async function getFacilities() {
       include: {
         creditAgreement: {
           include: {
-            borrower: {
-              include: {
-                entity: true
-              }
-            },
+            borrower: true,
             lender: true
           }
         },
@@ -25,6 +34,11 @@ export async function getFacilities() {
           orderBy: {
             tradeDate: 'desc'
           }
+        },
+        loans: {
+          select: {
+            outstandingAmount: true
+          }
         }
       },
       orderBy: {
@@ -32,12 +46,22 @@ export async function getFacilities() {
       }
     })
 
-    if (!facilities) {
-      throw new Error('No facilities found')
-    }
+    const validFacilities = facilities
+      .filter((f: FacilityWithRelations) => f.creditAgreement?.borrower && f.creditAgreement?.lender)
+      .map((facility: FacilityWithRelations) => {
+        const totalOutstanding = facility.loans.reduce((sum, loan) => {
+          const amount = loan.outstandingAmount || 0
+          return sum + amount
+        }, 0)
+        
+        return {
+          ...facility,
+          availableAmount: facility.commitmentAmount - totalOutstanding
+        }
+      })
 
     console.log('Fetched facilities with activities:', 
-      facilities.map(f => ({
+      validFacilities.map((f: FacilityWithRelations) => ({
         id: f.id,
         name: f.facilityName,
         servicingCount: f.servicingActivities?.length || 0,
@@ -45,12 +69,10 @@ export async function getFacilities() {
       }))
     )
 
-    return facilities
+    return validFacilities
   } catch (error) {
     console.error('Error in getFacilities:', error instanceof Error ? error.message : 'Unknown error')
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch facilities: ${error.message}`)
-    }
-    throw new Error('Failed to fetch facilities: Unknown error')
+    // Return empty array for database errors
+    return []
   }
 } 

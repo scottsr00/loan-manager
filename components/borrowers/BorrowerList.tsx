@@ -23,17 +23,17 @@ export function BorrowerList({ borrowers, onUpdate }: BorrowerListProps) {
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'name',
+      field: 'entity.legalName',
       headerName: 'Name',
       width: 200,
     },
     {
-      field: 'taxId',
+      field: 'entity.taxId',
       headerName: 'Tax ID',
       width: 150,
     },
     {
-      field: 'countryOfIncorporation',
+      field: 'entity.countryOfIncorporation',
       headerName: 'Country',
       width: 150,
     },

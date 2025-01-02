@@ -62,6 +62,7 @@ export async function createFacility(data: CreateFacilityInput) {
         facilityName: data.facilityName,
         facilityType: data.facilityType,
         commitmentAmount: data.commitmentAmount,
+        availableAmount: data.commitmentAmount,
         currency: data.currency || 'USD',
         startDate: data.startDate,
         maturityDate: data.maturityDate,

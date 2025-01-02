@@ -10,6 +10,20 @@ interface GetServicingActivitiesParams {
   endDate?: Date
 }
 
+interface Loan {
+  id: string
+  status: string
+  outstandingAmount: number
+}
+
+interface Activity {
+  id: string
+  activityType: string
+  facility?: {
+    loans: Loan[]
+  }
+}
+
 export async function getServicingActivities(params: GetServicingActivitiesParams = {}) {
   try {
     const { status, activityType, facilityId, startDate, endDate } = params
@@ -52,23 +66,24 @@ export async function getServicingActivities(params: GetServicingActivitiesParam
     })
 
     return {
-      activities: activities.map(activity => {
+      activities: activities.map((activity: Activity) => {
         const { facility, ...rest } = activity
         const activeLoans = facility?.loans || []
-        const totalOutstanding = activeLoans.reduce((sum, loan) => sum + loan.outstandingAmount, 0)
+        const totalOutstanding = activeLoans.reduce((sum: number, loan: Loan) => sum + loan.outstandingAmount, 0)
 
         // For payment activities, include all active loans with their proportional amounts
         if (['PRINCIPAL_PAYMENT', 'INTEREST_PAYMENT', 'UNSCHEDULED_PAYMENT'].includes(activity.activityType)) {
           return {
             ...rest,
             facility,
-            loans: activeLoans.map(loan => ({
+            facilityOutstandingAmount: totalOutstanding,
+            loans: activeLoans.map((loan: Loan) => ({
               id: loan.id,
               status: loan.status,
               outstandingAmount: loan.outstandingAmount,
               // Calculate the proportional share of the payment for each loan
               paymentShare: totalOutstanding > 0 
-                ? (loan.outstandingAmount / totalOutstanding) * activity.amount 
+                ? (loan.outstandingAmount / totalOutstanding) * (activity as any).amount 
                 : 0
             }))
           }
@@ -76,7 +91,8 @@ export async function getServicingActivities(params: GetServicingActivitiesParam
 
         return {
           ...rest,
-          facility
+          facility,
+          facilityOutstandingAmount: totalOutstanding
         }
       })
     }
