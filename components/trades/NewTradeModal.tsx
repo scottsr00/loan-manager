@@ -13,8 +13,14 @@ import { addDays } from 'date-fns'
 import { useLenders } from '@/hooks/useLenders'
 import { type Lender } from '@prisma/client'
 import { getCreditAgreementList } from '@/server/actions/creditAgreement/getCreditAgreementList'
+import { getCounterparties } from '@/server/actions/counterparty/getCounterparties'
 
 interface LenderWithEntity {
+  id: string
+  legalName: string
+}
+
+interface CounterpartyWithEntity {
   id: string
   legalName: string
 }
@@ -55,39 +61,27 @@ export function NewTradeModal({
 }: NewTradeModalProps) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { lenders = [], isLoading: isLoadingLenders } = useLenders()
+  const [isLoadingCreditAgreements, setIsLoadingCreditAgreements] = useState(true)
   const [creditAgreements, setCreditAgreements] = useState<CreditAgreement[]>([])
-  const [isLoadingCreditAgreements, setIsLoadingCreditAgreements] = useState(false)
-  const today = new Date()
+  const [counterparties, setCounterparties] = useState<CounterpartyWithEntity[]>([])
+  const [isLoadingCounterparties, setIsLoadingCounterparties] = useState(false)
+  const { lenders, isLoading: isLoadingLenders } = useLenders()
 
   const [formData, setFormData] = useState({
     creditAgreementId: '',
     facilityId: facilityId || '',
     sellerLenderId: '',
     buyerLenderId: '',
-    tradeDate: today,
-    settlementDate: addDays(today, 3), // T+3 default settlement
+    tradeDate: new Date(),
+    settlementDate: addDays(new Date(), 1),
     parAmount: '',
     price: '',
     description: ''
   })
 
-  // Get available facilities based on selected credit agreement
-  const availableFacilities = useMemo(() => {
-    const selectedCA = creditAgreements.find(ca => ca.id === formData.creditAgreementId)
-    return selectedCA?.facilities || []
-  }, [creditAgreements, formData.creditAgreementId])
-
   useEffect(() => {
-    if (facilityId) {
-      setFormData(prev => ({ ...prev, facilityId }))
-    }
-  }, [facilityId])
-
-  useEffect(() => {
-    async function loadCreditAgreements() {
+    const loadCreditAgreements = async () => {
       try {
-        setIsLoadingCreditAgreements(true)
         const data = await getCreditAgreementList()
         setCreditAgreements(data)
       } catch (error) {
@@ -98,65 +92,62 @@ export function NewTradeModal({
       }
     }
 
-    if (!facilityId && (controlledOpen || open)) {
-      loadCreditAgreements()
-    }
-  }, [facilityId, controlledOpen, open])
-
-  // Reset facility when credit agreement changes
-  useEffect(() => {
-    if (formData.creditAgreementId && formData.facilityId) {
-      const selectedCA = creditAgreements.find(ca => ca.id === formData.creditAgreementId)
-      const facilityExists = selectedCA?.facilities.some(f => f.id === formData.facilityId)
-      if (!facilityExists) {
-        setFormData(prev => ({ ...prev, facilityId: '' }))
+    const loadCounterparties = async () => {
+      setIsLoadingCounterparties(true)
+      try {
+        const data = await getCounterparties()
+        setCounterparties(data)
+      } catch (error) {
+        console.error('Error fetching counterparties:', error)
+        toast.error('Failed to fetch counterparties')
+      } finally {
+        setIsLoadingCounterparties(false)
       }
     }
-  }, [formData.creditAgreementId, formData.facilityId, creditAgreements])
+
+    loadCreditAgreements()
+    loadCounterparties()
+  }, [])
+
+  const availableFacilities = useMemo(() => {
+    const selectedAgreement = creditAgreements.find(ca => ca.id === formData.creditAgreementId)
+    return selectedAgreement?.facilities || []
+  }, [creditAgreements, formData.creditAgreementId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isSubmitting) return
+    setIsSubmitting(true)
 
     try {
-      setIsSubmitting(true)
-
-      // Basic validation
       if (!formData.facilityId) {
         throw new Error('Please select a facility')
       }
-      if (!formData.sellerLenderId || !formData.buyerLenderId) {
-        throw new Error('Please select both seller and buyer')
+      if (!formData.sellerLenderId) {
+        throw new Error('Please select a seller')
       }
-      if (formData.sellerLenderId === formData.buyerLenderId) {
-        throw new Error('Seller and buyer cannot be the same')
+      if (!formData.buyerLenderId) {
+        throw new Error('Please select a buyer')
       }
-      if (!formData.parAmount || parseFloat(formData.parAmount) <= 0) {
-        throw new Error('Please enter a valid par amount')
+      if (!formData.tradeDate) {
+        throw new Error('Please select a trade date')
       }
-      if (!formData.price || parseFloat(formData.price) <= 0 || parseFloat(formData.price) > 100) {
-        throw new Error('Please enter a valid price (0-100)')
+      if (!formData.settlementDate) {
+        throw new Error('Please select a settlement date')
       }
-
-      // Facility-specific validation
-      const selectedFacility = availableFacilities.find(f => f.id === formData.facilityId)
-      if (selectedFacility) {
-        if (parseFloat(formData.parAmount) > selectedFacility.commitmentAmount) {
-          throw new Error('Trade amount cannot exceed facility commitment amount')
-        }
-        if (formData.settlementDate > selectedFacility.maturityDate) {
-          throw new Error('Settlement date cannot be after facility maturity date')
-        }
+      if (!formData.parAmount) {
+        throw new Error('Please enter a par amount')
+      }
+      if (!formData.price) {
+        throw new Error('Please enter a price')
       }
 
       const tradeData = {
         facilityId: formData.facilityId,
-        sellerLenderId: formData.sellerLenderId,
-        buyerLenderId: formData.buyerLenderId,
-        tradeDate: formData.tradeDate,
-        settlementDate: formData.settlementDate,
+        sellerCounterpartyId: formData.sellerLenderId,
+        buyerCounterpartyId: formData.buyerLenderId,
         parAmount: parseFloat(formData.parAmount),
         price: parseFloat(formData.price),
+        settlementDate: formData.settlementDate.toISOString(),
         description: formData.description || undefined
       }
 
@@ -275,15 +266,15 @@ export function NewTradeModal({
               <Select
                 value={formData.buyerLenderId}
                 onValueChange={(value) => handleInputChange('buyerLenderId', value)}
-                disabled={isLoadingLenders}
+                disabled={isLoadingCounterparties}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select buyer" />
+                  <SelectValue placeholder={isLoadingCounterparties ? "Loading..." : "Select buyer"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {lenders.map((lender: LenderWithEntity) => (
-                    <SelectItem key={lender.id} value={lender.id}>
-                      {lender.legalName}
+                  {counterparties.map((cp) => (
+                    <SelectItem key={cp.id} value={cp.id}>
+                      {cp.legalName}
                     </SelectItem>
                   ))}
                 </SelectContent>

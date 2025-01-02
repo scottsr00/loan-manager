@@ -53,7 +53,13 @@ export function CounterpartyDetailsModal({
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
-                <p>{format(new Date(counterparty.updatedAt), 'MMM d, yyyy')}</p>
+                <p>
+                  {counterparty.updatedAt ? (
+                    format(new Date(counterparty.updatedAt), 'MMM d, yyyy')
+                  ) : (
+                    'Not available'
+                  )}
+                </p>
               </div>
             </CardContent>
           </Card>

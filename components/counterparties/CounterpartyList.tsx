@@ -39,9 +39,11 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
       ),
     },
     {
+      field: 'primaryContact',
       headerName: 'Primary Contact',
       width: 200,
       valueGetter: (params) => {
+        if (!params.data?.entity?.contacts) return 'No contacts'
         const primaryContact = params.data.entity.contacts.find((c: any) => c.isPrimary)
         if (!primaryContact) return 'No primary contact'
         return `${primaryContact.firstName} ${primaryContact.lastName}`
@@ -51,6 +53,7 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
       headerName: 'Primary Address',
       width: 200,
       valueGetter: (params) => {
+        if (!params.data?.entity?.addresses) return 'No addresses'
         const primaryAddress = params.data.entity.addresses.find((a: any) => a.isPrimary)
         if (!primaryAddress) return 'No primary address'
         return primaryAddress.state 
@@ -62,7 +65,15 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
       field: 'createdAt',
       headerName: 'Created',
       width: 150,
-      valueFormatter: (params) => format(new Date(params.value), 'MMM d, yyyy'),
+      valueFormatter: (params) => {
+        if (!params.value) return ''
+        try {
+          return format(new Date(params.value), 'MMM d, yyyy')
+        } catch (error) {
+          console.error('Error formatting date:', error)
+          return 'Invalid date'
+        }
+      },
       filter: 'agDateColumnFilter',
     },
   ], [])

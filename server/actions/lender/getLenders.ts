@@ -1,17 +1,34 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
+import { type Lender } from '@prisma/client'
+
+interface LenderWithEntity extends Lender {
+  entity: {
+    id: string
+    legalName: string
+  }
+}
 
 export async function getLenders() {
   const lenders = await prisma.lender.findMany({
-    select: {
-      id: true,
-      legalName: true
+    include: {
+      entity: {
+        select: {
+          id: true,
+          legalName: true
+        }
+      }
     },
     orderBy: {
-      legalName: 'asc'
+      entity: {
+        legalName: 'asc'
+      }
     }
   })
 
-  return lenders
+  return lenders.map((lender: LenderWithEntity) => ({
+    id: lender.id,
+    legalName: lender.entity.legalName
+  }))
 } 
