@@ -14,15 +14,18 @@ model Entity {
   taxId                  String?
   countryOfIncorporation String?
   status                 String            @default("ACTIVE")
+  isAgent               Boolean           @default(false)
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
   addresses              Address[]
   contacts               Contact[]
   counterparty           Counterparty?
   lender                 Lender?
+  borrower              Borrower?
   kyc                    KYC?
   beneficialOwners       BeneficialOwner[]
   creditAgreements       CreditAgreement[] @relation("LenderCreditAgreements")
+  positionHistory        LenderPositionHistory[]
 }
 
 model KYC {
@@ -41,7 +44,8 @@ model KYC {
 
 model Address {
   id         String   @id @default(cuid())
-  entityId   String
+  entityId   String?  // Optional reference to Entity
+  counterpartyId String? // Optional reference to Counterparty
   type       String
   street1    String
   street2    String?
@@ -52,9 +56,11 @@ model Address {
   isPrimary  Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  entity     Entity   @relation(fields: [entityId], references: [id])
+  entity     Entity?  @relation(fields: [entityId], references: [id])
+  counterparty Counterparty? @relation(fields: [counterpartyId], references: [id])
 
   @@index([entityId])
+  @@index([counterpartyId])
 }
 
 model Contact {
@@ -92,6 +98,7 @@ model BeneficialOwner {
 
 model Borrower {
   id                    String            @id @default(cuid())
+  entityId              String            @unique
   name                  String
   taxId                 String?
   countryOfIncorporation String?
@@ -104,7 +111,10 @@ model Borrower {
   kycStatus             String            @default("PENDING")
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
+  entity                Entity            @relation(fields: [entityId], references: [id])
   creditAgreements      CreditAgreement[]
+
+  @@index([entityId])
 }
 
 model Lender {
@@ -165,8 +175,8 @@ model Facility {
   sublimits            FacilitySublimit[]
   loans                Loan[]
   servicingActivities  ServicingActivity[]
-  servicingAssignments ServicingAssignment[]
   trades               Trade[]
+  positionHistory      LenderPositionHistory[]
 
   @@index([creditAgreementId])
 }
@@ -220,21 +230,21 @@ model Loan {
 }
 
 model Trade {
-  id                   String               @id @default(cuid())
-  facilityId           String
-  sellerCounterpartyId String
-  buyerCounterpartyId  String
-  tradeDate            DateTime
-  settlementDate       DateTime
-  parAmount            Float                // Original face value being traded
-  price                Float                // Price as percentage of par (e.g., 98.5)
-  settlementAmount     Float                // Actual payment amount (parAmount * price/100)
-  status               String               @default("PENDING")
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
-  facility             Facility             @relation(fields: [facilityId], references: [id])
-  sellerCounterparty   Counterparty         @relation("SellerCounterpartyTrades", fields: [sellerCounterpartyId], references: [id])
-  buyerCounterparty    Counterparty         @relation("BuyerCounterpartyTrades", fields: [buyerCounterpartyId], references: [id])
+  id                    String            @id @default(cuid())
+  facilityId            String
+  sellerCounterpartyId  String
+  buyerCounterpartyId   String
+  tradeDate             DateTime          @default(now())
+  settlementDate        DateTime
+  parAmount             Float
+  price                 Float
+  description          String?
+  status               String            @default("PENDING")
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  facility             Facility          @relation(fields: [facilityId], references: [id])
+  sellerCounterparty   Counterparty      @relation("SellerCounterpartyTrades", fields: [sellerCounterpartyId], references: [id])
+  buyerCounterparty    Counterparty      @relation("BuyerCounterpartyTrades", fields: [buyerCounterpartyId], references: [id])
   transactions         TransactionHistory[]
 
   @@index([facilityId])
@@ -287,52 +297,36 @@ model ServicingActivity {
 }
 
 model Counterparty {
-  id                String         @id @default(cuid())
-  entityId          String         @unique  // References Entity (LEI)
-  typeId           String
-  tradingStatus    String         @default("ACTIVE")
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  entity           Entity         @relation(fields: [entityId], references: [id])
-  type             CounterpartyType @relation(fields: [typeId], references: [id])
-  salesTrades      Trade[]        @relation("SellerCounterpartyTrades")
-  purchaseTrades   Trade[]        @relation("BuyerCounterpartyTrades")
-  addresses        CounterpartyAddress[]
-  contacts         CounterpartyContact[]
+  id                    String            @id @default(cuid())
+  entityId              String            @unique
+  name                  String
+  type                  CounterpartyType  @relation(fields: [typeId], references: [id])
+  typeId                String
+  status                String            @default("ACTIVE")
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  entity                Entity            @relation(fields: [entityId], references: [id])
+  addresses             Address[]
+  contacts              CounterpartyContact[]
+  salesTrades          Trade[]           @relation("SellerCounterpartyTrades")
+  purchaseTrades       Trade[]           @relation("BuyerCounterpartyTrades")
+  servicingAssignments ServicingAssignment[]
 
   @@index([entityId])
   @@index([typeId])
 }
 
 model CounterpartyType {
-  id             String         @id @default(cuid())
-  name           String         @unique
-  description    String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id           String        @id @default(cuid())
+  name         String        @unique
+  description  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   counterparties Counterparty[]
 }
 
-model CounterpartyAddress {
-  id             String       @id @default(cuid())
-  counterpartyId String
-  type           String
-  street1        String
-  street2        String?
-  city           String
-  state          String?
-  postalCode     String?
-  country        String
-  isPrimary      Boolean      @default(false)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  counterparty   Counterparty @relation(fields: [counterpartyId], references: [id])
-
-  @@index([counterpartyId])
-}
-
 model CounterpartyContact {
-  id             String       @id @default(cuid())
+  id             String      @id @default(cuid())
   counterpartyId String
   type           String
   firstName      String
@@ -340,52 +334,82 @@ model CounterpartyContact {
   title          String?
   email          String?
   phone          String?
-  isPrimary      Boolean      @default(false)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  isPrimary      Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
   counterparty   Counterparty @relation(fields: [counterpartyId], references: [id])
 
   @@index([counterpartyId])
 }
 
 model ServicingRole {
-  id          String                @id @default(cuid())
-  name        String                @unique
-  description String
-  permissions String
-  createdAt   DateTime              @default(now())
-  updatedAt   DateTime              @updatedAt
-  teamMembers ServicingTeamMember[]
+  id           String                @id @default(cuid())
+  name         String                @unique
+  description  String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  assignments  ServicingAssignment[]
 }
 
 model ServicingTeamMember {
-  id          String                @id @default(cuid())
-  name        String
-  email       String                @unique
-  roleId      String
-  status      String                @default("ACTIVE")
-  createdAt   DateTime              @default(now())
-  updatedAt   DateTime              @updatedAt
-  assignments ServicingAssignment[]
-  role        ServicingRole         @relation(fields: [roleId], references: [id])
+  id             String                @id @default(cuid())
+  assignmentId   String
+  firstName      String
+  lastName       String
+  email          String
+  phone          String?
+  title          String?
+  status         String                @default("ACTIVE")
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  assignment     ServicingAssignment   @relation(fields: [assignmentId], references: [id])
 
-  @@index([roleId])
+  @@index([assignmentId])
 }
 
 model ServicingAssignment {
-  id             String              @id @default(cuid())
-  teamMemberId   String
-  facilityId     String
-  assignmentType String              @default("PRIMARY_AGENT")
+  id             String          @id @default(cuid())
+  counterpartyId String
+  roleId         String
   startDate      DateTime
   endDate        DateTime?
-  status         String              @default("ACTIVE")
-  notes          String?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  facility       Facility            @relation(fields: [facilityId], references: [id])
-  teamMember     ServicingTeamMember @relation(fields: [teamMemberId], references: [id])
+  status         String          @default("ACTIVE")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  counterparty   Counterparty    @relation(fields: [counterpartyId], references: [id])
+  role           ServicingRole   @relation(fields: [roleId], references: [id])
+  teamMembers    ServicingTeamMember[]
 
-  @@index([teamMemberId])
+  @@index([counterpartyId])
+  @@index([roleId])
+}
+
+enum PositionChangeType {
+  PAYDOWN
+  ACCRUAL
+  TRADE
+}
+
+model LenderPositionHistory {
+  id                      String            @id @default(cuid())
+  facilityId             String
+  lenderId               String
+  changeDateTime         DateTime          @default(now())
+  changeType             PositionChangeType
+  previousOutstandingAmount Float
+  newOutstandingAmount   Float
+  previousAccruedInterest Float
+  newAccruedInterest     Float
+  changeAmount           Float
+  userId                 String
+  notes                  String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  
+  // Relations
+  facility               Facility          @relation(fields: [facilityId], references: [id])
+  lender                 Entity            @relation(fields: [lenderId], references: [id])
+
   @@index([facilityId])
+  @@index([lenderId])
 }

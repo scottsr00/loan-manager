@@ -10,7 +10,12 @@ export async function getCounterparties(): Promise<CounterpartyWithRelations[]> 
         type: true,
         addresses: true,
         contacts: true,
-        entity: true,
+        entity: {
+          include: {
+            addresses: true,
+            contacts: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc',

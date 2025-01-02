@@ -8,6 +8,7 @@ import { formatCurrency } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { ColDef } from 'ag-grid-community'
 import type { TransactionHistory as TransactionHistoryType } from '@/server/types/transaction'
+import '@/lib/ag-grid-init'
 
 export function TransactionHistory() {
   const [transactions, setTransactions] = useState<TransactionHistoryType[]>([])

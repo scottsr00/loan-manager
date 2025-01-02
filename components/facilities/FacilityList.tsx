@@ -4,10 +4,13 @@ import { useState, useEffect, useMemo } from 'react'
 import { type ColDef } from 'ag-grid-community'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { DataGrid } from '@/components/ui/data-grid'
 import { getFacilities } from '@/server/actions/loan/getFacilities'
 import { formatCurrency } from '@/lib/utils'
 import { FacilityDetailsModal } from './FacilityDetailsModal'
+import { PositionHistoryModal } from '@/components/positions/PositionHistoryModal'
+import '@/lib/ag-grid-init'
 
 export function FacilityList() {
   const [facilities, setFacilities] = useState<any[]>([])
@@ -15,6 +18,7 @@ export function FacilityList() {
   const [error, setError] = useState<string | null>(null)
   const [selectedFacility, setSelectedFacility] = useState<any | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
 
   useEffect(() => {
     const loadFacilities = async () => {
@@ -55,12 +59,12 @@ export function FacilityList() {
       valueGetter: (params) => params.data.creditAgreement?.agreementNumber || 'N/A',
     },
     {
-      field: 'creditAgreement.borrower.legalName',
+      field: 'creditAgreement.borrower.entity.legalName',
       headerName: 'Borrower',
       filter: 'agTextColumnFilter',
       width: 200,
       valueGetter: (params) => {
-        const entity = params.data.creditAgreement?.borrower
+        const entity = params.data.creditAgreement?.borrower?.entity
         return entity ? `${entity.legalName}${entity.dba ? ` (${entity.dba})` : ''}` : 'N/A'
       }
     },
@@ -100,36 +104,50 @@ export function FacilityList() {
       filter: 'agTextColumnFilter',
       width: 120,
       cellRenderer: (params: any) => (
-        <Badge variant={params.value === 'ACTIVE' ? 'success' : 'default'}>
+        <Badge variant={params.value === 'ACTIVE' ? 'success' : 'secondary'}>
           {params.value}
         </Badge>
       ),
     },
     {
-      field: 'interestType',
-      headerName: 'Interest Type',
-      filter: 'agTextColumnFilter',
+      field: 'maturityDate',
+      headerName: 'Maturity',
+      filter: 'agDateColumnFilter',
       width: 150,
+      valueFormatter: (params) => format(new Date(params.value), 'MMM d, yyyy'),
     },
     {
-      field: 'baseRate',
-      headerName: 'Base Rate',
-      filter: 'agTextColumnFilter',
-      width: 120,
-    },
-    {
-      field: 'margin',
-      headerName: 'Margin (%)',
-      valueFormatter: (params) => params.value ? `${params.value}%` : '',
-      filter: 'agNumberColumnFilter',
-      width: 120,
+      headerName: 'Actions',
+      field: 'actions',
+      width: 200,
+      cellRenderer: (params: any) => (
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              setSelectedFacility(params.data)
+              setIsDetailsOpen(true)
+            }}
+          >
+            Details
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              setSelectedFacility(params.data)
+              setIsHistoryOpen(true)
+            }}
+          >
+            History
+          </Button>
+        </div>
+      ),
     },
   ], [])
-
-  const handleRowClick = (params: any) => {
-    setSelectedFacility(params.data)
-    setIsDetailsOpen(true)
-  }
 
   if (error) {
     return <div className="text-destructive">{error}</div>
@@ -141,7 +159,6 @@ export function FacilityList() {
         <DataGrid
           rowData={facilities}
           columnDefs={columnDefs}
-          onRowClick={handleRowClick}
         />
       </div>
 
@@ -149,6 +166,13 @@ export function FacilityList() {
         facilityId={selectedFacility?.id}
         open={isDetailsOpen}
         onOpenChange={setIsDetailsOpen}
+      />
+
+      <PositionHistoryModal
+        facilityId={selectedFacility?.id}
+        facility={selectedFacility}
+        open={isHistoryOpen}
+        onOpenChange={setIsHistoryOpen}
       />
     </>
   )

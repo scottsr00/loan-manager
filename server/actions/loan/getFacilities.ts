@@ -8,17 +8,17 @@ export async function getFacilities() {
       include: {
         creditAgreement: {
           include: {
-            borrower: true,
+            borrower: {
+              include: {
+                entity: true
+              }
+            },
             lender: true
           }
         },
-        servicingAssignments: {
-          include: {
-            teamMember: {
-              include: {
-                role: true
-              }
-            }
+        servicingActivities: {
+          orderBy: {
+            dueDate: 'desc'
           },
           where: {
             status: 'ACTIVE'

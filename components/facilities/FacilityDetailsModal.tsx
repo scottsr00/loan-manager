@@ -1,16 +1,25 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { format } from 'date-fns'
 import { formatCurrency } from '@/lib/utils'
-import { getFacility, type FacilityWithRelations } from '@/server/actions/facility/getFacility'
-import { Loader2 } from 'lucide-react'
+import { getFacility } from '@/server/actions/facility/getFacility'
+import { PositionHistory } from '@/components/positions/PositionHistory'
+import { DataGrid } from '@/components/ui/data-grid'
+import { type ColDef, type ValueFormatterParams, type ICellRendererParams } from 'ag-grid-community'
+import '@/lib/ag-grid-init'
 
 interface FacilityDetailsModalProps {
-  facilityId: string
+  facilityId?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -20,136 +29,201 @@ export function FacilityDetailsModal({
   open,
   onOpenChange,
 }: FacilityDetailsModalProps) {
-  const [facility, setFacility] = useState<FacilityWithRelations | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [facility, setFacility] = useState<any>(null)
+  const [selectedActivity, setSelectedActivity] = useState<any>(null)
+  const [activities, setActivities] = useState<any[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (open && facilityId) {
-      setIsLoading(true)
-      getFacility(facilityId)
-        .then(data => {
-          setFacility(data)
-          setIsLoading(false)
-        })
-        .catch(error => {
-          console.error('Error loading facility:', error)
-          setIsLoading(false)
-        })
+    const loadFacility = async () => {
+      if (!facilityId) return
+      try {
+        const data = await getFacility(facilityId)
+        setFacility(data)
+        // Combine servicing activities and trades into a single timeline
+        const allActivities = [
+          ...(data.servicingActivities || []).map((activity: any) => ({
+            ...activity,
+            type: 'SERVICING',
+            date: activity.dueDate
+          })),
+          ...(data.trades || []).map((trade: any) => ({
+            ...trade,
+            type: 'TRADE',
+            date: trade.tradeDate
+          }))
+        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        
+        setActivities(allActivities)
+      } catch (err) {
+        console.error('Error loading facility:', err)
+        setError('Failed to load facility details')
+      }
     }
-  }, [facilityId, open])
+
+    loadFacility()
+  }, [facilityId])
+
+  const activityColumnDefs: ColDef[] = [
+    {
+      field: 'date',
+      headerName: 'Date',
+      flex: 1,
+      valueFormatter: (params: ValueFormatterParams) => format(new Date(params.value), 'PPP')
+    },
+    {
+      field: 'type',
+      headerName: 'Type',
+      flex: 1,
+      cellRenderer: (params: ICellRendererParams) => (
+        <Badge variant={params.value === 'TRADE' ? 'default' : 'secondary'}>
+          {params.value}
+        </Badge>
+      )
+    },
+    {
+      field: 'amount',
+      headerName: 'Amount',
+      flex: 1,
+      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value)
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      flex: 1,
+      cellRenderer: (params: ICellRendererParams) => (
+        <Badge variant={params.value === 'COMPLETED' ? 'success' : 'secondary'}>
+          {params.value}
+        </Badge>
+      )
+    }
+  ]
+
+  if (!facilityId || !open) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-6xl">
         <DialogHeader>
           <DialogTitle>Facility Details</DialogTitle>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        ) : !facility ? (
-          <div className="py-4 text-center text-muted-foreground">
-            Facility not found
-          </div>
-        ) : (
-          <div className="grid gap-4 py-4">
-            {/* Basic Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Facility Name</label>
-                  <p>{facility.facilityName}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Type</label>
-                  <p>{facility.facilityType}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Credit Agreement</label>
-                  <p>{facility.creditAgreement.agreementNumber}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Borrower</label>
-                  <p>{facility.creditAgreement.borrower?.name}</p>
-                </div>
-              </CardContent>
-            </Card>
+        <Tabs defaultValue="details" className="w-full">
+          <TabsList>
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+          </TabsList>
 
-            {/* Financial Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Financial Information</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Commitment Amount</label>
-                  <p>{formatCurrency(facility.commitmentAmount)} {facility.currency}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Available Amount</label>
-                  <p>{formatCurrency(facility.availableAmount)} {facility.currency}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Interest Type</label>
-                  <p>{facility.interestType}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Interest Rate</label>
-                  <p>{facility.baseRate} + {facility.margin}%</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Dates */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Important Dates</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Start Date</label>
-                  <p>{format(new Date(facility.startDate), 'PP')}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Maturity Date</label>
-                  <p>{format(new Date(facility.maturityDate), 'PP')}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Positions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Lender Positions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {facility.positions.map(position => (
-                    <div key={position.id} className="flex justify-between items-center border-b pb-2 last:border-0">
-                      <div>
-                        <p className="font-medium">{position.lender.entity.legalName}</p>
-                        <Badge variant="outline" className="mt-1">
-                          {position.status}
-                        </Badge>
-                      </div>
-                      <div className="text-right">
-                        <p>{formatCurrency(position.amount)} {facility.currency}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {(position.share * 100).toFixed(2)}%
-                        </p>
-                      </div>
+          <TabsContent value="details">
+            {facility && (
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Facility Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div>
+                      <span className="font-semibold">Name:</span> {facility.facilityName}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+                    <div>
+                      <span className="font-semibold">Type:</span> {facility.facilityType}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Status:</span>{' '}
+                      <Badge variant={facility.status === 'ACTIVE' ? 'success' : 'secondary'}>
+                        {facility.status}
+                      </Badge>
+                    </div>
+                    <div>
+                      <span className="font-semibold">Commitment:</span>{' '}
+                      {formatCurrency(facility.commitmentAmount)}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Available:</span>{' '}
+                      {formatCurrency(facility.availableAmount)}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Currency:</span> {facility.currency}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Start Date:</span>{' '}
+                      {format(new Date(facility.startDate), 'PP')}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Maturity Date:</span>{' '}
+                      {format(new Date(facility.maturityDate), 'PP')}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Credit Agreement</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {facility.creditAgreement && (
+                      <>
+                        <div>
+                          <span className="font-semibold">Agreement Number:</span>{' '}
+                          {facility.creditAgreement.agreementNumber}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Borrower:</span>{' '}
+                          {facility.creditAgreement.borrower?.entity?.legalName}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Lender:</span>{' '}
+                          {facility.creditAgreement.lender?.legalName}
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="history">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Activity History */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Activity History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[400px]">
+                    <DataGrid
+                      rowData={activities}
+                      columnDefs={activityColumnDefs}
+                      onRowClick={params => setSelectedActivity(params.data)}
+                      defaultColDef={{
+                        sortable: true,
+                        filter: true
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Position History */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Position Snapshot</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[400px]">
+                    {selectedActivity && (
+                      <PositionHistory
+                        facilityId={facilityId}
+                        endDate={new Date(selectedActivity.date)}
+                      />
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   )

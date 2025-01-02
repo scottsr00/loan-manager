@@ -29,18 +29,26 @@ type TransactionWithRelations = Prisma.TransactionHistoryGetPayload<{
       select: {
         amount: true
         outstandingAmount: true
+        facilityId: true
+        facility: {
+          select: {
+            facilityName: true
+          }
+        }
       }
     }
     trade: {
       select: {
-        amount: true
+        parAmount: true
         price: true
+        facilityId: true
       }
     }
     servicingActivity: {
       select: {
         description: true
         activityType: true
+        facilityId: true
       }
     }
   }
@@ -92,7 +100,7 @@ export async function getTransactions(params: GetTransactionsParams = {}) {
           }
         }
       ],
-      ...(type && { type }),
+      ...(type && { activityType: type }),
       ...(startDate && endDate && {
         effectiveDate: {
           gte: startDate,
@@ -105,7 +113,7 @@ export async function getTransactions(params: GetTransactionsParams = {}) {
       ...(loanId && { loanId }),
       ...(tradeId && { tradeId }),
       ...(servicingActivityId && { servicingActivityId }),
-      ...(type && { type }),
+      ...(type && { activityType: type }),
       ...(startDate && endDate && {
         effectiveDate: {
           gte: startDate,
@@ -152,7 +160,7 @@ export async function getTransactions(params: GetTransactionsParams = {}) {
         },
         trade: {
           select: {
-            amount: true,
+            parAmount: true,
             price: true,
             facilityId: true
           }

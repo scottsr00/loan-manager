@@ -29,7 +29,7 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
       width: 150,
     },
     {
-      field: 'tradingStatus',
+      field: 'status',
       headerName: 'Status',
       width: 120,
       cellRenderer: (params: any) => (
@@ -42,7 +42,7 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
       headerName: 'Primary Contact',
       width: 200,
       valueGetter: (params) => {
-        const primaryContact = params.data.contacts.find((c: CounterpartyContact) => c.isPrimary)
+        const primaryContact = params.data.entity.contacts.find((c: any) => c.isPrimary)
         if (!primaryContact) return 'No primary contact'
         return `${primaryContact.firstName} ${primaryContact.lastName}`
       },
@@ -51,7 +51,7 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
       headerName: 'Primary Address',
       width: 200,
       valueGetter: (params) => {
-        const primaryAddress = params.data.addresses.find((a: CounterpartyAddress) => a.isPrimary)
+        const primaryAddress = params.data.entity.addresses.find((a: any) => a.isPrimary)
         if (!primaryAddress) return 'No primary address'
         return primaryAddress.state 
           ? `${primaryAddress.city}, ${primaryAddress.state}, ${primaryAddress.country}`

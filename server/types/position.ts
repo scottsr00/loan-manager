@@ -1,66 +1,46 @@
-export interface Position {
+import { z } from 'zod'
+
+export const PositionChangeType = {
+  PAYDOWN: 'PAYDOWN',
+  ACCRUAL: 'ACCRUAL',
+  TRADE: 'TRADE'
+} as const
+
+export const lenderPositionHistorySchema = z.object({
+  facilityId: z.string(),
+  lenderId: z.string(),
+  changeType: z.enum(['PAYDOWN', 'ACCRUAL', 'TRADE']),
+  previousOutstandingAmount: z.number(),
+  newOutstandingAmount: z.number(),
+  previousAccruedInterest: z.number(),
+  newAccruedInterest: z.number(),
+  changeAmount: z.number(),
+  userId: z.string(),
+  notes: z.string().optional()
+})
+
+export type LenderPositionHistoryInput = z.infer<typeof lenderPositionHistorySchema>
+
+export interface LenderPositionHistory {
   id: string
-  agreementNumber: string
-  borrower: {
-    name: string
-    type: string
-    status: string
-  }
-  agent: {
-    name: string
-    type: string
-  }
-  amount: number
-  currency: string
-  status: string
-  startDate: Date
-  maturityDate: Date
-  interestRate: string
-  facilities: Array<{
-    id: string
+  facilityId: string
+  lenderId: string
+  changeDateTime: Date
+  changeType: keyof typeof PositionChangeType
+  previousOutstandingAmount: number
+  newOutstandingAmount: number
+  previousAccruedInterest: number
+  newAccruedInterest: number
+  changeAmount: number
+  userId: string
+  notes?: string | null
+  createdAt: Date
+  updatedAt: Date
+  facility: {
     facilityName: string
-    facilityType: string
-    commitmentAmount: number
-    availableAmount: number
     currency: string
-    status: string
-    interestType: string
-    baseRate: string
-    margin: number
-    positions: Array<{
-      lender: string
-      commitment: number
-      status: string
-    }>
-    trades: Array<{
-      id: string
-      counterparty: string
-      amount: number
-      price: number
-      status: string
-      tradeDate: Date
-      settlementDate: Date
-    }>
-    loans: Array<{
-      id: string
-      amount: number
-      outstandingAmount: number
-      currency: string
-      status: string
-      interestPeriod: string
-      drawDate: Date
-      baseRate: string
-      effectiveRate: string
-    }>
-    servicingActivities: Array<{
-      id: string
-      activityType: string
-      dueDate: Date
-      description: string | null
-      amount: number
-      status: string
-      completedAt: Date | null
-      completedBy: string | null
-    }>
-  }>
+  }
+  lender: {
+    legalName: string
+  }
 } 

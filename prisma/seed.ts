@@ -52,7 +52,7 @@ async function main() {
   // First, clear existing data
   await prisma.trade.deleteMany()
   await prisma.counterpartyContact.deleteMany()
-  await prisma.counterpartyAddress.deleteMany()
+  await prisma.address.deleteMany()
   await prisma.counterparty.deleteMany()
   await prisma.counterpartyType.deleteMany()
   await prisma.facilityPosition.deleteMany()
@@ -61,7 +61,7 @@ async function main() {
   await prisma.lender.deleteMany()
   await prisma.borrower.deleteMany()
   await prisma.contact.deleteMany()
-  await prisma.address.deleteMany()
+  await prisma.beneficialOwner.deleteMany()
   await prisma.entity.deleteMany()
 
   // Create counterparty types
@@ -88,11 +88,13 @@ async function main() {
     const type = createdTypes[typeIndex]
     const status = i % 5 === 0 ? 'INACTIVE' : i % 7 === 0 ? 'PENDING' : 'ACTIVE'
 
-    await prisma.counterparty.create({
+    // Create entity first
+    const entity = await prisma.entity.create({
       data: {
-        name: generateCompanyName(i, type.name),
-        typeId: type.id,
-        status,
+        id: `LEI${i.toString().padStart(6, '0')}`,
+        legalName: generateCompanyName(i, type.name),
+        status: 'ACTIVE',
+        isAgent: false,
         addresses: {
           create: [
             generateAddress(true), // Primary address
@@ -107,6 +109,24 @@ async function main() {
         },
       },
     })
+
+    // Then create counterparty linked to entity
+    await prisma.counterparty.create({
+      data: {
+        name: entity.legalName,
+        type: {
+          connect: {
+            id: type.id
+          }
+        },
+        status,
+        entity: {
+          connect: {
+            id: entity.id
+          }
+        }
+      }
+    })
   }
 
   // Create servicing roles
@@ -114,49 +134,71 @@ async function main() {
     {
       name: 'Admin',
       description: 'Full system access',
-      permissions: JSON.stringify(['MANAGE_TEAM', 'MANAGE_ROLES', 'MANAGE_ASSIGNMENTS', 'VIEW_ALL'])
     },
     {
       name: 'Manager',
       description: 'Team and assignment management',
-      permissions: JSON.stringify(['MANAGE_ASSIGNMENTS', 'VIEW_ALL'])
     },
     {
       name: 'Agent',
       description: 'Regular team member',
-      permissions: JSON.stringify(['VIEW_ASSIGNMENTS'])
     }
   ]
 
   for (const role of roles) {
-    await prisma.servicingRole.upsert({
-      where: { name: role.name },
-      update: role,
-      create: role
+    await prisma.servicingRole.create({
+      data: {
+        name: role.name,
+        description: role.description
+      }
     })
   }
 
-  // Create borrower
-  const borrower = await prisma.borrower.create({
+  // Create borrower entity
+  const borrowerEntity = await prisma.entity.create({
     data: {
-      name: 'Test Company Inc.',
+      id: 'LEI999999',
+      legalName: 'Test Company Inc.',
       taxId: 'TAX123',
       countryOfIncorporation: 'US',
+      status: 'ACTIVE',
+      isAgent: false,
+      addresses: {
+        create: [generateAddress(true)]
+      },
+      contacts: {
+        create: [generateContact(true)]
+      }
+    }
+  })
+
+  // Create borrower linked to entity
+  const borrower = await prisma.borrower.create({
+    data: {
+      name: borrowerEntity.legalName,
+      taxId: borrowerEntity.taxId,
+      countryOfIncorporation: borrowerEntity.countryOfIncorporation,
       industrySegment: 'Technology',
       businessType: 'Corporation',
       creditRating: 'BBB',
       ratingAgency: 'S&P',
       riskRating: 'Medium',
       onboardingStatus: 'COMPLETED',
-      kycStatus: 'COMPLETED'
+      kycStatus: 'COMPLETED',
+      entity: {
+        connect: {
+          id: borrowerEntity.id
+        }
+      }
     }
   })
 
+  // Create lender entity
   const lenderEntity = await prisma.entity.create({
     data: {
+      id: 'LEI888888',
       legalName: 'Bank of Test',
       dba: 'Test Bank',
-      registrationNumber: 'BANK123',
       taxId: 'BANK456',
       countryOfIncorporation: 'US',
       status: 'ACTIVE',
@@ -170,10 +212,15 @@ async function main() {
     }
   })
 
+  // Create lender linked to entity
   const lender = await prisma.lender.create({
     data: {
-      entityId: lenderEntity.id,
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      entity: {
+        connect: {
+          id: lenderEntity.id
+        }
+      }
     }
   })
 
@@ -208,29 +255,6 @@ async function main() {
                   lenderId: lender.id,
                   amount: 6000000,
                   share: 100,
-                  status: 'ACTIVE'
-                }
-              ]
-            }
-          },
-          {
-            facilityName: 'Revolving Credit Facility',
-            facilityType: 'REVOLVING',
-            commitmentAmount: 4000000,
-            availableAmount: 4000000,
-            currency: 'USD',
-            startDate: new Date(),
-            maturityDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-            interestType: 'FLOATING',
-            baseRate: 'SOFR',
-            margin: 3.0,
-            positions: {
-              create: [
-                {
-                  lenderId: lender.id,
-                  amount: 4000000,
-                  share: 100,
-                  status: 'ACTIVE'
                 }
               ]
             }
@@ -239,49 +263,6 @@ async function main() {
       }
     }
   })
-
-  // Get the created facilities
-  const facilities = await prisma.facility.findMany({
-    where: {
-      creditAgreementId: creditAgreement.id
-    }
-  })
-
-  // Create loans for each facility
-  for (const facility of facilities) {
-    const loanAmount = facility.facilityType === 'TERM_LOAN' ? 3000000 : 2000000
-    
-    const loan = await prisma.loan.create({
-      data: {
-        facilityId: facility.id,
-        amount: loanAmount,
-        outstandingAmount: loanAmount,
-        currency: 'USD',
-        status: 'ACTIVE',
-        interestPeriod: '1M',
-        drawDate: new Date(),
-        baseRate: 4.5,
-        effectiveRate: 7.0,
-      }
-    })
-
-    // Create a drawdown transaction
-    await prisma.transactionHistory.create({
-      data: {
-        creditAgreementId: creditAgreement.id,
-        loanId: loan.id,
-        activityType: 'DRAWDOWN',
-        amount: loanAmount,
-        currency: 'USD',
-        status: 'COMPLETED',
-        description: `Initial drawdown for ${facility.facilityName}`,
-        effectiveDate: new Date(),
-        processedBy: 'SYSTEM'
-      }
-    })
-  }
-
-  console.log('Seed data created successfully')
 }
 
 main()
