@@ -63,6 +63,10 @@ export function PositionHistoryModal({ facilityId, facility, open, onOpenChange 
     }
   ], [])
 
+  const gridOptions = useMemo(() => ({
+    rowSelection: 'single' as const
+  }), [])
+
   const activities = useMemo(() => {
     if (!facility) return []
     console.log('Facility data:', facility)
@@ -77,7 +81,8 @@ export function PositionHistoryModal({ facilityId, facility, open, onOpenChange 
         ...trade,
         type: 'TRADE' as const,
         date: trade.tradeDate,
-        id: trade.id
+        id: trade.id,
+        amount: trade.parAmount
       }))
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     console.log('Combined activities:', combinedActivities)
@@ -90,17 +95,17 @@ export function PositionHistoryModal({ facilityId, facility, open, onOpenChange 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl">
+      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Position History - {facility?.facilityName}</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-4">
-          <Card>
-            <CardHeader>
+        <div className="flex flex-col gap-4 flex-1 overflow-hidden">
+          <Card className="flex-1">
+            <CardHeader className="py-2">
               <CardTitle>Activity History</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
+            <CardContent className="p-2">
+              <div className="h-[250px]">
                 <DataGrid
                   rowData={activities}
                   columnDefs={activityColumnDefs}
@@ -108,19 +113,20 @@ export function PositionHistoryModal({ facilityId, facility, open, onOpenChange 
                     sortable: true,
                     filter: true
                   }}
+                  gridOptions={gridOptions}
                   onRowClick={handleRowClick}
-                  rowSelection="single"
+                  className="h-full w-full"
                 />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="flex-1">
+            <CardHeader className="py-2">
               <CardTitle>Position History</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
+            <CardContent className="p-2">
+              <div className="h-[250px]">
                 <PositionHistory 
                   facilityId={facilityId} 
                   selectedActivity={selectedActivity}

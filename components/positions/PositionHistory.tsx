@@ -39,11 +39,17 @@ export function PositionHistory({ facilityId, selectedActivity, lenderId, startD
 
         const data = await getPositionHistory({ 
           facilityId, 
-          lenderId, 
-          startDate: selectedActivity ? new Date(selectedActivity.date) : startDate,
-          endDate: selectedActivity ? new Date(selectedActivity.date) : endDate,
-          activityId: selectedActivity?.id,
-          activityType: selectedActivity?.type
+          lenderId,
+          ...(selectedActivity 
+            ? {
+                activityId: selectedActivity.id,
+                activityType: selectedActivity.type
+              }
+            : {
+                startDate,
+                endDate
+              }
+          )
         })
         setHistory(data)
       } catch (err) {
@@ -87,10 +93,30 @@ export function PositionHistory({ facilityId, selectedActivity, lenderId, startD
       cellRenderer: (params: ICellRendererParams) => getChangeTypeBadge(params.value)
     },
     {
+      field: 'facility.outstandingAmount',
+      headerName: 'Facility Outstanding',
+      flex: 1,
+      valueGetter: (params: ValueGetterParams) => params.data?.facility?.outstandingAmount || 0,
+      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
+      filter: 'agNumberColumnFilter'
+    },
+    {
       field: 'newOutstandingAmount',
-      headerName: 'Outstanding Amount',
+      headerName: 'Lender Outstanding',
       flex: 1,
       valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
+      filter: 'agNumberColumnFilter'
+    },
+    {
+      field: 'share',
+      headerName: 'Share %',
+      flex: 1,
+      valueGetter: (params: ValueGetterParams) => {
+        const lenderOutstanding = params.data?.newOutstandingAmount || 0
+        const facilityOutstanding = params.data?.facility?.outstandingAmount || 0
+        return facilityOutstanding > 0 ? (lenderOutstanding / facilityOutstanding * 100).toFixed(2) : 0
+      },
+      valueFormatter: (params: ValueFormatterParams) => `${params.value}%`,
       filter: 'agNumberColumnFilter'
     },
     {
