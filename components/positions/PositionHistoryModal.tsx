@@ -7,8 +7,16 @@ import { DataGrid } from '@/components/ui/data-grid'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { formatCurrency } from '@/lib/utils'
-import { type ColDef, type ValueFormatterParams } from 'ag-grid-community'
-import { useMemo } from 'react'
+import { type ColDef, type ValueFormatterParams, type RowClickedEvent } from 'ag-grid-community'
+import { useMemo, useState } from 'react'
+
+interface Activity {
+  id: string
+  type: 'SERVICING' | 'TRADE'
+  date: Date
+  amount: number
+  status: string
+}
 
 interface PositionHistoryModalProps {
   facilityId?: string
@@ -18,9 +26,11 @@ interface PositionHistoryModalProps {
 }
 
 export function PositionHistoryModal({ facilityId, facility, open, onOpenChange }: PositionHistoryModalProps) {
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
+
   const activityColumnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'dueDate',
+      field: 'date',
       headerName: 'Date',
       flex: 1,
       valueFormatter: (params: ValueFormatterParams) => format(new Date(params.value), 'PPP')
@@ -55,19 +65,28 @@ export function PositionHistoryModal({ facilityId, facility, open, onOpenChange 
 
   const activities = useMemo(() => {
     if (!facility) return []
-    return [
+    console.log('Facility data:', facility)
+    const combinedActivities = [
       ...(facility.servicingActivities || []).map((activity: any) => ({
         ...activity,
-        type: 'SERVICING',
-        date: activity.dueDate
+        type: 'SERVICING' as const,
+        date: activity.dueDate,
+        id: activity.id
       })),
       ...(facility.trades || []).map((trade: any) => ({
         ...trade,
-        type: 'TRADE',
-        date: trade.tradeDate
+        type: 'TRADE' as const,
+        date: trade.tradeDate,
+        id: trade.id
       }))
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    console.log('Combined activities:', combinedActivities)
+    return combinedActivities
   }, [facility])
+
+  const handleRowClick = (event: RowClickedEvent) => {
+    setSelectedActivity(event.data)
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -75,13 +94,13 @@ export function PositionHistoryModal({ facilityId, facility, open, onOpenChange 
         <DialogHeader>
           <DialogTitle>Position History - {facility?.facilityName}</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-4">
           <Card>
             <CardHeader>
               <CardTitle>Activity History</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[400px]">
+              <div className="h-[300px]">
                 <DataGrid
                   rowData={activities}
                   columnDefs={activityColumnDefs}
@@ -89,6 +108,8 @@ export function PositionHistoryModal({ facilityId, facility, open, onOpenChange 
                     sortable: true,
                     filter: true
                   }}
+                  onRowClick={handleRowClick}
+                  rowSelection="single"
                 />
               </div>
             </CardContent>
@@ -99,8 +120,11 @@ export function PositionHistoryModal({ facilityId, facility, open, onOpenChange 
               <CardTitle>Position History</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[400px]">
-                <PositionHistory facilityId={facilityId} />
+              <div className="h-[300px]">
+                <PositionHistory 
+                  facilityId={facilityId} 
+                  selectedActivity={selectedActivity}
+                />
               </div>
             </CardContent>
           </Card>

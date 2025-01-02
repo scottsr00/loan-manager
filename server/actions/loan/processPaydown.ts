@@ -3,6 +3,9 @@
 import { prisma } from '@/server/db/client'
 import { type PaydownInput, type PaydownResult, paydownInputSchema } from '@/server/types/servicing'
 import { revalidatePath } from 'next/cache'
+import type { PrismaClient } from '@prisma/client'
+
+type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use'>
 
 export async function processPaydown(params: PaydownInput): Promise<PaydownResult> {
   if (!params) {
@@ -14,14 +17,22 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
     const validatedParams = paydownInputSchema.parse(params)
 
     // Start a transaction since we need to update multiple records atomically
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx: TransactionClient) => {
       // 1. Verify the loan exists and get current amounts
       const loan = await tx.loan.findUnique({
         where: { id: validatedParams.loanId },
         include: {
           facility: {
             include: {
-              positions: true,
+              positions: {
+                include: {
+                  lender: {
+                    include: {
+                      entity: true
+                    }
+                  }
+                }
+              },
               creditAgreement: true
             }
           }
@@ -42,7 +53,7 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
 
       // 2. Calculate new amounts
       const availableAmount = loan.facility.positions.reduce((sum: number, pos) => sum + pos.amount, 0)
-      const newAvailableAmount = availableAmount + validatedParams.amount
+      const newAvailableAmount = availableAmount - validatedParams.amount
 
       // 3. Update loan outstanding amount
       const updatedLoan = await tx.loan.update({
@@ -52,16 +63,35 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
         }
       })
 
-      // 4. Update facility positions
+      // 4. Update facility positions and create position history records
       const positionUpdates = await Promise.all(loan.facility.positions.map(async (position) => {
         const share = position.amount / availableAmount
-        const increaseShare = validatedParams.amount * share
+        const decreaseShare = validatedParams.amount * share
+        const newAmount = position.amount - decreaseShare
+
         const updatedPosition = await tx.facilityPosition.update({
           where: { id: position.id },
-          data: { amount: position.amount + increaseShare }
+          data: { amount: newAmount }
         })
+
+        // Create position history record
+        await tx.lenderPositionHistory.create({
+          data: {
+            facilityId: loan.facility!.id,
+            lenderId: position.lender.entity.id,
+            changeType: 'PAYDOWN',
+            previousOutstandingAmount: position.amount,
+            newOutstandingAmount: newAmount,
+            previousAccruedInterest: 0, // TODO: Track accrued interest
+            newAccruedInterest: 0,
+            changeAmount: decreaseShare,
+            userId: 'SYSTEM',
+            notes: `Principal payment of ${formatAmount(decreaseShare)} (${(share * 100).toFixed(2)}% of ${formatAmount(validatedParams.amount)})`
+          }
+        })
+
         return {
-          lenderId: position.lenderId,
+          lenderId: position.lender.entity.id,
           previousAmount: position.amount,
           newAmount: updatedPosition.amount,
           share: share * 100 // Convert to percentage
@@ -77,7 +107,7 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
             activityType: 'PRINCIPAL_PAYMENT',
             amount: validatedParams.amount,
             dueDate: validatedParams.paymentDate,
-            description: validatedParams.description || `Principal payment of ${validatedParams.amount}`,
+            description: validatedParams.description || `Principal payment of ${formatAmount(validatedParams.amount)}`,
             status: 'COMPLETED',
             completedAt: new Date(),
             completedBy: 'SYSTEM'
@@ -103,7 +133,7 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
           amount: validatedParams.amount,
           currency: loan.currency,
           status: 'COMPLETED',
-          description: validatedParams.description || `Principal payment of ${validatedParams.amount}`,
+          description: validatedParams.description || `Principal payment of ${formatAmount(validatedParams.amount)}`,
           effectiveDate: validatedParams.paymentDate,
           processedBy: 'SYSTEM'
         }
@@ -139,4 +169,11 @@ export async function processPaydown(params: PaydownInput): Promise<PaydownResul
     console.error('Error processing paydown:', error instanceof Error ? error.message : 'Unknown error')
     throw error instanceof Error ? error : new Error('Failed to process paydown')
   }
+}
+
+function formatAmount(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(amount)
 } 

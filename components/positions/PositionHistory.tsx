@@ -10,14 +10,23 @@ import { getPositionHistory } from '@/server/actions/position/positionHistory'
 import type { LenderPositionHistory } from '@/server/types/position'
 import '@/lib/ag-grid-init'
 
+interface Activity {
+  id: string
+  type: 'SERVICING' | 'TRADE'
+  date: Date
+  amount: number
+  status: string
+}
+
 interface PositionHistoryProps {
   facilityId?: string
+  selectedActivity?: Activity | null
   lenderId?: string
   startDate?: Date
   endDate?: Date
 }
 
-export function PositionHistory({ facilityId, lenderId, startDate, endDate }: PositionHistoryProps) {
+export function PositionHistory({ facilityId, selectedActivity, lenderId, startDate, endDate }: PositionHistoryProps) {
   const [history, setHistory] = useState<LenderPositionHistory[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -26,7 +35,14 @@ export function PositionHistory({ facilityId, lenderId, startDate, endDate }: Po
     const loadHistory = async () => {
       try {
         setIsLoading(true)
-        const data = await getPositionHistory({ facilityId, lenderId, startDate, endDate })
+        const data = await getPositionHistory({ 
+          facilityId, 
+          lenderId, 
+          startDate: selectedActivity ? new Date(selectedActivity.date) : startDate,
+          endDate: selectedActivity ? new Date(selectedActivity.date) : endDate,
+          activityId: selectedActivity?.id,
+          activityType: selectedActivity?.type
+        })
         setHistory(data)
       } catch (err) {
         console.error('Error loading position history:', err)
@@ -37,7 +53,7 @@ export function PositionHistory({ facilityId, lenderId, startDate, endDate }: Po
     }
 
     loadHistory()
-  }, [facilityId, lenderId, startDate, endDate])
+  }, [facilityId, lenderId, startDate, endDate, selectedActivity])
 
   const getChangeTypeBadge = (type: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'success'> = {

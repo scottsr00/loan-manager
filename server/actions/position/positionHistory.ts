@@ -32,14 +32,18 @@ export async function createPositionHistory(data: LenderPositionHistoryInput): P
   }
 }
 
-export async function getPositionHistory(params: {
+interface GetPositionHistoryParams {
   facilityId?: string
   lenderId?: string
   startDate?: Date
   endDate?: Date
-}): Promise<LenderPositionHistory[]> {
+  activityId?: string
+  activityType?: 'SERVICING' | 'TRADE'
+}
+
+export async function getPositionHistory(params: GetPositionHistoryParams = {}) {
   try {
-    const { facilityId, lenderId, startDate, endDate } = params
+    const { facilityId, lenderId, startDate, endDate, activityId, activityType } = params
 
     const where = {
       ...(facilityId && { facilityId }),
@@ -49,23 +53,22 @@ export async function getPositionHistory(params: {
           gte: startDate,
           lte: endDate
         }
+      }),
+      ...(activityId && activityType === 'SERVICING' && {
+        servicingActivityId: activityId
+      }),
+      ...(activityId && activityType === 'TRADE' && {
+        tradeId: activityId
       })
     }
 
     const history = await prisma.lenderPositionHistory.findMany({
       where,
       include: {
-        facility: {
-          select: {
-            facilityName: true,
-            currency: true
-          }
-        },
-        lender: {
-          select: {
-            legalName: true
-          }
-        }
+        facility: true,
+        lender: true,
+        servicingActivity: true,
+        trade: true
       },
       orderBy: {
         changeDateTime: 'desc'

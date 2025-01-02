@@ -19,9 +19,11 @@ export async function getFacilities() {
         servicingActivities: {
           orderBy: {
             dueDate: 'desc'
-          },
-          where: {
-            status: 'ACTIVE'
+          }
+        },
+        trades: {
+          orderBy: {
+            tradeDate: 'desc'
           }
         }
       },
@@ -33,6 +35,15 @@ export async function getFacilities() {
     if (!facilities) {
       throw new Error('No facilities found')
     }
+
+    console.log('Fetched facilities with activities:', 
+      facilities.map(f => ({
+        id: f.id,
+        name: f.facilityName,
+        servicingCount: f.servicingActivities?.length || 0,
+        tradesCount: f.trades?.length || 0
+      }))
+    )
 
     return facilities
   } catch (error) {

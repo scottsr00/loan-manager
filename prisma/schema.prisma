@@ -390,6 +390,11 @@ enum PositionChangeType {
   TRADE
 }
 
+enum ActivityType {
+  SERVICING
+  TRADE
+}
+
 model LenderPositionHistory {
   id                      String            @id @default(cuid())
   facilityId             String
@@ -403,13 +408,20 @@ model LenderPositionHistory {
   changeAmount           Float
   userId                 String
   notes                  String?
+  activityType           ActivityType
+  servicingActivityId    String?
+  tradeId               String?
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
   
   // Relations
   facility               Facility          @relation(fields: [facilityId], references: [id])
   lender                 Entity            @relation(fields: [lenderId], references: [id])
+  servicingActivity      ServicingActivity? @relation(fields: [servicingActivityId], references: [id])
+  trade                 Trade?            @relation(fields: [tradeId], references: [id])
 
   @@index([facilityId])
   @@index([lenderId])
+  @@index([servicingActivityId])
+  @@index([tradeId])
 }
