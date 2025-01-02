@@ -1,167 +1,149 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { updateTradeStatus } from '@/server/actions/trade/updateTradeStatus'
+import { toast } from 'sonner'
+import { TradeStatus, type TradeWithRelations } from '@/server/types/trade'
 import { formatCurrency } from '@/lib/utils'
-import { format } from 'date-fns'
-import { getTrade } from '@/server/actions/trade/getTrades'
-import { type TradeWithRelations, TradeStatus, type TradeTransaction } from '@/server/types/trade'
 
 interface TradeDetailsModalProps {
-  tradeId: string
+  trade: TradeWithRelations
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case 'COMPLETED':
-      return <Badge variant="success">Completed</Badge>
-    case 'PENDING':
-      return <Badge variant="secondary">Pending</Badge>
-    case 'FAILED':
-      return <Badge variant="destructive">Failed</Badge>
-    default:
-      return <Badge variant="outline">{status}</Badge>
-  }
-}
+export function TradeDetailsModal({ trade, open, onOpenChange, onSuccess }: TradeDetailsModalProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [description, setDescription] = useState('')
 
-function TransactionHistory({ transactions }: { transactions: TradeTransaction[] }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Transaction History</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Activity</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Processed By</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {transactions.map((transaction) => (
-              <TableRow key={transaction.id}>
-                <TableCell>{format(new Date(transaction.effectiveDate), 'PP')}</TableCell>
-                <TableCell>{transaction.activityType}</TableCell>
-                <TableCell>{formatCurrency(transaction.amount)}</TableCell>
-                <TableCell>{getStatusBadge(transaction.status)}</TableCell>
-                <TableCell>{transaction.description}</TableCell>
-                <TableCell>{transaction.processedBy}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  )
-}
+  const canConfirm = trade.status === TradeStatus.PENDING
+  const canSettle = trade.status === TradeStatus.CONFIRMED
+  const canClose = trade.status === TradeStatus.SETTLED
 
-export function TradeDetailsModal({ tradeId, open, onOpenChange }: TradeDetailsModalProps) {
-  const [trade, setTrade] = useState<TradeWithRelations | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    if (open && tradeId) {
-      setIsLoading(true)
-      getTrade(tradeId)
-        .then(data => {
-          setTrade(data)
-          setIsLoading(false)
-        })
-        .catch(error => {
-          console.error('Error loading trade:', error)
-          setIsLoading(false)
-        })
-    } else {
-      setTrade(null)
-      setIsLoading(true)
+  const handleUpdateStatus = async (newStatus: keyof typeof TradeStatus) => {
+    setIsSubmitting(true)
+    try {
+      await updateTradeStatus({
+        id: trade.id,
+        status: newStatus,
+        description: description || undefined
+      })
+      toast.success('Trade status updated successfully')
+      onSuccess?.()
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Error updating trade status:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to update trade status')
+    } finally {
+      setIsSubmitting(false)
     }
-  }, [tradeId, open])
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Trade Details</DialogTitle>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Status</Label>
+              <div className="text-sm font-medium">{trade.status}</div>
+            </div>
+            <div>
+              <Label>Par Amount</Label>
+              <div className="text-sm font-medium">{formatCurrency(trade.parAmount)}</div>
+            </div>
           </div>
-        ) : !trade ? (
-          <div className="py-4 text-center text-muted-foreground">
-            Trade not found
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Trade Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-medium mb-2">Facility Details</h4>
-                    <div className="space-y-1">
-                      <p>{trade.facility.facilityName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Agreement: {trade.facility.creditAgreement.agreementNumber}
-                      </p>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Trade Status</h4>
-                    <div className="space-y-1">
-                      <div>{getStatusBadge(trade.status)}</div>
-                      <p className="text-sm text-muted-foreground">
-                        Created: {format(new Date(trade.createdAt), 'PPp')}
-                      </p>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Seller</h4>
-                    <p>{trade.seller.entity.legalName}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Buyer</h4>
-                    <p>{trade.buyer.entity.legalName}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Trade Details</h4>
-                    <div className="space-y-1">
-                      <p>Par Amount: {formatCurrency(trade.parAmount)}</p>
-                      <p>Price: {trade.price.toFixed(2)}%</p>
-                      <p>Settlement Amount: {formatCurrency(trade.settlementAmount)}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Dates</h4>
-                    <div className="space-y-1">
-                      <p>Trade Date: {format(new Date(trade.tradeDate), 'PP')}</p>
-                      <p>Settlement Date: {format(new Date(trade.settlementDate), 'PP')}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            <ScrollArea className="h-[400px]">
-              <TransactionHistory transactions={trade.transactions} />
-            </ScrollArea>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Price</Label>
+              <div className="text-sm font-medium">{trade.price}%</div>
+            </div>
+            <div>
+              <Label>Settlement Amount</Label>
+              <div className="text-sm font-medium">{formatCurrency(trade.settlementAmount)}</div>
+            </div>
           </div>
-        )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Trade Date</Label>
+              <div className="text-sm font-medium">
+                {new Date(trade.tradeDate).toLocaleDateString()}
+              </div>
+            </div>
+            <div>
+              <Label>Settlement Date</Label>
+              <div className="text-sm font-medium">
+                {new Date(trade.settlementDate).toLocaleDateString()}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <Label>Seller</Label>
+            <div className="text-sm font-medium">{trade.sellerCounterparty.entity.legalName}</div>
+          </div>
+
+          <div>
+            <Label>Buyer</Label>
+            <div className="text-sm font-medium">{trade.buyerCounterparty.entity.legalName}</div>
+          </div>
+
+          <div>
+            <Label>Facility</Label>
+            <div className="text-sm font-medium">{trade.facility.facilityName}</div>
+          </div>
+
+          {(canConfirm || canSettle || canClose) && (
+            <>
+              <div>
+                <Label>Description (Optional)</Label>
+                <Input
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Add a note about this status change"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                {canConfirm && (
+                  <Button
+                    onClick={() => handleUpdateStatus(TradeStatus.CONFIRMED)}
+                    disabled={isSubmitting}
+                  >
+                    Confirm Trade
+                  </Button>
+                )}
+                {canSettle && (
+                  <Button
+                    onClick={() => handleUpdateStatus(TradeStatus.SETTLED)}
+                    disabled={isSubmitting}
+                  >
+                    Settle Trade
+                  </Button>
+                )}
+                {canClose && (
+                  <Button
+                    onClick={() => handleUpdateStatus(TradeStatus.CLOSED)}
+                    disabled={isSubmitting}
+                  >
+                    Close Trade
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   )

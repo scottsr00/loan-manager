@@ -2,16 +2,44 @@ import { type Prisma } from '@prisma/client'
 import { z } from 'zod'
 
 // Base Prisma Types with Relations
-export type EntityWithRelations = Prisma.EntityGetPayload<{
-  include: {
-    addresses: true
-    contacts: true
-    beneficialOwners: true
-    lender: true
-    borrower: true
-    kyc: true
+export interface EntityWithRelations {
+  id: string
+  legalName: string
+  dba?: string | null
+  status: string
+  jurisdiction?: string | null
+  createdAt: Date
+  updatedAt: Date
+  addresses: Array<{
+    id: string
+    type: string
+    street1: string
+    street2: string | null
+    city: string
+    state: string | null
+    postalCode: string | null
+    country: string
+    isPrimary: boolean
+  }>
+  contacts: Array<{
+    id: string
+    firstName: string
+    lastName: string
+    title: string | null
+    email: string | null
+    phone: string | null
+    isPrimary: boolean
+  }>
+  kyc?: {
+    verificationStatus: string
+    counterpartyVerified: boolean
+    lastVerificationDate: Date | null
   }
-}>
+  isLender: boolean
+  isBorrower: boolean
+  isCounterparty: boolean
+  isAgent: boolean
+}
 
 // Input Validation Schemas
 export const entityAddressSchema = z.object({

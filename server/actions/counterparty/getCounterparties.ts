@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { type Counterparty } from '@prisma/client'
 
 interface CounterpartyWithEntity extends Counterparty {
+  entityId: string
   entity: {
     id: string
     legalName: string
@@ -28,6 +29,11 @@ interface CounterpartyWithEntity extends Counterparty {
       country: string
       isPrimary: boolean
     }>
+    kyc?: {
+      verificationStatus: string
+      counterpartyVerified: boolean
+      lastVerificationDate: Date | null
+    } | null
   } | null
   type: {
     id: string
@@ -71,6 +77,13 @@ export async function getCounterparties() {
               country: true,
               isPrimary: true
             }
+          },
+          kyc: {
+            select: {
+              verificationStatus: true,
+              counterpartyVerified: true,
+              lastVerificationDate: true
+            }
           }
         }
       },
@@ -93,11 +106,17 @@ export async function getCounterparties() {
     .map((counterparty: CounterpartyWithEntity) => ({
       id: counterparty.id,
       name: counterparty.entity!.legalName,
+      entityId: counterparty.entity!.id,
       createdAt: counterparty.createdAt.toISOString(),
       updatedAt: counterparty.updatedAt.toISOString(),
       type: counterparty.type,
       status: counterparty.status,
       contacts: counterparty.entity!.contacts,
-      addresses: counterparty.entity!.addresses
+      addresses: counterparty.entity!.addresses,
+      kyc: counterparty.entity!.kyc || {
+        verificationStatus: 'PENDING',
+        counterpartyVerified: false,
+        lastVerificationDate: null
+      }
     }))
 } 

@@ -54,6 +54,12 @@ export type CounterpartyWithRelations = Counterparty & {
   type: CounterpartyType
   addresses: CounterpartyAddress[]
   contacts: CounterpartyContact[]
+  entityId: string
+  kyc?: {
+    verificationStatus: string
+    counterpartyVerified: boolean
+    lastVerificationDate: Date | null
+  }
 }
 
 export interface CreateCounterpartyInput {

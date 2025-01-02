@@ -28,14 +28,55 @@ export function EntityList({ entities }: EntityListProps) {
       },
     },
     {
-      field: 'isAgent',
-      headerName: 'Agent Bank',
-      width: 120,
-      cellRenderer: (params: ICellRendererParams) => (
-        params.value ? (
-          <Badge className="bg-green-500">Agent</Badge>
-        ) : null
-      ),
+      field: 'relationships',
+      headerName: 'Relationships',
+      width: 200,
+      cellRenderer: (params: ICellRendererParams) => {
+        const relationships = []
+        if (params.data.isLender) relationships.push('Lender')
+        if (params.data.isBorrower) relationships.push('Borrower')
+        if (params.data.isCounterparty) relationships.push('Counterparty')
+        if (params.data.isAgent) relationships.push('Agent')
+
+        return (
+          <div className="flex flex-wrap gap-1">
+            {relationships.map(rel => (
+              <Badge key={rel} variant="outline" className="text-xs">
+                {rel}
+              </Badge>
+            ))}
+          </div>
+        )
+      }
+    },
+    {
+      field: 'kyc',
+      headerName: 'KYC Status',
+      width: 200,
+      cellRenderer: (params: ICellRendererParams) => {
+        const kyc = params.value || {
+          verificationStatus: 'PENDING',
+          counterpartyVerified: false
+        }
+        const variant = kyc.verificationStatus === 'VERIFIED' && kyc.counterpartyVerified
+          ? 'success'
+          : kyc.verificationStatus === 'REJECTED'
+            ? 'destructive'
+            : 'secondary'
+        
+        return (
+          <div className="flex flex-col gap-1">
+            <Badge variant={variant}>
+              {kyc.verificationStatus}
+            </Badge>
+            {kyc.verificationStatus === 'VERIFIED' && !kyc.counterpartyVerified && (
+              <Badge variant="outline">
+                Pending Counterparty Verification
+              </Badge>
+            )}
+          </div>
+        )
+      }
     },
     {
       field: 'jurisdiction',

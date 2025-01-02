@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { CounterpartyDetailsModal } from './CounterpartyDetailsModal'
 import { DataGrid } from '@/components/ui/data-grid'
 import { type ColDef, type RowClickedEvent } from 'ag-grid-community'
-import { type CounterpartyWithRelations, type CounterpartyAddress, type CounterpartyContact } from '@/types/counterparty'
+import { type CounterpartyWithRelations } from '@/types/counterparty'
 import '@/lib/ag-grid-init'
 
 interface CounterpartyListProps {
@@ -19,7 +19,7 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'entity.legalName',
+      field: 'name',
       headerName: 'Name',
       width: 250,
     },
@@ -39,12 +39,38 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
       ),
     },
     {
+      field: 'kyc',
+      headerName: 'KYC Status',
+      width: 200,
+      cellRenderer: (params: any) => {
+        const kyc = params.value
+        const variant = kyc.verificationStatus === 'VERIFIED' && kyc.counterpartyVerified
+          ? 'success'
+          : kyc.verificationStatus === 'REJECTED'
+            ? 'destructive'
+            : 'secondary'
+        
+        return (
+          <div className="flex flex-col gap-1">
+            <Badge variant={variant}>
+              {kyc.verificationStatus}
+            </Badge>
+            {kyc.verificationStatus === 'VERIFIED' && !kyc.counterpartyVerified && (
+              <Badge variant="outline">
+                Pending Counterparty Verification
+              </Badge>
+            )}
+          </div>
+        )
+      }
+    },
+    {
       field: 'primaryContact',
       headerName: 'Primary Contact',
       width: 200,
       valueGetter: (params) => {
-        if (!params.data?.entity?.contacts) return 'No contacts'
-        const primaryContact = params.data.entity.contacts.find((c: any) => c.isPrimary)
+        if (!params.data?.contacts) return 'No contacts'
+        const primaryContact = params.data.contacts.find((c: any) => c.isPrimary)
         if (!primaryContact) return 'No primary contact'
         return `${primaryContact.firstName} ${primaryContact.lastName}`
       },
@@ -53,8 +79,8 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
       headerName: 'Primary Address',
       width: 200,
       valueGetter: (params) => {
-        if (!params.data?.entity?.addresses) return 'No addresses'
-        const primaryAddress = params.data.entity.addresses.find((a: any) => a.isPrimary)
+        if (!params.data?.addresses) return 'No addresses'
+        const primaryAddress = params.data.addresses.find((a: any) => a.isPrimary)
         if (!primaryAddress) return 'No primary address'
         return primaryAddress.state 
           ? `${primaryAddress.city}, ${primaryAddress.state}, ${primaryAddress.country}`

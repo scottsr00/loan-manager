@@ -1,11 +1,26 @@
 'use client'
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
-import { type EntityWithRelations } from '@/server/types/entity'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { format } from 'date-fns'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { type EntityWithRelations } from '@/server/types/entity'
+import { useState } from 'react'
+import { updateKYCStatus } from '@/server/actions/kyc/updateKYCStatus'
+import { toast } from 'sonner'
 
 interface EntityDetailsModalProps {
   entity: EntityWithRelations | null
@@ -13,171 +28,210 @@ interface EntityDetailsModalProps {
   onOpenChange: (open: boolean) => void
 }
 
-export function EntityDetailsModal({ entity, open, onOpenChange }: EntityDetailsModalProps) {
+export function EntityDetailsModal({
+  entity,
+  open,
+  onOpenChange,
+}: EntityDetailsModalProps) {
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [verificationStatus, setVerificationStatus] = useState(entity?.kyc?.verificationStatus || 'PENDING')
+  const [counterpartyVerified, setCounterpartyVerified] = useState(entity?.kyc?.counterpartyVerified || false)
+
   if (!entity) return null
 
-  const primaryAddress = entity.addresses?.[0]
-  const primaryContact = entity.contacts?.[0]
-  const primaryBeneficialOwner = entity.beneficialOwners?.[0]
+  const handleUpdateKYC = async () => {
+    try {
+      setIsUpdating(true)
+      await updateKYCStatus({
+        entityId: entity.id,
+        verificationStatus,
+        counterpartyVerified
+      })
+      toast.success('KYC status updated successfully')
+    } catch (error) {
+      console.error('Error updating KYC status:', error)
+      toast.error('Failed to update KYC status')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const getRelationshipBadges = () => {
+    const relationships = []
+    if (entity.isLender) relationships.push('Lender')
+    if (entity.isBorrower) relationships.push('Borrower')
+    if (entity.isCounterparty) relationships.push('Counterparty')
+    if (entity.isAgent) relationships.push('Agent')
+
+    return relationships.map(rel => (
+      <Badge key={rel} variant="outline">
+        {rel}
+      </Badge>
+    ))
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[600px]">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>{entity.legalName}</span>
-            <Badge variant={entity.status === 'ACTIVE' ? 'success' : 'secondary'}>
-              {entity.status}
-            </Badge>
-          </DialogTitle>
+          <DialogTitle>Entity Details</DialogTitle>
         </DialogHeader>
-        <div className="max-h-[calc(80vh-8rem)] overflow-y-auto pr-4">
-          <div className="space-y-6">
-            {/* Basic Information */}
-            <div className="space-y-4">
-              <h4 className="font-medium">Basic Information</h4>
-              <div className="grid grid-cols-2 gap-4">
-                {entity.dba && (
-                  <div>
-                    <Label className="text-muted-foreground">DBA</Label>
-                    <div>{entity.dba}</div>
-                  </div>
-                )}
-                {entity.taxId && (
-                  <div>
-                    <Label className="text-muted-foreground">Tax ID</Label>
-                    <div>{entity.taxId}</div>
-                  </div>
-                )}
-                {entity.countryOfIncorporation && (
-                  <div>
-                    <Label className="text-muted-foreground">Country of Incorporation</Label>
-                    <div>{entity.countryOfIncorporation}</div>
-                  </div>
-                )}
+
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-medium">General Information</h3>
+            <div className="mt-2 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Legal Name:</span>
+                <span>{entity.legalName}</span>
+              </div>
+              {entity.dba && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">DBA:</span>
+                  <span>{entity.dba}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Jurisdiction:</span>
+                <span>{entity.jurisdiction}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status:</span>
+                <Badge variant={entity.status === 'ACTIVE' ? 'success' : 'secondary'}>
+                  {entity.status}
+                </Badge>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Relationships:</span>
+                <div className="flex gap-2">
+                  {getRelationshipBadges()}
+                </div>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Created:</span>
+                <span>{format(new Date(entity.createdAt), 'MMM d, yyyy')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Last Updated:</span>
+                <span>{format(new Date(entity.updatedAt), 'MMM d, yyyy')}</span>
               </div>
             </div>
+          </div>
 
-            {/* Primary Address */}
-            {primaryAddress && (
-              <div className="space-y-4">
-                <h4 className="font-medium">Primary Address</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Street Address</Label>
-                    <div>{primaryAddress.street1}</div>
-                    {primaryAddress.street2 && <div>{primaryAddress.street2}</div>}
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">City</Label>
-                    <div>{primaryAddress.city}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">State</Label>
-                    <div>{primaryAddress.state || 'N/A'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Postal Code</Label>
-                    <div>{primaryAddress.postalCode || 'N/A'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Country</Label>
-                    <div>{primaryAddress.country}</div>
-                  </div>
-                </div>
+          <Separator />
+
+          <div>
+            <h3 className="text-lg font-medium">KYC Status</h3>
+            <div className="mt-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Verification Status:</span>
+                <Select
+                  value={verificationStatus}
+                  onValueChange={setVerificationStatus}
+                  disabled={isUpdating}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                    <SelectItem value="VERIFIED">Verified</SelectItem>
+                    <SelectItem value="REJECTED">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
 
-            {/* Primary Contact */}
-            {primaryContact && (
-              <div className="space-y-4">
-                <h4 className="font-medium">Primary Contact</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Name</Label>
-                    <div>{`${primaryContact.firstName} ${primaryContact.lastName}`}</div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Counterparty Verification:</span>
+                <Select
+                  value={counterpartyVerified ? 'true' : 'false'}
+                  onValueChange={(value) => setCounterpartyVerified(value === 'true')}
+                  disabled={isUpdating || verificationStatus !== 'VERIFIED'}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Verified</SelectItem>
+                    <SelectItem value="false">Not Verified</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex justify-end">
+                <Button 
+                  onClick={handleUpdateKYC}
+                  disabled={isUpdating}
+                >
+                  Update KYC Status
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div>
+            <h3 className="text-lg font-medium">Primary Contact</h3>
+            <div className="mt-2 space-y-2">
+              {entity.contacts[0] ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Name:</span>
+                    <span>
+                      {entity.contacts[0].firstName} {entity.contacts[0].lastName}
+                    </span>
                   </div>
-                  {primaryContact.title && (
-                    <div>
-                      <Label className="text-muted-foreground">Title</Label>
-                      <div>{primaryContact.title}</div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Email:</span>
+                    <span>{entity.contacts[0].email || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Phone:</span>
+                    <span>{entity.contacts[0].phone || 'N/A'}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center text-muted-foreground">No primary contact found</div>
+              )}
+            </div>
+          </div>
+
+          <Separator />
+
+          <div>
+            <h3 className="text-lg font-medium">Primary Address</h3>
+            <div className="mt-2 space-y-2">
+              {entity.addresses[0] ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Street:</span>
+                    <span>
+                      {entity.addresses[0].street1}
+                      {entity.addresses[0].street2 && (
+                        <>, {entity.addresses[0].street2}</>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">City:</span>
+                    <span>{entity.addresses[0].city}</span>
+                  </div>
+                  {entity.addresses[0].state && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">State:</span>
+                      <span>{entity.addresses[0].state}</span>
                     </div>
                   )}
-                  <div>
-                    <Label className="text-muted-foreground">Email</Label>
-                    <div>{primaryContact.email || 'N/A'}</div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Country:</span>
+                    <span>{entity.addresses[0].country}</span>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Phone</Label>
-                    <div>{primaryContact.phone || 'N/A'}</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Beneficial Owner */}
-            {primaryBeneficialOwner && (
-              <div className="space-y-4">
-                <h4 className="font-medium">Beneficial Owner</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Name</Label>
-                    <div>{primaryBeneficialOwner.name}</div>
-                  </div>
-                  {primaryBeneficialOwner.dateOfBirth && (
-                    <div>
-                      <Label className="text-muted-foreground">Date of Birth</Label>
-                      <div>{format(new Date(primaryBeneficialOwner.dateOfBirth), 'PP')}</div>
-                    </div>
-                  )}
-                  {primaryBeneficialOwner.nationality && (
-                    <div>
-                      <Label className="text-muted-foreground">Nationality</Label>
-                      <div>{primaryBeneficialOwner.nationality}</div>
-                    </div>
-                  )}
-                  <div>
-                    <Label className="text-muted-foreground">Ownership</Label>
-                    <div>{primaryBeneficialOwner.ownershipPercentage}%</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Control Type</Label>
-                    <div>{primaryBeneficialOwner.controlType}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Verification Status</Label>
-                    <div>{primaryBeneficialOwner.verificationStatus}</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* KYC Status */}
-            {entity.kyc && (
-              <div className="space-y-4">
-                <h4 className="font-medium">KYC Status</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Verification Status</Label>
-                    <div>{entity.kyc.verificationStatus}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Lender Verified</Label>
-                    <div>{entity.kyc.lenderVerified ? 'Yes' : 'No'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Counterparty Verified</Label>
-                    <div>{entity.kyc.counterpartyVerified ? 'Yes' : 'No'}</div>
-                  </div>
-                  {entity.kyc.lastVerificationDate && (
-                    <div>
-                      <Label className="text-muted-foreground">Last Verification</Label>
-                      <div>{format(new Date(entity.kyc.lastVerificationDate), 'PP')}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+                </>
+              ) : (
+                <div className="text-center text-muted-foreground">No primary address found</div>
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>

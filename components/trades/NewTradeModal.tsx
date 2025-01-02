@@ -14,6 +14,11 @@ import { useLenders } from '@/hooks/useLenders'
 import { type Lender } from '@prisma/client'
 import { getCreditAgreementList } from '@/server/actions/creditAgreement/getCreditAgreementList'
 import { getCounterparties } from '@/server/actions/counterparty/getCounterparties'
+import { getFacilityPositions } from '@/server/actions/facility/getFacilityPositions'
+import { createLenderCounterparty } from '@/server/actions/counterparty/createLenderCounterparty'
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
 
 interface LenderWithEntity {
   id: string
@@ -22,7 +27,20 @@ interface LenderWithEntity {
 
 interface CounterpartyWithEntity {
   id: string
-  legalName: string
+  name: string
+  entityId: string
+  type: {
+    id: string
+    name: string
+  }
+  status: string
+}
+
+interface FacilityPositionInfo {
+  id: string
+  name: string
+  amount: number
+  share: number
 }
 
 interface CreditAgreement {
@@ -64,7 +82,9 @@ export function NewTradeModal({
   const [isLoadingCreditAgreements, setIsLoadingCreditAgreements] = useState(true)
   const [creditAgreements, setCreditAgreements] = useState<CreditAgreement[]>([])
   const [counterparties, setCounterparties] = useState<CounterpartyWithEntity[]>([])
+  const [facilityPositions, setFacilityPositions] = useState<FacilityPositionInfo[]>([])
   const [isLoadingCounterparties, setIsLoadingCounterparties] = useState(false)
+  const [isLoadingPositions, setIsLoadingPositions] = useState(false)
   const { lenders, isLoading: isLoadingLenders } = useLenders()
 
   const [formData, setFormData] = useState({
@@ -109,10 +129,38 @@ export function NewTradeModal({
     loadCounterparties()
   }, [])
 
+  useEffect(() => {
+    const loadFacilityPositions = async () => {
+      if (!formData.facilityId) return
+      
+      setIsLoadingPositions(true)
+      try {
+        const positions = await getFacilityPositions(formData.facilityId)
+        console.log('Loaded facility positions:', positions)
+        setFacilityPositions(positions)
+      } catch (error) {
+        console.error('Error loading facility positions:', error)
+        toast.error('Failed to load facility positions')
+      } finally {
+        setIsLoadingPositions(false)
+      }
+    }
+
+    loadFacilityPositions()
+  }, [formData.facilityId])
+
   const availableFacilities = useMemo(() => {
     const selectedAgreement = creditAgreements.find(ca => ca.id === formData.creditAgreementId)
     return selectedAgreement?.facilities || []
   }, [creditAgreements, formData.creditAgreementId])
+
+  const availableSellers = useMemo(() => {
+    // Use facility positions directly for sellers
+    return facilityPositions.map(pos => ({
+      id: pos.id,
+      name: pos.name
+    }))
+  }, [facilityPositions])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -141,9 +189,18 @@ export function NewTradeModal({
         throw new Error('Please enter a price')
       }
 
+      // Get the seller's entity ID from the facility positions
+      const sellerPosition = facilityPositions.find(pos => pos.id === formData.sellerLenderId)
+      if (!sellerPosition) {
+        throw new Error('Seller position not found')
+      }
+
+      // Get or create a counterparty for the seller
+      const sellerCounterparty = await createLenderCounterparty(sellerPosition.id)
+
       const tradeData = {
         facilityId: formData.facilityId,
-        sellerCounterpartyId: formData.sellerLenderId,
+        sellerCounterpartyId: sellerCounterparty.id,
         buyerCounterpartyId: formData.buyerLenderId,
         parAmount: parseFloat(formData.parAmount),
         price: parseFloat(formData.price),
@@ -246,15 +303,21 @@ export function NewTradeModal({
               <Select
                 value={formData.sellerLenderId}
                 onValueChange={(value) => handleInputChange('sellerLenderId', value)}
-                disabled={isLoadingLenders}
+                disabled={isLoadingPositions || !formData.facilityId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select seller" />
+                  <SelectValue placeholder={
+                    isLoadingPositions 
+                      ? "Loading..." 
+                      : !formData.facilityId 
+                        ? "Select a facility first"
+                        : "Select seller"
+                  } />
                 </SelectTrigger>
                 <SelectContent>
-                  {lenders.map((lender: LenderWithEntity) => (
-                    <SelectItem key={lender.id} value={lender.id}>
-                      {lender.legalName}
+                  {availableSellers.map((cp) => (
+                    <SelectItem key={cp.id} value={cp.id}>
+                      {cp.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -274,7 +337,7 @@ export function NewTradeModal({
                 <SelectContent>
                   {counterparties.map((cp) => (
                     <SelectItem key={cp.id} value={cp.id}>
-                      {cp.legalName}
+                      {cp.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

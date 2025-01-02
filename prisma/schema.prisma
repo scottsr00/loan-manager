@@ -250,10 +250,24 @@ model Trade {
   buyerCounterparty    Counterparty         @relation("BuyerCounterpartyTrades", fields: [buyerCounterpartyId], references: [id])
   transactions         TransactionHistory[]
   positionHistory      LenderPositionHistory[]
+  statusChanges        TradeStatusChange[]
 
   @@index([facilityId])
   @@index([sellerCounterpartyId])
   @@index([buyerCounterpartyId])
+}
+
+model TradeStatusChange {
+  id          String   @id @default(cuid())
+  tradeId     String
+  fromStatus  String
+  toStatus    String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  trade       Trade    @relation(fields: [tradeId], references: [id])
+
+  @@index([tradeId])
 }
 
 model TransactionHistory {
