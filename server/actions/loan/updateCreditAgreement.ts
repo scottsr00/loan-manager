@@ -1,99 +1,116 @@
 'use server'
 
-import { prisma } from '@/server/db/client'
-import { type UpdateCreditAgreementInput } from '@/server/types/credit-agreement'
+import { prisma } from '@/lib/prisma'
+import { type UpdateCreditAgreementInput, type CreditAgreementWithRelations } from '@/server/types/credit-agreement'
+import { updateCreditAgreementSchema } from '@/server/types/credit-agreement'
 
-export async function updateCreditAgreement(data: UpdateCreditAgreementInput) {
+export async function updateCreditAgreement(
+  data: UpdateCreditAgreementInput
+): Promise<CreditAgreementWithRelations> {
   try {
-    // Validate positive amount
-    if (data.amount !== undefined && data.amount <= 0) {
-      throw new Error('Amount must be positive')
-    }
+    // Validate input data
+    const validatedData = updateCreditAgreementSchema.parse(data)
 
-    // Get existing credit agreement with facilities
+    // Check if credit agreement exists
     const existingAgreement = await prisma.creditAgreement.findUnique({
-      where: { id: data.id },
-      include: {
-        facilities: true,
-      },
+      where: { id: validatedData.id }
     })
 
     if (!existingAgreement) {
       throw new Error('Credit agreement not found')
     }
 
-    // Validate status transitions
-    if (data.status && existingAgreement.status === 'TERMINATED') {
-      throw new Error('Cannot change status of terminated agreement')
+    // If maturity date is being updated, validate it's after start date
+    if (validatedData.maturityDate && validatedData.startDate) {
+      if (validatedData.maturityDate <= validatedData.startDate) {
+        throw new Error('Maturity date must be after start date')
+      }
+    } else if (validatedData.maturityDate && validatedData.maturityDate <= existingAgreement.startDate) {
+      throw new Error('Maturity date must be after start date')
+    } else if (validatedData.startDate && existingAgreement.maturityDate <= validatedData.startDate) {
+      throw new Error('Maturity date must be after start date')
     }
 
-    // Check if currency change is allowed
-    if (data.currency && data.currency !== existingAgreement.currency && existingAgreement.facilities.length > 0) {
-      throw new Error('Cannot change currency of credit agreement with existing facilities')
+    // If amount is being updated, validate it's positive
+    if (validatedData.amount !== undefined && validatedData.amount <= 0) {
+      throw new Error('Amount must be positive')
     }
 
-    // Validate facility commitments against new amount
-    if (data.amount) {
-      const totalCommitments = existingAgreement.facilities.reduce(
-        (sum: number, facility: { commitmentAmount: number }) => sum + facility.commitmentAmount,
-        0
-      )
-      if (totalCommitments > data.amount) {
-        throw new Error('Credit agreement amount cannot be less than total facility commitments')
+    // If interest rate is being updated, validate it's non-negative
+    if (validatedData.interestRate !== undefined && validatedData.interestRate < 0) {
+      throw new Error('Interest rate must be non-negative')
+    }
+
+    // If borrower is being updated, validate it exists
+    if (validatedData.borrowerId) {
+      const borrower = await prisma.borrower.findUnique({
+        where: { id: validatedData.borrowerId }
+      })
+      if (!borrower) {
+        throw new Error('Borrower not found')
       }
     }
 
-    // Validate maturity date against facility maturity dates
-    if (data.maturityDate) {
-      const hasInvalidFacility = existingAgreement.facilities.some(
-        (facility: { maturityDate: Date }) => facility.maturityDate > (data.maturityDate as Date)
-      )
-      if (hasInvalidFacility) {
-        throw new Error('Credit agreement maturity date cannot be earlier than facility maturity dates')
-      }
-    }
-
-    const updatedCreditAgreement = await prisma.creditAgreement.update({
-      where: {
-        id: data.id,
-      },
+    // Update credit agreement
+    const updatedAgreement = await prisma.creditAgreement.update({
+      where: { id: validatedData.id },
       data: {
-        agreementNumber: data.agreementNumber,
-        status: data.status,
-        amount: data.amount,
-        currency: data.currency,
-        startDate: data.startDate,
-        maturityDate: data.maturityDate,
-        interestRate: data.interestRate,
-        description: data.description,
-        borrowerId: data.borrowerId,
+        agreementNumber: validatedData.agreementNumber,
+        borrower: validatedData.borrowerId ? {
+          connect: {
+            id: validatedData.borrowerId
+          }
+        } : undefined,
+        status: validatedData.status,
+        amount: validatedData.amount,
+        currency: validatedData.currency,
+        startDate: validatedData.startDate,
+        maturityDate: validatedData.maturityDate,
+        interestRate: validatedData.interestRate,
+        description: validatedData.description
       },
       include: {
         borrower: true,
-        lender: true,
+        lender: {
+          include: {
+            lender: true
+          }
+        },
         facilities: {
           include: {
             trades: {
               include: {
-                counterparty: true,
-              },
-            },
-          },
+                sellerCounterparty: {
+                  include: {
+                    entity: {
+                      select: {
+                        id: true,
+                        legalName: true
+                      }
+                    }
+                  }
+                },
+                buyerCounterparty: {
+                  include: {
+                    entity: {
+                      select: {
+                        id: true,
+                        legalName: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         },
-        transactions: true,
-      },
+        transactions: true
+      }
     })
 
-    if (!updatedCreditAgreement) {
-      throw new Error('Failed to update credit agreement')
-    }
-
-    return updatedCreditAgreement
+    return updatedAgreement
   } catch (error) {
-    console.error('Error updating credit agreement:', error instanceof Error ? error.message : 'Unknown error')
-    if (error instanceof Error) {
-      throw error
-    }
-    throw new Error('Failed to update credit agreement: Unknown error')
+    console.error('Error updating credit agreement:', error)
+    throw error
   }
 } 

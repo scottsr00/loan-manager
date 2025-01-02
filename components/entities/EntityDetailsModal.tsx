@@ -43,34 +43,16 @@ export function EntityDetailsModal({ entity, open, onOpenChange }: EntityDetails
                     <div>{entity.dba}</div>
                   </div>
                 )}
-                {entity.registrationNumber && (
-                  <div>
-                    <Label className="text-muted-foreground">Registration Number</Label>
-                    <div>{entity.registrationNumber}</div>
-                  </div>
-                )}
                 {entity.taxId && (
                   <div>
                     <Label className="text-muted-foreground">Tax ID</Label>
                     <div>{entity.taxId}</div>
                   </div>
                 )}
-                {entity.dateOfIncorporation && (
-                  <div>
-                    <Label className="text-muted-foreground">Date of Incorporation</Label>
-                    <div>{format(new Date(entity.dateOfIncorporation), 'PP')}</div>
-                  </div>
-                )}
                 {entity.countryOfIncorporation && (
                   <div>
                     <Label className="text-muted-foreground">Country of Incorporation</Label>
                     <div>{entity.countryOfIncorporation}</div>
-                  </div>
-                )}
-                {entity.governmentId && (
-                  <div>
-                    <Label className="text-muted-foreground">Government ID</Label>
-                    <div>{entity.governmentId} ({entity.governmentIdType})</div>
                   </div>
                 )}
               </div>
@@ -166,6 +148,33 @@ export function EntityDetailsModal({ entity, open, onOpenChange }: EntityDetails
                     <Label className="text-muted-foreground">Verification Status</Label>
                     <div>{primaryBeneficialOwner.verificationStatus}</div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* KYC Status */}
+            {entity.kyc && (
+              <div className="space-y-4">
+                <h4 className="font-medium">KYC Status</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground">Verification Status</Label>
+                    <div>{entity.kyc.verificationStatus}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Lender Verified</Label>
+                    <div>{entity.kyc.lenderVerified ? 'Yes' : 'No'}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Counterparty Verified</Label>
+                    <div>{entity.kyc.counterpartyVerified ? 'Yes' : 'No'}</div>
+                  </div>
+                  {entity.kyc.lastVerificationDate && (
+                    <div>
+                      <Label className="text-muted-foreground">Last Verification</Label>
+                      <div>{format(new Date(entity.kyc.lastVerificationDate), 'PP')}</div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

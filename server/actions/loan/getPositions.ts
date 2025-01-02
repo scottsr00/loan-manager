@@ -1,123 +1,137 @@
 'use server'
 
-import { prisma } from '@/server/db/client'
-import { type Borrower, type Lender, type CreditAgreement, type Facility, type Loan, type Trade, type FacilityPosition } from '@prisma/client'
+import { type Position } from '../../../server/types/position'
+import { prisma } from '@/lib/prisma'
+import { type Prisma, type CreditAgreement, type Facility, type FacilityPosition, type Trade, type Loan, type ServicingActivity } from '@prisma/client'
 
-interface PositionResponse {
+type ServicingActivityWithRelations = {
+  id: string
+  activityType: string
+  dueDate: Date
+  description: string | null
+  amount: number
+  status: string
+  completedAt: Date | null
+  completedBy: string | null
+}
+
+type CreditAgreementWithRelations = {
   id: string
   agreementNumber: string
-  borrower: {
-    name: string
-    type: string
-    status: string
-  }
-  agent: {
-    name: string
-    type: string
-  }
+  borrowerId: string
+  lenderId: string
+  status: string
   amount: number
   currency: string
-  status: string
   startDate: Date
   maturityDate: Date
   interestRate: number
-  facilities: {
-    id: string
-    facilityName: string
-    facilityType: string
-    commitmentAmount: number
-    currency: string
-    status: string
-    interestType: string
-    baseRate: string
-    margin: number
-    positions: {
-      lender: string
-      commitment: number
+  description: string | null
+  createdAt: Date
+  updatedAt: Date
+  borrower: {
+    name: string
+    businessType: string | null
+    onboardingStatus: string
+  }
+  lender: {
+    legalName: string
+    lender: {
       status: string
-    }[]
-    trades: {
-      id: string
-      counterparty: string
-      amount: number
-      price: number
-      status: string
-      tradeDate: Date
-      settlementDate: Date
-    }[]
-    loans: {
-      id: string
-      amount: number
-      outstandingAmount: number
-      currency: string
-      status: string
-      interestPeriod: string
-      drawDate: Date
-      baseRate: number
-      effectiveRate: number
-      positions: {
-        lender: string
-        amount: number
-        status: string
-      }[]
-    }[]
-  }[]
+    } | null
+  }
+  facilities: FacilityWithRelations[]
 }
 
-interface PrismaQueryResult extends CreditAgreement {
-  borrower?: Borrower & {
+type FacilityPositionWithRelations = {
+  id: string
+  facilityId: string
+  lenderId: string
+  amount: number
+  share: number
+  status: string
+  createdAt: Date
+  updatedAt: Date
+  lender: {
     entity: {
       legalName: string
     }
   }
-  lender?: Lender & {
+}
+
+type LoanWithRelations = {
+  id: string
+  facilityId: string
+  amount: number
+  outstandingAmount: number
+  currency: string
+  status: string
+  interestPeriod: string
+  drawDate: Date
+  baseRate: Prisma.Decimal
+  effectiveRate: Prisma.Decimal
+  createdAt: Date
+  updatedAt: Date
+}
+
+type TradeWithRelations = {
+  id: string
+  facilityId: string
+  sellerCounterpartyId: string
+  buyerCounterpartyId: string
+  tradeDate: Date
+  settlementDate: Date
+  parAmount: number
+  price: number
+  settlementAmount: number
+  status: string
+  createdAt: Date
+  updatedAt: Date
+  sellerCounterparty: {
     entity: {
       legalName: string
     }
   }
-  facilities: Array<Facility & {
-    positions: Array<FacilityPosition & {
-      lender: Lender & {
-        entity: {
-          legalName: string
-        }
-      }
-    }>
-    trades: Array<Trade & {
-      counterparty: {
-        id: string
-        name: string
-        status: string
-      }
-    }>
-    loans: Array<{
-      id: string
-      amount: number
-      outstandingAmount: number
-      currency: string
-      status: string
-      interestPeriod: string
-      drawDate: Date
-      baseRate: number
-      effectiveRate: number
-    }>
-  }>
+  buyerCounterparty: {
+    entity: {
+      legalName: string
+    }
+  }
 }
 
-export async function getPositions(): Promise<PositionResponse[]> {
+type FacilityWithRelations = {
+  id: string
+  facilityName: string
+  facilityType: string
+  creditAgreementId: string
+  commitmentAmount: number
+  availableAmount: number
+  currency: string
+  startDate: Date
+  maturityDate: Date
+  interestType: string
+  baseRate: string
+  margin: number
+  status: string
+  description: string | null
+  createdAt: Date
+  updatedAt: Date
+  positions: FacilityPositionWithRelations[]
+  trades: TradeWithRelations[]
+  loans: LoanWithRelations[]
+  servicingActivities: ServicingActivityWithRelations[]
+}
+
+export async function getPositions(): Promise<Position[]> {
   try {
     const creditAgreements = await prisma.creditAgreement.findMany({
-      select: {
-        id: true,
-        agreementNumber: true,
+      include: {
         borrower: true,
-        lender: true,
-        amount: true,
-        currency: true,
-        status: true,
-        startDate: true,
-        maturityDate: true,
-        interestRate: true,
+        lender: {
+          include: {
+            lender: true
+          }
+        },
         facilities: {
           include: {
             positions: {
@@ -129,41 +143,49 @@ export async function getPositions(): Promise<PositionResponse[]> {
                 }
               }
             },
-            loans: true,
             trades: {
               include: {
-                counterparty: {
-                  select: {
-                    id: true,
-                    name: true,
-                    status: true
+                sellerCounterparty: {
+                  include: {
+                    entity: true
+                  }
+                },
+                buyerCounterparty: {
+                  include: {
+                    entity: true
                   }
                 }
+              }
+            },
+            loans: true,
+            servicingActivities: {
+              select: {
+                id: true,
+                activityType: true,
+                dueDate: true,
+                description: true,
+                amount: true,
+                status: true,
+                completedAt: true,
+                completedBy: true
               }
             }
           }
         }
-      },
-      orderBy: {
-        agreementNumber: 'asc'
       }
     })
 
-    if (!creditAgreements) {
-      throw new Error('No credit agreements found')
-    }
-
-    return creditAgreements.map((agreement: any) => ({
+    const positions = creditAgreements.map((agreement: CreditAgreementWithRelations) => ({
       id: agreement.id,
       agreementNumber: agreement.agreementNumber,
       borrower: {
-        name: agreement.borrower?.name || 'Unknown',
-        type: 'BORROWER',
-        status: agreement.borrower?.onboardingStatus || 'UNKNOWN'
+        name: agreement.borrower.name,
+        type: agreement.borrower.businessType || 'Unknown',
+        status: agreement.borrower.onboardingStatus
       },
       agent: {
-        name: agreement.lender?.legalName || 'Unknown',
-        type: 'LENDER'
+        name: agreement.lender.legalName,
+        type: agreement.lender.lender?.status || 'Unknown'
       },
       amount: agreement.amount,
       currency: agreement.currency,
@@ -171,31 +193,32 @@ export async function getPositions(): Promise<PositionResponse[]> {
       startDate: agreement.startDate,
       maturityDate: agreement.maturityDate,
       interestRate: agreement.interestRate.toString(),
-      facilities: (agreement.facilities || []).map((facility: any) => ({
+      facilities: agreement.facilities.map(facility => ({
         id: facility.id,
         facilityName: facility.facilityName,
         facilityType: facility.facilityType,
         commitmentAmount: facility.commitmentAmount,
+        availableAmount: facility.availableAmount,
         currency: facility.currency,
         status: facility.status,
         interestType: facility.interestType,
         baseRate: facility.baseRate,
-        margin: facility.margin.toString(),
-        positions: facility.positions.map((pos: any) => ({
-          lender: pos.lender?.entity?.legalName || 'Unknown',
-          commitment: pos.amount,
-          status: pos.status
+        margin: facility.margin,
+        positions: facility.positions.map(position => ({
+          lender: position.lender.entity.legalName,
+          commitment: position.amount,
+          status: position.status
         })),
-        trades: (facility.trades || []).map((trade: any) => ({
+        trades: facility.trades.map(trade => ({
           id: trade.id,
-          counterparty: trade.counterparty?.name || 'Unknown',
-          amount: trade.amount,
+          counterparty: trade.sellerCounterparty.entity.legalName,
+          amount: trade.parAmount,
           price: trade.price,
           status: trade.status,
           tradeDate: trade.tradeDate,
           settlementDate: trade.settlementDate
         })),
-        loans: (facility.loans || []).map((loan: any) => ({
+        loans: facility.loans.map(loan => ({
           id: loan.id,
           amount: loan.amount,
           outstandingAmount: loan.outstandingAmount,
@@ -204,20 +227,24 @@ export async function getPositions(): Promise<PositionResponse[]> {
           interestPeriod: loan.interestPeriod,
           drawDate: loan.drawDate,
           baseRate: loan.baseRate.toString(),
-          effectiveRate: loan.effectiveRate.toString(),
-          positions: facility.positions.map((pos: any) => ({
-            lender: pos.lender?.entity?.legalName || 'Unknown',
-            amount: (loan.amount * pos.share),
-            status: pos.status
-          }))
+          effectiveRate: loan.effectiveRate.toString()
+        })),
+        servicingActivities: facility.servicingActivities.map(activity => ({
+          id: activity.id,
+          activityType: activity.activityType,
+          dueDate: activity.dueDate,
+          description: activity.description,
+          amount: activity.amount,
+          status: activity.status,
+          completedAt: activity.completedAt,
+          completedBy: activity.completedBy
         }))
       }))
     }))
+
+    return positions
   } catch (error) {
-    console.error('Error in getPositions:', error)
-    if (error instanceof Error) {
-      throw new Error(`Failed to get positions: ${error.message}`)
-    }
-    throw new Error('Failed to get positions')
+    console.error('Error fetching positions:', error)
+    throw error
   }
 } 

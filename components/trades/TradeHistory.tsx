@@ -1,133 +1,85 @@
 'use client'
 
-import '@/lib/ag-grid-init'
-import { useState, useMemo } from 'react'
-import { useTrades } from '@/hooks/useTrades'
-import { Button } from "@/components/ui/button"
-import { TradeDetailsModal } from './TradeDetailsModal'
-import { NewTradeModal } from './NewTradeModal'
+import { type Trade } from '@prisma/client'
 import { DataGrid } from '@/components/ui/data-grid'
-import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from '@/lib/utils'
-import { Loader2 } from 'lucide-react'
-import { type TradeWithRelations, TradeStatus } from '@/server/types/trade'
-import type { ColDef, RowClickedEvent } from 'ag-grid-community'
+import { format } from 'date-fns'
+import { Badge } from '@/components/ui/badge'
+import type { ColDef, ICellRendererParams } from 'ag-grid-community'
 
-export function TradeHistory() {
-  const { trades, isLoading, isError, mutate } = useTrades()
-  const [selectedTrade, setSelectedTrade] = useState<string | null>(null)
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-  const [isNewTradeOpen, setIsNewTradeOpen] = useState(false)
-
-  const columnDefs = useMemo<ColDef[]>(() => [
-    {
-      field: 'facility.creditAgreement.agreementName',
-      headerName: 'Deal Name',
-      flex: 1,
-      valueGetter: (params) => {
-        return params.data?.facility?.creditAgreement?.agreementName || 'N/A'
+interface TradeHistoryProps {
+  trades: (Trade & {
+    sellerCounterparty: {
+      entity: {
+        id: string
+        legalName: string
       }
+    }
+    buyerCounterparty: {
+      entity: {
+        id: string
+        legalName: string
+      }
+    }
+  })[]
+}
+
+export function TradeHistory({ trades }: TradeHistoryProps) {
+  const columnDefs: ColDef[] = [
+    {
+      field: 'tradeDate',
+      headerName: 'Trade Date',
+      valueFormatter: params => format(new Date(params.value), 'PP')
     },
     {
-      field: 'amount',
-      headerName: 'Amount',
-      flex: 1,
-      valueFormatter: params => formatCurrency(params.value),
-      filter: 'agNumberColumnFilter',
+      field: 'seller',
+      headerName: 'Seller',
+      valueGetter: params => params.data.sellerCounterparty.entity.legalName
+    },
+    {
+      field: 'buyer',
+      headerName: 'Buyer',
+      valueGetter: params => params.data.buyerCounterparty.entity.legalName
+    },
+    {
+      field: 'parAmount',
+      headerName: 'Par Amount',
+      valueFormatter: params => formatCurrency(params.value)
     },
     {
       field: 'price',
       headerName: 'Price',
-      flex: 1,
-      valueFormatter: params => `${params.value.toFixed(2)}%`,
-      filter: 'agNumberColumnFilter',
+      valueFormatter: params => `${params.value}%`
     },
     {
-      field: 'counterparty.legalName',
-      headerName: 'Counterparty',
-      flex: 1,
-      valueGetter: (params) => {
-        return params.data?.counterparty?.legalName || 'N/A'
-      }
-    },
-    {
-      field: 'tradeDate',
-      headerName: 'Trade Date',
-      flex: 1,
-      valueFormatter: params => new Date(params.value).toLocaleDateString(),
-      filter: 'agDateColumnFilter',
+      field: 'settlementAmount',
+      headerName: 'Settlement Amount',
+      valueFormatter: params => formatCurrency(params.value)
     },
     {
       field: 'settlementDate',
       headerName: 'Settlement Date',
-      flex: 1,
-      valueFormatter: params => new Date(params.value).toLocaleDateString(),
-      filter: 'agDateColumnFilter',
+      valueFormatter: params => format(new Date(params.value), 'PP')
     },
     {
       field: 'status',
       headerName: 'Status',
-      flex: 1,
-      cellRenderer: (params: { value: keyof typeof TradeStatus }) => {
-        const status = String(params.value)
-        return (
-          <Badge variant={status === 'CLOSED' ? 'success' : 'secondary'}>
-            {status}
-          </Badge>
-        )
-      },
-    },
-  ], [])
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
-  if (isError) {
-    return (
-      <div className="text-center p-8 text-destructive">
-        Error loading trades. Please try again later.
-      </div>
-    )
-  }
+      cellRenderer: (params: ICellRendererParams) => (
+        <Badge variant={params.value === 'SETTLED' ? 'success' : 'secondary'}>
+          {params.value}
+        </Badge>
+      )
+    }
+  ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold tracking-tight">Trade History</h2>
-        <NewTradeModal
-          open={isNewTradeOpen}
-          onOpenChange={setIsNewTradeOpen}
-          onSuccess={() => {
-            setIsNewTradeOpen(false)
-            mutate()
-          }}
-          trigger={<Button>New Trade</Button>}
-        />
-      </div>
-
+    <div className="h-[400px] w-full">
       <DataGrid
-        rowData={trades || []}
+        rowData={trades}
         columnDefs={columnDefs}
         onGridReady={params => {
           params.api.sizeColumnsToFit()
         }}
-        onRowClick={(event: RowClickedEvent<TradeWithRelations>) => {
-          if (event.data) {
-            setSelectedTrade(event.data.id)
-            setIsDetailsOpen(true)
-          }
-        }}
-      />
-
-      <TradeDetailsModal
-        tradeId={selectedTrade || ''}
-        open={isDetailsOpen}
-        onOpenChange={setIsDetailsOpen}
       />
     </div>
   )

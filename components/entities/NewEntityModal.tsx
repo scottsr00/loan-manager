@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -12,17 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { createEntity } from '@/server/actions/entity'
-import { getEntityTypes } from '@/server/actions/entity'
-import type { CounterpartyType } from '@/types/counterparty'
-import { DatePicker } from '@/components/ui/date-picker'
+import { createEntity } from '@/server/actions/entity/createEntity'
 
 export function NewEntityModal({
   onEntityCreated,
@@ -30,24 +20,7 @@ export function NewEntityModal({
   onEntityCreated: () => void
 }) {
   const [open, setOpen] = useState(false)
-  const [entityTypes, setEntityTypes] = useState<CounterpartyType[]>([])
-  const [date, setDate] = useState<Date>()
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (open) {
-      loadEntityTypes()
-    }
-  }, [open])
-
-  const loadEntityTypes = async () => {
-    try {
-      const types = await getEntityTypes()
-      setEntityTypes(types)
-    } catch (error) {
-      console.error('Error loading entity types:', error)
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -58,11 +31,9 @@ export function NewEntityModal({
       await createEntity({
         legalName: formData.get('legalName') as string,
         dba: formData.get('dba') as string || undefined,
-        registrationNumber: formData.get('registrationNumber') as string || undefined,
         taxId: formData.get('taxId') as string || undefined,
+        countryOfIncorporation: formData.get('country') as string,
         status: 'ACTIVE',
-        isAgent: formData.get('isAgent') === 'on',
-        dateOfIncorporation: date,
         addresses: [{
           type: 'REGISTERED',
           street1: formData.get('street1') as string,
@@ -81,10 +52,7 @@ export function NewEntityModal({
           email: formData.get('email') as string || undefined,
           phone: formData.get('phone') as string || undefined,
           isPrimary: true,
-        }],
-        primaryContactName: `${formData.get('firstName')} ${formData.get('lastName')}`,
-        primaryContactEmail: formData.get('email') as string || undefined,
-        primaryContactPhone: formData.get('phone') as string || undefined,
+        }]
       })
 
       setOpen(false)
@@ -123,55 +91,13 @@ export function NewEntityModal({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="registrationNumber">Registration Number</Label>
-                <Input id="registrationNumber" name="registrationNumber" />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="taxId">Tax ID</Label>
                 <Input id="taxId" name="taxId" />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="entityTypeId">Entity Type *</Label>
-                <Select name="entityTypeId" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {entityTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="country">Country of Incorporation *</Label>
+                <Input id="country" name="country" required />
               </div>
-              <div className="space-y-2">
-                <Label>Incorporation Date</Label>
-                <DatePicker value={date} onChange={setDate} />
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="isAgent"
-                name="isAgent"
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <Label htmlFor="isAgent">Is Agent Bank</Label>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="website">Website</Label>
-              <Input id="website" name="website" type="url" />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Input id="description" name="description" />
             </div>
 
             <div className="space-y-4">
@@ -200,10 +126,6 @@ export function NewEntityModal({
                 <div className="space-y-2">
                   <Label htmlFor="postalCode">Postal Code</Label>
                   <Input id="postalCode" name="postalCode" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country">Country *</Label>
-                  <Input id="country" name="country" required />
                 </div>
               </div>
             </div>

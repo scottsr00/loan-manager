@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { type Facility, type CreditAgreement, type Borrower, type Entity, type Lender, type Trade, type TransactionHistory, type FacilityPosition } from '@prisma/client'
 
 export const facilityTypeEnum = z.enum([
   'TERM_LOAN',
@@ -36,4 +37,48 @@ export const facilityInputSchema = z.object({
   status: z.string().default('ACTIVE')
 })
 
-export type FacilityInput = z.infer<typeof facilityInputSchema> 
+export type FacilityInput = z.infer<typeof facilityInputSchema>
+
+export type FacilityWithRelations = Facility & {
+  creditAgreement: CreditAgreement & {
+    borrower: {
+      id: string
+      name: string
+    }
+    lender: {
+      id: string
+      legalName: string
+      dba?: string | null
+      lender: {
+        id: string
+        status: string
+      } | null
+    }
+  }
+  trades: (Trade & {
+    sellerCounterparty: {
+      id: string
+      entity: {
+        id: string
+        legalName: string
+      }
+    }
+    buyerCounterparty: {
+      id: string
+      entity: {
+        id: string
+        legalName: string
+      }
+    }
+  })[]
+  positions: (FacilityPosition & {
+    lender: {
+      id: string
+      entity: {
+        id: string
+        legalName: string
+        dba?: string | null
+      }
+    }
+  })[]
+} 

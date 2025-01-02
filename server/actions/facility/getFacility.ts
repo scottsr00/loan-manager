@@ -1,47 +1,7 @@
 'use server'
 
-import { prisma } from '@/server/db/client'
-import { type Prisma } from '@prisma/client'
-
-export type FacilityWithRelations = Prisma.FacilityGetPayload<{
-  include: {
-    creditAgreement: {
-      include: {
-        borrower: true
-        lender: true
-      }
-    }
-    positions: {
-      include: {
-        lender: {
-          include: {
-            entity: true
-          }
-        }
-      }
-    }
-    loans: {
-      include: {
-        transactions: true
-      }
-    }
-    servicingActivities: true
-    servicingAssignments: {
-      include: {
-        teamMember: {
-          include: {
-            role: true
-          }
-        }
-      }
-    }
-    trades: {
-      include: {
-        counterparty: true
-      }
-    }
-  }
-}>
+import { prisma } from '@/lib/prisma'
+import { type FacilityWithRelations } from '@/server/types/facility'
 
 export async function getFacility(id: string): Promise<FacilityWithRelations | null> {
   try {
@@ -50,37 +10,64 @@ export async function getFacility(id: string): Promise<FacilityWithRelations | n
       include: {
         creditAgreement: {
           include: {
-            borrower: true,
-            lender: true
-          }
-        },
-        positions: {
-          include: {
-            lender: {
-              include: {
-                entity: true
+            borrower: {
+              select: {
+                id: true,
+                name: true
               }
-            }
-          }
-        },
-        loans: {
-          include: {
-            transactions: true
-          }
-        },
-        servicingActivities: true,
-        servicingAssignments: {
-          include: {
-            teamMember: {
-              include: {
-                role: true
+            },
+            lender: {
+              select: {
+                id: true,
+                legalName: true,
+                dba: true,
+                lender: {
+                  select: {
+                    id: true,
+                    status: true
+                  }
+                }
               }
             }
           }
         },
         trades: {
           include: {
-            counterparty: true
+            sellerCounterparty: {
+              include: {
+                entity: {
+                  select: {
+                    id: true,
+                    legalName: true
+                  }
+                }
+              }
+            },
+            buyerCounterparty: {
+              include: {
+                entity: {
+                  select: {
+                    id: true,
+                    legalName: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        positions: {
+          include: {
+            lender: {
+              include: {
+                entity: {
+                  select: {
+                    id: true,
+                    legalName: true,
+                    dba: true
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -92,10 +79,86 @@ export async function getFacility(id: string): Promise<FacilityWithRelations | n
 
     return facility
   } catch (error) {
-    console.error('Error fetching facility:', error instanceof Error ? error.message : 'Unknown error')
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch facility: ${error.message}`)
-    }
-    throw new Error('Failed to fetch facility: Unknown error')
+    console.error('Error fetching facility:', error)
+    throw error
+  }
+}
+
+export async function getFacilities(): Promise<FacilityWithRelations[]> {
+  try {
+    const facilities = await prisma.facility.findMany({
+      include: {
+        creditAgreement: {
+          include: {
+            borrower: {
+              select: {
+                id: true,
+                name: true
+              }
+            },
+            lender: {
+              select: {
+                id: true,
+                legalName: true,
+                dba: true,
+                lender: {
+                  select: {
+                    id: true,
+                    status: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        trades: {
+          include: {
+            sellerCounterparty: {
+              include: {
+                entity: {
+                  select: {
+                    id: true,
+                    legalName: true
+                  }
+                }
+              }
+            },
+            buyerCounterparty: {
+              include: {
+                entity: {
+                  select: {
+                    id: true,
+                    legalName: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        positions: {
+          include: {
+            lender: {
+              include: {
+                entity: {
+                  select: {
+                    id: true,
+                    legalName: true,
+                    dba: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    return facilities
+  } catch (error) {
+    console.error('Error fetching facilities:', error)
+    throw error
   }
 } 

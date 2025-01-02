@@ -9,6 +9,7 @@ export type EntityWithRelations = Prisma.EntityGetPayload<{
     beneficialOwners: true
     lender: true
     borrower: true
+    kyc: true
   }
 }>
 
@@ -37,19 +38,9 @@ export const entityContactSchema = z.object({
 export const entityInputSchema = z.object({
   legalName: z.string().min(1, 'Legal name is required'),
   dba: z.string().optional(),
-  registrationNumber: z.string().optional(),
   taxId: z.string().optional(),
-  dateOfBirth: z.date().optional(),
-  dateOfIncorporation: z.date().optional(),
   countryOfIncorporation: z.string().optional(),
-  governmentId: z.string().optional(),
-  governmentIdType: z.string().optional(),
-  governmentIdExpiry: z.date().optional(),
-  primaryContactName: z.string().optional(),
-  primaryContactEmail: z.string().optional(),
-  primaryContactPhone: z.string().optional(),
   status: z.string().default('ACTIVE'),
-  isAgent: z.boolean().default(false),
   addresses: z.array(entityAddressSchema).min(1, 'At least one address is required'),
   contacts: z.array(entityContactSchema).min(1, 'At least one contact is required'),
 })

@@ -14,18 +14,9 @@ export async function createEntity(data: EntityInput) {
       data: {
         legalName: validatedData.legalName,
         dba: validatedData.dba,
-        registrationNumber: validatedData.registrationNumber,
         taxId: validatedData.taxId,
-        status: validatedData.status,
-        isAgent: validatedData.isAgent || false,
-        dateOfIncorporation: validatedData.dateOfIncorporation,
         countryOfIncorporation: validatedData.countryOfIncorporation,
-        governmentId: validatedData.governmentId,
-        governmentIdType: validatedData.governmentIdType,
-        governmentIdExpiry: validatedData.governmentIdExpiry,
-        primaryContactName: validatedData.primaryContactName,
-        primaryContactEmail: validatedData.primaryContactEmail,
-        primaryContactPhone: validatedData.primaryContactPhone,
+        status: validatedData.status,
         addresses: {
           create: validatedData.addresses
         },
@@ -38,17 +29,15 @@ export async function createEntity(data: EntityInput) {
         contacts: true,
         beneficialOwners: true,
         lender: true,
-        borrower: true
+        borrower: true,
+        kyc: true
       }
     })
 
     revalidatePath('/entities')
     return entity
   } catch (error) {
-    console.error('Error creating entity:', error instanceof Error ? error.message : 'Unknown error')
-    if (error instanceof Error) {
-      throw new Error(`Failed to create entity: ${error.message}`)
-    }
-    throw new Error('Failed to create entity: Unknown error')
+    console.error('Error creating entity:', error)
+    throw error
   }
 } 

@@ -1,6 +1,6 @@
 'use server'
 
-import { prisma } from '@/server/db/client'
+import { prisma } from '@/lib/prisma'
 import { type CreditAgreementWithRelations } from '@/server/types/credit-agreement'
 
 export async function getCreditAgreements(): Promise<CreditAgreementWithRelations[]> {
@@ -8,12 +8,35 @@ export async function getCreditAgreements(): Promise<CreditAgreementWithRelation
     const creditAgreements = await prisma.creditAgreement.findMany({
       include: {
         borrower: true,
-        lender: true,
+        lender: {
+          include: {
+            lender: true
+          }
+        },
         facilities: {
           include: {
             trades: {
               include: {
-                counterparty: true
+                sellerCounterparty: {
+                  include: {
+                    entity: {
+                      select: {
+                        id: true,
+                        legalName: true
+                      }
+                    }
+                  }
+                },
+                buyerCounterparty: {
+                  include: {
+                    entity: {
+                      select: {
+                        id: true,
+                        legalName: true
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -25,17 +48,10 @@ export async function getCreditAgreements(): Promise<CreditAgreementWithRelation
       }
     })
 
-    if (!creditAgreements) {
-      throw new Error('No credit agreements found')
-    }
-
-    return creditAgreements as unknown as CreditAgreementWithRelations[]
+    return creditAgreements
   } catch (error) {
-    console.error('Error fetching credit agreements:', error instanceof Error ? error.message : 'Unknown error')
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch credit agreements: ${error.message}`)
-    }
-    throw new Error('Failed to fetch credit agreements: Unknown error')
+    console.error('Error fetching credit agreements:', error)
+    throw error
   }
 }
 
@@ -56,12 +72,35 @@ export async function getAvailableLoans(): Promise<CreditAgreementWithRelations[
       },
       include: {
         borrower: true,
-        lender: true,
+        lender: {
+          include: {
+            lender: true
+          }
+        },
         facilities: {
           include: {
             trades: {
               include: {
-                counterparty: true
+                sellerCounterparty: {
+                  include: {
+                    entity: {
+                      select: {
+                        id: true,
+                        legalName: true
+                      }
+                    }
+                  }
+                },
+                buyerCounterparty: {
+                  include: {
+                    entity: {
+                      select: {
+                        id: true,
+                        legalName: true
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -77,13 +116,10 @@ export async function getAvailableLoans(): Promise<CreditAgreementWithRelations[
       throw new Error('No available loans found')
     }
 
-    return availableLoans as unknown as CreditAgreementWithRelations[]
+    return availableLoans
   } catch (error) {
-    console.error('Error fetching available loans:', error instanceof Error ? error.message : 'Unknown error')
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch available loans: ${error.message}`)
-    }
-    throw new Error('Failed to fetch available loans: Unknown error')
+    console.error('Error fetching available loans:', error)
+    throw error
   }
 }
 
@@ -93,12 +129,35 @@ export async function getCreditAgreement(id: string): Promise<CreditAgreementWit
       where: { id },
       include: {
         borrower: true,
-        lender: true,
+        lender: {
+          include: {
+            lender: true
+          }
+        },
         facilities: {
           include: {
             trades: {
               include: {
-                counterparty: true
+                sellerCounterparty: {
+                  include: {
+                    entity: {
+                      select: {
+                        id: true,
+                        legalName: true
+                      }
+                    }
+                  }
+                },
+                buyerCounterparty: {
+                  include: {
+                    entity: {
+                      select: {
+                        id: true,
+                        legalName: true
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -111,12 +170,9 @@ export async function getCreditAgreement(id: string): Promise<CreditAgreementWit
       return null
     }
 
-    return creditAgreement as unknown as CreditAgreementWithRelations
+    return creditAgreement
   } catch (error) {
-    console.error('Error fetching credit agreement:', error instanceof Error ? error.message : 'Unknown error')
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch credit agreement: ${error.message}`)
-    }
-    throw new Error('Failed to fetch credit agreement: Unknown error')
+    console.error('Error fetching credit agreement:', error)
+    throw error
   }
 } 

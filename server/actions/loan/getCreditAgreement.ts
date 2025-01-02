@@ -1,10 +1,9 @@
 'use server'
 
-import { prisma } from '@/server/db/client'
+import { prisma } from '@/lib/prisma'
 import { type CreditAgreementWithRelations } from '@/server/types/credit-agreement'
 
 export async function getCreditAgreement(id: string): Promise<CreditAgreementWithRelations | null> {
-  console.log('Server: Fetching credit agreement with ID:', id)
   try {
     const creditAgreement = await prisma.creditAgreement.findUnique({
       where: { id },
@@ -19,7 +18,26 @@ export async function getCreditAgreement(id: string): Promise<CreditAgreementWit
           include: {
             trades: {
               include: {
-                counterparty: true
+                sellerCounterparty: {
+                  include: {
+                    entity: {
+                      select: {
+                        id: true,
+                        legalName: true
+                      }
+                    }
+                  }
+                },
+                buyerCounterparty: {
+                  include: {
+                    entity: {
+                      select: {
+                        id: true,
+                        legalName: true
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -28,18 +46,13 @@ export async function getCreditAgreement(id: string): Promise<CreditAgreementWit
       }
     })
 
-    console.log('Server: Found credit agreement:', creditAgreement ? 'yes' : 'no')
-
     if (!creditAgreement) {
       return null
     }
 
-    return creditAgreement as unknown as CreditAgreementWithRelations
+    return creditAgreement
   } catch (error) {
-    console.error('Server: Error fetching credit agreement:', error instanceof Error ? error.message : 'Unknown error')
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch credit agreement: ${error.message}`)
-    }
-    throw new Error('Failed to fetch credit agreement: Unknown error')
+    console.error('Error fetching credit agreement:', error)
+    throw error
   }
 } 

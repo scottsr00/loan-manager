@@ -146,7 +146,7 @@ export function FacilityList() {
       </div>
 
       <FacilityDetailsModal
-        facility={selectedFacility}
+        facilityId={selectedFacility?.id}
         open={isDetailsOpen}
         onOpenChange={setIsDetailsOpen}
       />

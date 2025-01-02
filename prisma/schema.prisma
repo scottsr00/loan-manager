@@ -8,29 +8,35 @@ datasource db {
 }
 
 model Entity {
-  id                     String            @id @default(cuid())
+  id                     String            @id  // LEI
   legalName              String
   dba                    String?
-  registrationNumber     String?
   taxId                  String?
-  dateOfBirth            DateTime?
-  dateOfIncorporation    DateTime?
   countryOfIncorporation String?
-  governmentId           String?
-  governmentIdType       String?
-  governmentIdExpiry     DateTime?
-  primaryContactName     String?
-  primaryContactEmail    String?
-  primaryContactPhone    String?
   status                 String            @default("ACTIVE")
-  isAgent                Boolean           @default(false)
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
   addresses              Address[]
-  beneficialOwners       BeneficialOwner[]
   contacts               Contact[]
-  lenderAgreements       CreditAgreement[] @relation("LenderCreditAgreements")
+  counterparty           Counterparty?
   lender                 Lender?
+  kyc                    KYC?
+  beneficialOwners       BeneficialOwner[]
+  creditAgreements       CreditAgreement[] @relation("LenderCreditAgreements")
+}
+
+model KYC {
+  id                    String            @id @default(cuid())
+  entityId              String            @unique  // References Entity (LEI)
+  verificationStatus    String            @default("PENDING")  // PENDING, VERIFIED, REJECTED
+  lenderVerified        Boolean           @default(false)      // Can act as a lender
+  counterpartyVerified  Boolean           @default(false)      // Can act as a counterparty
+  lastVerificationDate  DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  entity                Entity            @relation(fields: [entityId], references: [id])
+
+  @@index([entityId])
 }
 
 model Address {
@@ -109,8 +115,6 @@ model Lender {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   facilityPositions FacilityPosition[]
-  salesTrades       Trade[]            @relation("SellerTrades")
-  purchaseTrades    Trade[]            @relation("BuyerTrades")
   entity            Entity             @relation(fields: [entityId], references: [id])
 
   @@index([entityId])
@@ -126,7 +130,7 @@ model CreditAgreement {
   currency        String               @default("USD")
   startDate       DateTime
   maturityDate    DateTime
-  interestRate    Decimal             @db.Decimal(7,5)
+  interestRate    Float
   description     String?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
@@ -151,7 +155,7 @@ model Facility {
   maturityDate         DateTime
   interestType         String
   baseRate             String
-  margin              Decimal               @db.Decimal(7,5)
+  margin              Float
   status              String                @default("ACTIVE")
   description          String?
   createdAt            DateTime              @default(now())
@@ -216,26 +220,26 @@ model Loan {
 }
 
 model Trade {
-  id             String               @id @default(cuid())
-  facilityId     String
-  sellerLenderId String
-  buyerLenderId  String
-  tradeDate      DateTime
-  settlementDate DateTime
-  parAmount      Float                // Original face value being traded
-  price          Float                // Price as percentage of par (e.g., 98.5)
-  settlementAmount Float              // Actual payment amount (parAmount * price/100)
-  status         String               @default("PENDING")
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  facility       Facility             @relation(fields: [facilityId], references: [id])
-  seller         Lender               @relation("SellerTrades", fields: [sellerLenderId], references: [id])
-  buyer          Lender               @relation("BuyerTrades", fields: [buyerLenderId], references: [id])
-  transactions   TransactionHistory[]
+  id                   String               @id @default(cuid())
+  facilityId           String
+  sellerCounterpartyId String
+  buyerCounterpartyId  String
+  tradeDate            DateTime
+  settlementDate       DateTime
+  parAmount            Float                // Original face value being traded
+  price                Float                // Price as percentage of par (e.g., 98.5)
+  settlementAmount     Float                // Actual payment amount (parAmount * price/100)
+  status               String               @default("PENDING")
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  facility             Facility             @relation(fields: [facilityId], references: [id])
+  sellerCounterparty   Counterparty         @relation("SellerCounterpartyTrades", fields: [sellerCounterpartyId], references: [id])
+  buyerCounterparty    Counterparty         @relation("BuyerCounterpartyTrades", fields: [buyerCounterpartyId], references: [id])
+  transactions         TransactionHistory[]
 
   @@index([facilityId])
-  @@index([sellerLenderId])
-  @@index([buyerLenderId])
+  @@index([sellerCounterpartyId])
+  @@index([buyerCounterpartyId])
 }
 
 model TransactionHistory {
@@ -283,17 +287,20 @@ model ServicingActivity {
 }
 
 model Counterparty {
-  id        String                @id @default(cuid())
-  name      String
-  typeId    String
-  status    String                @default("ACTIVE")
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @updatedAt
-  type      CounterpartyType      @relation(fields: [typeId], references: [id])
-  addresses CounterpartyAddress[]
-  contacts  CounterpartyContact[]
-  trades    Trade[]
+  id                String         @id @default(cuid())
+  entityId          String         @unique  // References Entity (LEI)
+  typeId           String
+  tradingStatus    String         @default("ACTIVE")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  entity           Entity         @relation(fields: [entityId], references: [id])
+  type             CounterpartyType @relation(fields: [typeId], references: [id])
+  salesTrades      Trade[]        @relation("SellerCounterpartyTrades")
+  purchaseTrades   Trade[]        @relation("BuyerCounterpartyTrades")
+  addresses        CounterpartyAddress[]
+  contacts         CounterpartyContact[]
 
+  @@index([entityId])
   @@index([typeId])
 }
 

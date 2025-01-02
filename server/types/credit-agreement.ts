@@ -1,5 +1,6 @@
 import { type CreditAgreement, type Entity, type Facility, type TransactionHistory, type Borrower, type Lender } from '@prisma/client'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 
 // Base Prisma Types with Relations
 export type CreditAgreementWithRelations = CreditAgreement & {
@@ -11,15 +12,30 @@ export type CreditAgreementWithRelations = CreditAgreement & {
     trades: {
       id: string
       facilityId: string
-      counterpartyId: string
+      sellerCounterpartyId: string
+      buyerCounterpartyId: string
       tradeDate: Date
       settlementDate: Date
-      amount: number
+      parAmount: number
       price: number
+      settlementAmount: number
       status: string
       createdAt: Date
       updatedAt: Date
-      counterparty: Entity
+      sellerCounterparty: {
+        id: string
+        entity: {
+          id: string
+          legalName: string
+        }
+      }
+      buyerCounterparty: {
+        id: string
+        entity: {
+          id: string
+          legalName: string
+        }
+      }
     }[]
   })[]
   transactions: TransactionHistory[]
@@ -64,7 +80,7 @@ export const updateCreditAgreementSchema = z.object({
   currency: z.string().optional(),
   startDate: z.date().optional(),
   maturityDate: z.date().optional(),
-  interestRate: z.number().optional(),
+  interestRate: z.number().min(0, 'Interest rate must be non-negative').optional(),
   description: z.string().optional(),
 })
 

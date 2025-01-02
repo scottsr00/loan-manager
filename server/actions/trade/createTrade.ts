@@ -1,31 +1,44 @@
 'use server'
 
-import { prisma } from '@/server/db/client'
-import { type TradeInput, tradeInputSchema, type PrismaTransaction, TradeActivityType, TransactionStatus } from '@/server/types/trade'
-import { revalidatePath } from 'next/cache'
+import { prisma } from '@/lib/prisma'
+import { validateTrade } from './validateTrade'
+import { TradeInput, tradeInputSchema, type PrismaTransaction } from '@/server/types/trade'
+import { type Prisma } from "@prisma/client"
 
 export async function createTrade(input: TradeInput) {
   try {
-    // Validate input
+    // Validate input schema
     const validatedData = tradeInputSchema.parse(input)
 
-    // Calculate settlement amount
-    const settlementAmount = (validatedData.parAmount * validatedData.price) / 100
+    // Validate trade business rules
+    const validation = await validateTrade(validatedData)
+    if (!validation.isValid) {
+      throw new Error(validation.message || 'Trade validation failed')
+    }
 
-    // Create trade with initial transaction record
+    // Calculate settlement amount
+    const settlementAmount = validatedData.parAmount * (validatedData.price / 100)
+
+    // Create the trade in a transaction
     const trade = await prisma.$transaction(async (tx: PrismaTransaction) => {
-      // Create the trade
+      // Create the trade record
       const newTrade = await tx.trade.create({
         data: {
-          ...validatedData,
+          facilityId: validatedData.facilityId,
+          sellerCounterpartyId: validatedData.sellerCounterpartyId,
+          buyerCounterpartyId: validatedData.buyerCounterpartyId,
+          tradeDate: new Date(),
+          settlementDate: new Date(validatedData.settlementDate),
+          parAmount: validatedData.parAmount,
+          price: validatedData.price,
           settlementAmount,
           status: 'PENDING',
           transactions: {
             create: {
-              activityType: TradeActivityType.TRADE_CREATED,
+              activityType: 'TRADE_CREATED',
               amount: validatedData.parAmount,
-              status: TransactionStatus.COMPLETED,
-              description: `Trade created: ${validatedData.parAmount} at ${validatedData.price}%`,
+              status: 'PENDING',
+              description: 'Trade created',
               effectiveDate: new Date(),
               processedBy: 'SYSTEM'
             }
@@ -33,31 +46,55 @@ export async function createTrade(input: TradeInput) {
         },
         include: {
           facility: {
-            include: {
-              creditAgreement: true
+            select: {
+              id: true,
+              facilityName: true,
+              commitmentAmount: true,
+              maturityDate: true
             }
           },
-          seller: {
-            include: {
-              entity: true
+          sellerCounterparty: {
+            select: {
+              id: true,
+              entity: {
+                select: {
+                  id: true,
+                  legalName: true
+                }
+              }
             }
           },
-          buyer: {
-            include: {
-              entity: true
+          buyerCounterparty: {
+            select: {
+              id: true,
+              entity: {
+                select: {
+                  id: true,
+                  legalName: true
+                }
+              }
             }
           },
-          transactions: true
+          transactions: {
+            select: {
+              id: true,
+              activityType: true,
+              amount: true,
+              status: true,
+              description: true,
+              effectiveDate: true,
+              processedBy: true
+            }
+          }
         }
       })
 
       return newTrade
     })
 
-    revalidatePath('/trades')
     return trade
   } catch (error) {
-    console.error('Error in createTrade:', error)
+    console.error('Error creating trade:', error)
     throw error instanceof Error ? error : new Error('Failed to create trade')
   }
 } 

@@ -1,8 +1,7 @@
 'use server'
 
-import { prisma } from '@/server/db/client'
-import { type CreditAgreementInput, type CreditAgreementWithRelations, type FacilityInput } from '@/server/types/credit-agreement'
-import { Prisma } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
+import { type CreditAgreementInput, type CreditAgreementWithRelations } from '@/server/types/credit-agreement'
 
 export async function createCreditAgreement(
   data: CreditAgreementInput
@@ -71,26 +70,46 @@ export async function createCreditAgreement(
       },
       include: {
         borrower: true,
-        lender: true,
+        lender: {
+          include: {
+            lender: true
+          }
+        },
         facilities: {
           include: {
             trades: {
               include: {
-                counterparty: true,
-              },
-            },
-          },
+                sellerCounterparty: {
+                  include: {
+                    entity: {
+                      select: {
+                        id: true,
+                        legalName: true
+                      }
+                    }
+                  }
+                },
+                buyerCounterparty: {
+                  include: {
+                    entity: {
+                      select: {
+                        id: true,
+                        legalName: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         },
-        transactions: true,
-      },
-    }) as unknown as CreditAgreementWithRelations
+        transactions: true
+      }
+    })
 
     return creditAgreement
   } catch (error) {
-    console.error('Error creating credit agreement:', error instanceof Error ? error.message : 'Unknown error')
-    if (error instanceof Error) {
-      throw error
-    }
-    throw new Error('Failed to create credit agreement')
+    console.error('Error creating credit agreement:', error)
+    throw error
   }
 } 

@@ -132,14 +132,21 @@ function TableExpander({ isExpanded, onToggle }: { isExpanded: boolean; onToggle
   )
 }
 
-function ServicingTable({ facilityId }: ServicingTableProps) {
-  const [transactions, setTransactions] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+function ServicingTable({ facilityId, servicingActivities }: { facilityId: string, servicingActivities: Array<{
+  id: string
+  activityType: string
+  dueDate: Date
+  description: string | null
+  amount: number
+  status: string
+  completedAt: Date | null
+  completedBy: string | null
+}> }) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const servicingColumnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'effectiveDate',
+      field: 'dueDate',
       headerName: 'Date',
       valueFormatter: (params: ValueFormatterParams) => 
         params.value ? new Date(params.value).toLocaleDateString() : '',
@@ -157,7 +164,7 @@ function ServicingTable({ facilityId }: ServicingTableProps) {
           'PAYDOWN': 'Paydown',
           'DRAWDOWN': 'Drawdown'
         };
-        return types[params.value] || params.value;
+        return types[params.value as string] || params.value;
       },
       flex: 1
     },
@@ -169,21 +176,17 @@ function ServicingTable({ facilityId }: ServicingTableProps) {
     {
       field: 'amount',
       headerName: 'Amount',
-      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
-      flex: 1
-    },
-    {
-      field: 'loan.outstandingAmount',
-      headerName: 'Balance',
-      valueFormatter: (params: ValueFormatterParams) => 
-        params.value ? formatCurrency(params.value) : '-',
+      valueFormatter: (params: ValueFormatterParams) => {
+        const value = params.value;
+        return typeof value === 'number' ? formatCurrency(value) : '';
+      },
       flex: 1
     },
     {
       field: 'status',
       headerName: 'Status',
       cellRenderer: (params: ValueFormatterParams) => {
-        const status = params.value?.toUpperCase();
+        const status = (params.value as string)?.toUpperCase();
         let variant: "default" | "secondary" | "destructive" | "outline" = "outline";
         
         switch (status) {
@@ -203,37 +206,17 @@ function ServicingTable({ facilityId }: ServicingTableProps) {
       flex: 1
     },
     {
-      field: 'processedBy',
+      field: 'completedBy',
       headerName: 'Processed By',
       flex: 1
     }
   ], [])
 
-  useEffect(() => {
-    const loadTransactions = async () => {
-      try {
-        console.log('Loading transactions for facility:', facilityId)
-        const data = await getTransactions({ facilityId })
-        console.log('Loaded transactions:', data)
-        setTransactions(data)
-      } catch (error) {
-        console.error('Error loading transactions:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    loadTransactions()
-  }, [facilityId])
-
-  if (isLoading) {
-    return <div className="p-4">Loading servicing history...</div>
-  }
-
   return (
     <div>
       <TableExpander isExpanded={isExpanded} onToggle={() => setIsExpanded(!isExpanded)} />
       <DataGrid
-        rowData={transactions}
+        rowData={servicingActivities}
         columnDefs={servicingColumnDefs}
         className={`w-full transition-all duration-200 ${isExpanded ? 'h-[300px]' : 'h-[150px]'}`}
         defaultColDef={{
@@ -646,7 +629,7 @@ export function LoanPositionsHierarchy() {
                                   <CardTitle className="text-sm font-medium">Servicing History</CardTitle>
                                 </CardHeader>
                                 <CardContent className="pt-0 p-2">
-                                  <ServicingTable facilityId={facility.id} />
+                                  <ServicingTable facilityId={facility.id} servicingActivities={facility.servicingActivities} />
                                 </CardContent>
                               </Card>
                             </div>

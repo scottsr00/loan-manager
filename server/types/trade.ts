@@ -24,12 +24,11 @@ export const TransactionStatus = {
 
 export const tradeInputSchema = z.object({
   facilityId: z.string(),
-  sellerLenderId: z.string(),
-  buyerLenderId: z.string(),
-  tradeDate: z.date(),
-  settlementDate: z.date(),
+  sellerCounterpartyId: z.string(),
+  buyerCounterpartyId: z.string(),
   parAmount: z.number().positive(),
-  price: z.number().min(0).max(100),
+  price: z.number().positive(),
+  settlementDate: z.string().datetime(),
   description: z.string().optional()
 })
 
@@ -58,38 +57,48 @@ export type TradeTransaction = {
   createdAt: Date
 }
 
-export type TradeWithRelations = {
+export interface TradeWithRelations {
   id: string
   facilityId: string
-  sellerLenderId: string
-  buyerLenderId: string
+  sellerCounterpartyId: string
+  buyerCounterpartyId: string
   tradeDate: Date
   settlementDate: Date
   parAmount: number
   price: number
   settlementAmount: number
-  status: keyof typeof TradeStatus
-  description?: string | null
+  status: string
   createdAt: Date
   updatedAt: Date
   facility: {
+    id: string
     facilityName: string
-    currency: string
-    creditAgreement: {
-      agreementNumber: string
-    }
+    commitmentAmount: number
+    maturityDate: Date
   }
-  seller: {
+  sellerCounterparty: {
+    id: string
     entity: {
+      id: string
       legalName: string
     }
   }
-  buyer: {
+  buyerCounterparty: {
+    id: string
     entity: {
+      id: string
       legalName: string
     }
   }
-  transactions: TradeTransaction[]
+  transactions: Array<{
+    id: string
+    activityType: string
+    amount: number
+    status: string
+    description: string
+    effectiveDate: Date
+    processedBy: string
+  }>
 }
 
 // Prisma transaction type for type safety

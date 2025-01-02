@@ -15,6 +15,7 @@ import { updateCreditAgreement } from '@/server/actions/loan/updateCreditAgreeme
 import { getCreditAgreement } from '@/server/actions/loan/getCreditAgreement'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { Prisma } from '@prisma/client'
 import {
   Select,
   SelectContent,
@@ -41,7 +42,7 @@ interface FormData {
   startDate?: Date
   maturityDate?: Date
   interestRate?: number
-  description?: string | null
+  description?: string
 }
 
 export function CreditAgreementDetailsModal({
@@ -96,7 +97,7 @@ export function CreditAgreementDetailsModal({
       startDate: new Date(creditAgreement.startDate),
       maturityDate: new Date(creditAgreement.maturityDate),
       interestRate: creditAgreement.interestRate,
-      description: creditAgreement.description,
+      description: creditAgreement.description || undefined
     })
     setIsEditing(true)
   }
@@ -110,11 +111,7 @@ export function CreditAgreementDetailsModal({
     if (!formData) return
     setIsSubmitting(true)
     try {
-      const updateData = {
-        ...formData,
-        description: formData.description || undefined
-      }
-      await updateCreditAgreement(updateData)
+      await updateCreditAgreement(formData)
       toast.success('Credit agreement updated successfully')
       setIsEditing(false)
       setFormData(null)
@@ -130,9 +127,21 @@ export function CreditAgreementDetailsModal({
 
   const handleInputChange = (field: keyof FormData, value: any) => {
     if (!formData) return
+    
+    // Convert numeric fields to numbers
+    let parsedValue = value
+    if (field === 'amount' || field === 'interestRate') {
+      parsedValue = value === '' ? undefined : Number(value)
+    }
+    
+    // Handle empty description as undefined
+    if (field === 'description' && value === '') {
+      parsedValue = undefined
+    }
+    
     setFormData({
       ...formData,
-      [field]: value
+      [field]: parsedValue
     } as FormData)
   }
 
@@ -228,7 +237,7 @@ export function CreditAgreementDetailsModal({
                       <Input
                         type="number"
                         value={formData?.amount}
-                        onChange={(e) => handleInputChange('amount', parseFloat(e.target.value))}
+                        onChange={(e) => handleInputChange('amount', e.target.value)}
                         className="flex-1"
                       />
                       <Select
@@ -254,12 +263,12 @@ export function CreditAgreementDetailsModal({
                   {isEditing ? (
                     <Input
                       type="number"
-                      value={formData?.interestRate}
-                      onChange={(e) => handleInputChange('interestRate', parseFloat(e.target.value))}
+                      value={formData?.interestRate ?? ''}
+                      onChange={(e) => handleInputChange('interestRate', e.target.value)}
                       step="0.00001"
                     />
                   ) : (
-                    <p>{Number(creditAgreement.interestRate).toFixed(5)}%</p>
+                    <p>{((creditAgreement.interestRate ?? 0)).toFixed(5)}%</p>
                   )}
                 </div>
                 <div>
@@ -400,6 +409,50 @@ export function CreditAgreementDetailsModal({
                             <p>{format(new Date(facility.maturityDate), 'PP')}</p>
                           </div>
                         </div>
+                        {/* Trades */}
+                        {facility.trades.length > 0 && (
+                          <div className="space-y-4">
+                            <h4 className="font-medium">Trades</h4>
+                            <div className="grid gap-4">
+                              {facility.trades.map((trade) => (
+                                <div key={trade.id} className="border rounded-lg p-4">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <Label className="text-muted-foreground">Seller</Label>
+                                      <div>{trade.sellerCounterparty.entity.legalName}</div>
+                                    </div>
+                                    <div>
+                                      <Label className="text-muted-foreground">Buyer</Label>
+                                      <div>{trade.buyerCounterparty.entity.legalName}</div>
+                                    </div>
+                                    <div>
+                                      <Label className="text-muted-foreground">Par Amount</Label>
+                                      <div>{formatCurrency(trade.parAmount)}</div>
+                                    </div>
+                                    <div>
+                                      <Label className="text-muted-foreground">Price</Label>
+                                      <div>{trade.price}%</div>
+                                    </div>
+                                    <div>
+                                      <Label className="text-muted-foreground">Settlement Amount</Label>
+                                      <div>{formatCurrency(trade.settlementAmount)}</div>
+                                    </div>
+                                    <div>
+                                      <Label className="text-muted-foreground">Settlement Date</Label>
+                                      <div>{format(new Date(trade.settlementDate), 'PP')}</div>
+                                    </div>
+                                    <div>
+                                      <Label className="text-muted-foreground">Status</Label>
+                                      <Badge variant={trade.status === 'SETTLED' ? 'success' : 'secondary'}>
+                                        {trade.status}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

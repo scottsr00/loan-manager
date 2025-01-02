@@ -1,19 +1,7 @@
 'use server'
 
-import { prisma } from '@/server/db/client'
-import type { Prisma } from '@prisma/client'
-
-type TradeWithRelations = Prisma.TradeGetPayload<{
-  include: {
-    facility: {
-      include: {
-        creditAgreement: true
-      }
-    }
-    counterparty: true
-    transactions: true
-  }
-}>
+import { prisma } from '@/lib/prisma'
+import { type TradeWithRelations } from '@/server/types/trade'
 
 export async function getTradeHistory(): Promise<TradeWithRelations[]> {
   try {
@@ -24,22 +12,35 @@ export async function getTradeHistory(): Promise<TradeWithRelations[]> {
             creditAgreement: true
           }
         },
-        counterparty: true,
-        transactions: true
+        sellerCounterparty: {
+          include: {
+            entity: {
+              select: {
+                id: true,
+                legalName: true
+              }
+            }
+          }
+        },
+        buyerCounterparty: {
+          include: {
+            entity: {
+              select: {
+                id: true,
+                legalName: true
+              }
+            }
+          }
+        }
       },
       orderBy: {
-        tradeDate: 'desc'
+        createdAt: 'desc'
       }
     })
 
-    if (!trades) {
-      return []
-    }
-
     return trades
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-    console.error('Error fetching trade history:', errorMessage)
-    throw new Error('Failed to fetch trade history: ' + errorMessage)
+    console.error('Error fetching trade history:', error)
+    throw error
   }
 } 
