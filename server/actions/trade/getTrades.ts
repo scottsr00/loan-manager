@@ -16,12 +16,12 @@ export async function getTrades(): Promise<TradeWithRelations[]> {
             }
           }
         },
-        seller: {
+        sellerCounterparty: {
           include: {
             entity: true
           }
         },
-        buyer: {
+        buyerCounterparty: {
           include: {
             entity: true
           }
@@ -58,12 +58,12 @@ export async function getTrade(id: string): Promise<TradeWithRelations | null> {
             }
           }
         },
-        seller: {
+        sellerCounterparty: {
           include: {
             entity: true
           }
         },
-        buyer: {
+        buyerCounterparty: {
           include: {
             entity: true
           }

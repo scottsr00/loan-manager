@@ -7,6 +7,7 @@ import { CounterpartyDetailsModal } from './CounterpartyDetailsModal'
 import { DataGrid } from '@/components/ui/data-grid'
 import { type ColDef, type RowClickedEvent } from 'ag-grid-community'
 import { type CounterpartyWithRelations, type CounterpartyAddress, type CounterpartyContact } from '@/types/counterparty'
+import '@/lib/ag-grid-init'
 
 interface CounterpartyListProps {
   counterparties: CounterpartyWithRelations[]
@@ -18,7 +19,7 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'name',
+      field: 'entity.legalName',
       headerName: 'Name',
       width: 250,
     },
@@ -28,7 +29,7 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
       width: 150,
     },
     {
-      field: 'status',
+      field: 'tradingStatus',
       headerName: 'Status',
       width: 120,
       cellRenderer: (params: any) => (

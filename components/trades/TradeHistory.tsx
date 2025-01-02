@@ -1,27 +1,17 @@
 'use client'
 
-import { type Trade } from '@prisma/client'
+import { type TradeWithRelations } from '@/server/types/trade'
 import { DataGrid } from '@/components/ui/data-grid'
 import { formatCurrency } from '@/lib/utils'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import type { ColDef, ICellRendererParams } from 'ag-grid-community'
+import '@/lib/ag-grid-init'
+import { NewTradeModal } from './NewTradeModal'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface TradeHistoryProps {
-  trades: (Trade & {
-    sellerCounterparty: {
-      entity: {
-        id: string
-        legalName: string
-      }
-    }
-    buyerCounterparty: {
-      entity: {
-        id: string
-        legalName: string
-      }
-    }
-  })[]
+  trades: TradeWithRelations[]
 }
 
 export function TradeHistory({ trades }: TradeHistoryProps) {
@@ -32,12 +22,12 @@ export function TradeHistory({ trades }: TradeHistoryProps) {
       valueFormatter: params => format(new Date(params.value), 'PP')
     },
     {
-      field: 'seller',
+      field: 'sellerCounterparty.entity.legalName',
       headerName: 'Seller',
       valueGetter: params => params.data.sellerCounterparty.entity.legalName
     },
     {
-      field: 'buyer',
+      field: 'buyerCounterparty.entity.legalName',
       headerName: 'Buyer',
       valueGetter: params => params.data.buyerCounterparty.entity.legalName
     },
@@ -73,14 +63,26 @@ export function TradeHistory({ trades }: TradeHistoryProps) {
   ]
 
   return (
-    <div className="h-[400px] w-full">
-      <DataGrid
-        rowData={trades}
-        columnDefs={columnDefs}
-        onGridReady={params => {
-          params.api.sizeColumnsToFit()
-        }}
-      />
-    </div>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardTitle>Trade History</CardTitle>
+        <NewTradeModal 
+          onSuccess={() => {
+            window.location.reload()
+          }}
+        />
+      </CardHeader>
+      <CardContent>
+        <div className="h-[400px] w-full">
+          <DataGrid
+            rowData={trades}
+            columnDefs={columnDefs}
+            onGridReady={params => {
+              params.api.sizeColumnsToFit()
+            }}
+          />
+        </div>
+      </CardContent>
+    </Card>
   )
 }
