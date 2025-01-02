@@ -31,7 +31,8 @@ export function TradeDetailsModal({ trade, open, onOpenChange, onSuccess }: Trad
       await updateTradeStatus({
         id: trade.id,
         status: newStatus,
-        description: description || undefined
+        description: description || undefined,
+        userId: 'SYSTEM'
       })
       toast.success('Trade status updated successfully')
       onSuccess?.()

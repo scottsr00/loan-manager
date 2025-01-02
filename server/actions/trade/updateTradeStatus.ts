@@ -3,14 +3,16 @@
 import { prisma } from '@/server/db/client'
 import { TradeStatus } from '@/server/types/trade'
 import { revalidatePath } from 'next/cache'
+import { closeTrade } from './closeTrade'
 
 interface UpdateTradeStatusParams {
   id: string
   status: keyof typeof TradeStatus
   description?: string
+  userId?: string
 }
 
-export async function updateTradeStatus({ id, status, description }: UpdateTradeStatusParams) {
+export async function updateTradeStatus({ id, status, description, userId = 'SYSTEM' }: UpdateTradeStatusParams) {
   const trade = await prisma.trade.findUnique({
     where: { id },
     select: { status: true }
@@ -33,11 +35,16 @@ export async function updateTradeStatus({ id, status, description }: UpdateTrade
     throw new Error(`Invalid status transition from ${trade.status} to ${status}`)
   }
 
-  // Update trade status
-  await prisma.trade.update({
-    where: { id },
-    data: { status }
-  })
+  if (status === TradeStatus.CLOSED) {
+    // If transitioning to CLOSED, use the closeTrade action
+    await closeTrade(id, userId)
+  } else {
+    // For other status transitions, just update the status
+    await prisma.trade.update({
+      where: { id },
+      data: { status }
+    })
+  }
 
   // Create status change record
   await prisma.tradeStatusChange.create({

@@ -22,9 +22,11 @@ interface CreatePositionHistoryInput {
 
 export async function createPositionHistory(data: CreatePositionHistoryInput): Promise<LenderPositionHistory> {
   try {
+    const { activityType, ...prismaData } = data
+
     const history = await prisma.lenderPositionHistory.create({
       data: {
-        ...data,
+        ...prismaData,
         changeDateTime: new Date()
       },
       include: {
@@ -45,6 +47,9 @@ export async function createPositionHistory(data: CreatePositionHistoryInput): P
     return history
   } catch (error) {
     console.error('Error in createPositionHistory:', error)
+    if (error instanceof Error) {
+      throw error
+    }
     throw new Error('Failed to create position history record')
   }
 }

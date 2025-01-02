@@ -1,4 +1,6 @@
-import './globals.css'
+import 'ag-grid-community/styles/ag-grid.css'
+import 'ag-grid-community/styles/ag-theme-alpine.css'
+import '@/app/globals.css'
 import { Inter } from 'next/font/google'
 import { MainNav } from '@/components/layout/MainNav'
 import { ThemeProvider } from '@/components/ui/theme/ThemeProvider'
