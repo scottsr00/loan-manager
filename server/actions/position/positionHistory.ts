@@ -22,7 +22,6 @@ interface CreatePositionHistoryInput {
   activityType: 'SERVICING' | 'TRADE'
   servicingActivityId?: string
   tradeId?: string
-  facilityOutstandingAmount: number
 }
 
 export async function createPositionHistory(data: CreatePositionHistoryInput): Promise<LenderPositionHistory> {

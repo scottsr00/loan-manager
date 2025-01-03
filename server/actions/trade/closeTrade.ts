@@ -137,8 +137,7 @@ export async function closeTrade(tradeId: string, userId: string) {
         userId,
         activityType: 'TRADE',
         tradeId: trade.id,
-        notes: `Trade closed - Sold ${trade.parAmount} to ${trade.buyerCounterparty.entity.legalName}`,
-        facilityOutstandingAmount: trade.facility.outstandingAmount
+        notes: `Trade closed - Sold ${trade.parAmount} to ${trade.buyerCounterparty.entity.legalName}`
       })
 
       // Record position history for buyer
@@ -158,8 +157,7 @@ export async function closeTrade(tradeId: string, userId: string) {
         userId,
         activityType: 'TRADE',
         tradeId: trade.id,
-        notes: `Trade closed - Bought ${trade.parAmount} from ${trade.sellerCounterparty.entity.legalName}`,
-        facilityOutstandingAmount: trade.facility.outstandingAmount
+        notes: `Trade closed - Bought ${trade.parAmount} from ${trade.sellerCounterparty.entity.legalName}`
       })
 
       // Create transaction history record
