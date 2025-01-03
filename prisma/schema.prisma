@@ -134,6 +134,7 @@ model Lender {
   updatedAt         DateTime           @updatedAt
   facilityPositions FacilityPosition[]
   entity            Entity             @relation(fields: [entityId], references: [id])
+  positionHistory   FacilityPositionHistory[]
 
   @@index([entityId])
 }
@@ -187,6 +188,7 @@ model Facility {
   servicingActivities  ServicingActivity[]
   trades               Trade[]
   positionHistory      LenderPositionHistory[]
+  facilityPositionHistory FacilityPositionHistory[]
 
   @@index([creditAgreementId])
 }
@@ -249,18 +251,18 @@ model Trade {
   tradeDate            DateTime
   settlementDate       DateTime
   parAmount            Float
-  price                Float
-  settlementAmount     Float
-  status               String                @default("PENDING")
-  facilityOutstandingAmount Float?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  facility             Facility              @relation(fields: [facilityId], references: [id])
-  sellerCounterparty   Counterparty         @relation("SellerCounterpartyTrades", fields: [sellerCounterpartyId], references: [id])
-  buyerCounterparty    Counterparty         @relation("BuyerCounterpartyTrades", fields: [buyerCounterpartyId], references: [id])
-  transactions         TransactionHistory[]
-  positionHistory      LenderPositionHistory[]
-  statusChanges        TradeStatusChange[]
+  price               Float
+  settlementAmount    Float
+  status              String                @default("PENDING")
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  facility            Facility              @relation(fields: [facilityId], references: [id])
+  sellerCounterparty  Counterparty          @relation("SellerTrades", fields: [sellerCounterpartyId], references: [id])
+  buyerCounterparty   Counterparty          @relation("BuyerTrades", fields: [buyerCounterpartyId], references: [id])
+  positionHistory     LenderPositionHistory[]
+  facilityPositionHistory FacilityPositionHistory[]
+  statusChanges       TradeStatusChange[]
+  transactions        TransactionHistory[]
 
   @@index([facilityId])
   @@index([sellerCounterpartyId])
@@ -311,19 +313,19 @@ model TransactionHistory {
 model ServicingActivity {
   id                String                @id @default(cuid())
   facilityId        String
-  activityType      String
-  dueDate           DateTime
-  description       String?
-  amount            Float
-  status            String                @default("PENDING")
-  completedAt       DateTime?
-  completedBy       String?
-  facilityOutstandingAmount Float?
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
-  facility          Facility              @relation(fields: [facilityId], references: [id])
-  transactions      TransactionHistory[]
-  positionHistory   LenderPositionHistory[]
+  type              String
+  dueDate          DateTime
+  description      String?
+  amount           Float
+  status           String                @default("PENDING")
+  completedAt      DateTime?
+  completedBy      String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  facility         Facility              @relation(fields: [facilityId], references: [id])
+  positionHistory  LenderPositionHistory[]
+  facilityPositionHistory FacilityPositionHistory[]
+  transactions     TransactionHistory[]
 
   @@index([facilityId])
 }
@@ -338,8 +340,8 @@ model Counterparty {
   addresses            Address[]
   contacts             Contact[]
   counterpartyContacts CounterpartyContact[]
-  salesTrades          Trade[]              @relation("SellerCounterpartyTrades")
-  purchaseTrades       Trade[]              @relation("BuyerCounterpartyTrades")
+  salesTrades          Trade[]              @relation("SellerTrades")
+  purchaseTrades       Trade[]              @relation("BuyerTrades")
   servicingAssignments ServicingAssignment[]
 
   @@index([entityId])
@@ -443,6 +445,42 @@ model LenderPositionHistory {
   lender                 Entity            @relation(fields: [lenderId], references: [id])
   servicingActivity      ServicingActivity? @relation(fields: [servicingActivityId], references: [id])
   trade                  Trade?            @relation(fields: [tradeId], references: [id])
+
+  @@index([facilityId])
+  @@index([lenderId])
+  @@index([servicingActivityId])
+  @@index([tradeId])
+}
+
+model FacilityPositionHistory {
+  id                      String            @id @default(cuid())
+  facilityId             String
+  lenderId               String
+  changeDateTime         DateTime          @default(now())
+  changeType             PositionChangeType
+  previousCommitmentAmount Float
+  newCommitmentAmount    Float
+  previousUndrawnAmount  Float
+  newUndrawnAmount      Float
+  previousDrawnAmount    Float
+  newDrawnAmount        Float
+  previousShare         Float
+  newShare             Float
+  previousStatus       String
+  newStatus           String
+  changeAmount        Float
+  userId              String
+  notes               String?
+  servicingActivityId String?
+  tradeId            String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  
+  // Relations
+  facility           Facility           @relation(fields: [facilityId], references: [id])
+  lender             Lender             @relation(fields: [lenderId], references: [id])
+  servicingActivity  ServicingActivity? @relation(fields: [servicingActivityId], references: [id])
+  trade              Trade?             @relation(fields: [tradeId], references: [id])
 
   @@index([facilityId])
   @@index([lenderId])

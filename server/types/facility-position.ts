@@ -35,6 +35,18 @@ export interface FacilityPositionWithRelations extends FacilityPosition {
   facility: {
     id: string
     facilityName: string
+    creditAgreement?: {
+      agreementNumber: string
+      borrower: {
+        name: string
+        type?: string
+        status: string
+      }
+      lender: {
+        legalName: string
+        isAgent?: boolean
+      }
+    }
   }
 }
 
@@ -50,6 +62,60 @@ export interface FacilityPositionView {
   undrawnAmount: number
   share: number
   status: FacilityPositionStatus
+  hierarchyInfo?: {
+    agreementNumber: string
+    borrowerName: string
+    borrowerType?: string
+    borrowerStatus: string
+    agentName: string
+    isAgent?: boolean
+  }
+}
+
+// Hierarchy view for position display
+export interface FacilityPositionHierarchyView {
+  id: string
+  agreementNumber: string
+  borrower: {
+    name: string
+    type?: string
+    status: string
+  }
+  agent: {
+    name: string
+    isAgent: boolean
+  }
+  amount: number
+  currency: string
+  status: string
+  facilities: {
+    id: string
+    facilityName: string
+    facilityType: string
+    commitmentAmount: number
+    currency: string
+    positions: FacilityPositionView[]
+    trades?: {
+      id: string
+      counterparty: string
+      amount: number
+      price: number
+      status: string
+      tradeDate: Date
+      settlementDate: Date
+    }[]
+    loans?: {
+      id: string
+      amount: number
+      outstandingAmount: number
+      currency: string
+      status: string
+      interestPeriod: string
+      drawDate: Date
+      baseRate: string
+      effectiveRate: string
+    }[]
+  }[]
 }
 
 // Server Action input validation

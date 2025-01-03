@@ -1,12 +1,12 @@
 'use server'
 
-import { type Position } from '../../../server/types/position'
 import { prisma } from '@/lib/prisma'
+import { type FacilityPositionHierarchyView } from '@/server/types/facility-position'
 import { type Prisma, type CreditAgreement, type Facility, type FacilityPosition, type Trade, type Loan, type ServicingActivity } from '@prisma/client'
 
 type ServicingActivityWithRelations = {
   id: string
-  activityType: string
+  type: string
   dueDate: Date
   description: string | null
   amount: number
@@ -124,7 +124,7 @@ type FacilityWithRelations = {
   servicingActivities: ServicingActivityWithRelations[]
 }
 
-export async function getPositions(): Promise<Position[]> {
+export async function getPositions(): Promise<FacilityPositionHierarchyView[]> {
   try {
     const creditAgreements = await prisma.creditAgreement.findMany({
       include: {
@@ -163,7 +163,7 @@ export async function getPositions(): Promise<Position[]> {
             servicingActivities: {
               select: {
                 id: true,
-                activityType: true,
+                type: true,
                 dueDate: true,
                 description: true,
                 amount: true,
@@ -177,7 +177,7 @@ export async function getPositions(): Promise<Position[]> {
       }
     })
 
-    const positions = creditAgreements.map((agreement: CreditAgreementWithRelations) => ({
+    return creditAgreements.map((agreement: CreditAgreementWithRelations) => ({
       id: agreement.id,
       agreementNumber: agreement.agreementNumber,
       borrower: {
@@ -187,30 +187,27 @@ export async function getPositions(): Promise<Position[]> {
       },
       agent: {
         name: agreement.lender.legalName,
-        type: agreement.lender.lender?.status || 'Unknown'
+        isAgent: agreement.lender.lender?.status === 'ACTIVE'
       },
       amount: agreement.amount,
       currency: agreement.currency,
       status: agreement.status,
-      startDate: agreement.startDate,
-      maturityDate: agreement.maturityDate,
-      interestRate: agreement.interestRate.toString(),
       facilities: agreement.facilities.map(facility => ({
         id: facility.id,
         facilityName: facility.facilityName,
         facilityType: facility.facilityType,
         commitmentAmount: facility.commitmentAmount,
-        availableAmount: facility.availableAmount,
         currency: facility.currency,
-        status: facility.status,
-        interestType: facility.interestType,
-        baseRate: facility.baseRate,
-        margin: facility.margin,
         positions: facility.positions.map(position => ({
-          lender: position.lender.entity.legalName,
-          commitment: position.commitmentAmount,
-          undrawnAmount: position.undrawnAmount,
+          id: position.id,
+          lenderName: position.lender.entity.legalName,
+          lenderId: position.lenderId,
+          facilityName: facility.facilityName,
+          facilityId: facility.id,
+          commitmentAmount: position.commitmentAmount,
           drawnAmount: position.drawnAmount,
+          undrawnAmount: position.undrawnAmount,
+          share: position.share,
           status: position.status
         })),
         trades: facility.trades.map(trade => ({
@@ -232,21 +229,9 @@ export async function getPositions(): Promise<Position[]> {
           drawDate: loan.drawDate,
           baseRate: loan.baseRate.toString(),
           effectiveRate: loan.effectiveRate.toString()
-        })),
-        servicingActivities: facility.servicingActivities.map(activity => ({
-          id: activity.id,
-          activityType: activity.activityType,
-          dueDate: activity.dueDate,
-          description: activity.description,
-          amount: activity.amount,
-          status: activity.status,
-          completedAt: activity.completedAt,
-          completedBy: activity.completedBy
         }))
       }))
     }))
-
-    return positions
   } catch (error) {
     console.error('Error fetching positions:', error)
     throw error

@@ -6,8 +6,8 @@ import { Badge } from '@/components/ui/badge'
 import { DataGrid } from '@/components/ui/data-grid'
 import { type ColDef, type ValueGetterParams, type ValueFormatterParams, type ICellRendererParams } from 'ag-grid-community'
 import { formatCurrency } from '@/lib/utils'
-import { getPositionHistory } from '@/server/actions/position/positionHistory'
-import type { LenderPositionHistory } from '@/server/types/position'
+import { getFacilityPositionHistory } from '@/server/actions/facility/facilityPositionHistory'
+import type { FacilityPositionHistoryView } from '@/server/types/facility-position-history'
 import '@/lib/ag-grid-init'
 
 interface Activity {
@@ -27,7 +27,7 @@ interface PositionHistoryProps {
 }
 
 export function PositionHistory({ facilityId, selectedActivity, lenderId, startDate, endDate }: PositionHistoryProps) {
-  const [history, setHistory] = useState<LenderPositionHistory[]>([])
+  const [history, setHistory] = useState<FacilityPositionHistoryView[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -37,7 +37,7 @@ export function PositionHistory({ facilityId, selectedActivity, lenderId, startD
         setIsLoading(true)
         if (!facilityId) return
 
-        const data = await getPositionHistory({ 
+        const data = await getFacilityPositionHistory({ 
           facilityId, 
           lenderId,
           ...(selectedActivity 
@@ -67,17 +67,17 @@ export function PositionHistory({ facilityId, selectedActivity, lenderId, startD
     const variants: Record<string, 'default' | 'secondary' | 'success'> = {
       'PAYDOWN': 'success',
       'ACCRUAL': 'secondary',
-      'TRADE': 'default'
+      'TRADE': 'default',
+      'DRAWDOWN': 'default'
     }
     return <Badge variant={variants[type] || 'default'}>{type}</Badge>
   }
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
-      field: 'lender.legalName',
+      field: 'lenderName',
       headerName: 'Lender',
-      flex: 1,
-      valueGetter: (params: ValueGetterParams) => params.data?.lender?.legalName || 'N/A'
+      flex: 1
     },
     {
       field: 'changeDateTime',
@@ -93,45 +93,24 @@ export function PositionHistory({ facilityId, selectedActivity, lenderId, startD
       cellRenderer: (params: ICellRendererParams) => getChangeTypeBadge(params.value)
     },
     {
-      field: 'facilityOutstandingAmount',
+      field: 'newDrawnAmount',
       headerName: 'Facility Outstanding',
       flex: 1,
-      valueGetter: (params: ValueGetterParams) => {
-        if (params.data?.trade) {
-          return params.data.trade.facilityOutstandingAmount
-        }
-        if (params.data?.servicingActivity) {
-          return params.data.servicingActivity.facilityOutstandingAmount
-        }
-        return 0
-      },
       valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
       filter: 'agNumberColumnFilter'
     },
     {
-      field: 'newOutstandingAmount',
-      headerName: 'Lender Outstanding',
+      field: 'newCommitmentAmount',
+      headerName: 'Commitment Amount',
       flex: 1,
       valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
       filter: 'agNumberColumnFilter'
     },
     {
-      field: 'share',
+      field: 'newShare',
       headerName: 'Share %',
       flex: 1,
-      valueGetter: (params: ValueGetterParams) => {
-        const lenderOutstanding = params.data?.newOutstandingAmount || 0
-        const facilityOutstanding = params.data?.trade?.facilityOutstandingAmount || params.data?.servicingActivity?.facilityOutstandingAmount || 0
-        return facilityOutstanding > 0 ? (lenderOutstanding / facilityOutstanding * 100).toFixed(2) : 0
-      },
       valueFormatter: (params: ValueFormatterParams) => `${params.value}%`,
-      filter: 'agNumberColumnFilter'
-    },
-    {
-      field: 'newAccruedInterest',
-      headerName: 'Accrued Interest',
-      flex: 1,
-      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
       filter: 'agNumberColumnFilter'
     },
     {

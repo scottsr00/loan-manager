@@ -1,206 +1,125 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { createPositionHistory } from '../position/positionHistory'
+import { createFacilityPositionHistory } from '../facility/facilityPositionHistory'
 import { type PrismaTransaction } from '@/server/types/trade'
+import { PositionChangeType, type FacilityPosition } from '@prisma/client'
 
 export async function closeTrade(tradeId: string, userId: string) {
   try {
-    return await prisma.$transaction(async (tx: PrismaTransaction) => {
-      // Get the trade with related data
-      const trade = await tx.trade.findUnique({
-        where: { id: tradeId },
-        include: {
-          facility: true,
-          sellerCounterparty: {
-            include: {
-              entity: true
-            }
-          },
-          buyerCounterparty: {
-            include: {
-              entity: true
-            }
+    const trade = await prisma.trade.findUnique({
+      where: { id: tradeId },
+      include: {
+        facility: {
+          include: {
+            positions: true
           }
         }
-      })
-
-      if (!trade) {
-        throw new Error('Trade not found')
       }
-
-      if (trade.status === 'CLOSED') {
-        throw new Error('Trade is already closed')
-      }
-
-      // Get or create lender records for both counterparties
-      const sellerLender = await tx.lender.upsert({
-        where: {
-          entityId: trade.sellerCounterparty.entity.id
-        },
-        create: {
-          entityId: trade.sellerCounterparty.entity.id,
-          status: 'ACTIVE'
-        },
-        update: {}
-      })
-
-      const buyerLender = await tx.lender.upsert({
-        where: {
-          entityId: trade.buyerCounterparty.entity.id
-        },
-        create: {
-          entityId: trade.buyerCounterparty.entity.id,
-          status: 'ACTIVE'
-        },
-        update: {}
-      })
-
-      // Get current positions using lender IDs
-      const sellerPosition = await tx.facilityPosition.findFirst({
-        where: {
-          facilityId: trade.facilityId,
-          lenderId: sellerLender.id
-        }
-      })
-
-      const buyerPosition = await tx.facilityPosition.findFirst({
-        where: {
-          facilityId: trade.facilityId,
-          lenderId: buyerLender.id
-        }
-      })
-
-      if (!sellerPosition) {
-        throw new Error('Seller position not found')
-      }
-
-      // Calculate new share percentages based on commitment amounts
-      const newSellerShare = ((sellerPosition.commitmentAmount - trade.parAmount) / trade.facility.commitmentAmount) * 100
-      const newBuyerShare = ((buyerPosition?.commitmentAmount || 0 + trade.parAmount) / trade.facility.commitmentAmount) * 100
-
-      // Update seller position
-      const updatedSellerPosition = await tx.facilityPosition.update({
-        where: {
-          id: sellerPosition.id
-        },
-        data: {
-          commitmentAmount: sellerPosition.commitmentAmount - trade.parAmount,
-          drawnAmount: sellerPosition.drawnAmount - trade.parAmount,
-          undrawnAmount: sellerPosition.undrawnAmount,
-          share: newSellerShare
-        }
-      })
-
-      // Create or update buyer position
-      let updatedBuyerPosition
-      if (buyerPosition) {
-        updatedBuyerPosition = await tx.facilityPosition.update({
-          where: {
-            id: buyerPosition.id
-          },
-          data: {
-            commitmentAmount: buyerPosition.commitmentAmount + trade.parAmount,
-            drawnAmount: buyerPosition.drawnAmount + trade.parAmount,
-            undrawnAmount: buyerPosition.undrawnAmount,
-            share: newBuyerShare
-          }
-        })
-      } else {
-        updatedBuyerPosition = await tx.facilityPosition.create({
-          data: {
-            facilityId: trade.facilityId,
-            lenderId: buyerLender.id,
-            commitmentAmount: trade.parAmount,
-            drawnAmount: trade.parAmount,
-            undrawnAmount: 0,
-            share: newBuyerShare,
-            status: 'ACTIVE'
-          }
-        })
-      }
-
-      // Record position history for seller
-      await createPositionHistory({
-        facilityId: trade.facilityId,
-        lenderId: trade.sellerCounterparty.entity.id,
-        changeType: 'TRADE',
-        previousCommitmentAmount: sellerPosition.commitmentAmount,
-        newCommitmentAmount: updatedSellerPosition.commitmentAmount,
-        previousUndrawnAmount: sellerPosition.undrawnAmount,
-        newUndrawnAmount: updatedSellerPosition.undrawnAmount,
-        previousDrawnAmount: sellerPosition.drawnAmount,
-        newDrawnAmount: updatedSellerPosition.drawnAmount,
-        previousAccruedInterest: 0,
-        newAccruedInterest: 0,
-        changeAmount: -trade.parAmount,
-        userId,
-        activityType: 'TRADE',
-        tradeId: trade.id,
-        notes: `Trade closed - Sold ${trade.parAmount} to ${trade.buyerCounterparty.entity.legalName}`
-      })
-
-      // Record position history for buyer
-      await createPositionHistory({
-        facilityId: trade.facilityId,
-        lenderId: trade.buyerCounterparty.entity.id,
-        changeType: 'TRADE',
-        previousCommitmentAmount: buyerPosition?.commitmentAmount || 0,
-        newCommitmentAmount: updatedBuyerPosition.commitmentAmount,
-        previousUndrawnAmount: buyerPosition?.undrawnAmount || 0,
-        newUndrawnAmount: updatedBuyerPosition.undrawnAmount,
-        previousDrawnAmount: buyerPosition?.drawnAmount || 0,
-        newDrawnAmount: updatedBuyerPosition.drawnAmount,
-        previousAccruedInterest: 0,
-        newAccruedInterest: 0,
-        changeAmount: trade.parAmount,
-        userId,
-        activityType: 'TRADE',
-        tradeId: trade.id,
-        notes: `Trade closed - Bought ${trade.parAmount} from ${trade.sellerCounterparty.entity.legalName}`
-      })
-
-      // Create transaction history record
-      const transaction = await tx.transactionHistory.create({
-        data: {
-          tradeId: trade.id,
-          activityType: 'TRADE_SETTLEMENT',
-          amount: trade.parAmount,
-          status: 'COMPLETED',
-          description: `Trade closed - ${trade.parAmount} transferred from ${trade.sellerCounterparty.entity.legalName} to ${trade.buyerCounterparty.entity.legalName}`,
-          effectiveDate: new Date(),
-          processedBy: userId,
-          facilityOutstandingAmount: trade.facility.outstandingAmount
-        }
-      })
-
-      // Update trade status to closed
-      const closedTrade = await tx.trade.update({
-        where: { id: trade.id },
-        data: {
-          status: 'CLOSED',
-          facilityOutstandingAmount: trade.facility.outstandingAmount
-        },
-        include: {
-          facility: true,
-          sellerCounterparty: {
-            include: {
-              entity: true
-            }
-          },
-          buyerCounterparty: {
-            include: {
-              entity: true
-            }
-          },
-          transactions: true
-        }
-      })
-
-      return closedTrade
     })
+
+    if (!trade) {
+      throw new Error('Trade not found')
+    }
+
+    if (trade.status !== 'PENDING') {
+      throw new Error('Trade is not in PENDING status')
+    }
+
+    // Update trade status and create position history
+    await prisma.$transaction(async (tx: PrismaTransaction) => {
+      // Update trade status
+      await tx.trade.update({
+        where: { id: tradeId },
+        data: {
+          status: 'COMPLETED'
+        }
+      })
+
+      // Create position history for seller
+      const sellerPosition = trade.facility.positions.find(
+        (p: FacilityPosition) => p.lenderId === trade.sellerCounterpartyId
+      )
+
+      if (sellerPosition) {
+        const newCommitmentAmount = sellerPosition.commitmentAmount - trade.parAmount
+        const newUndrawnAmount = sellerPosition.undrawnAmount - trade.parAmount
+        const newShare = (newCommitmentAmount / trade.facility.commitmentAmount) * 100
+
+        await tx.facilityPosition.update({
+          where: { id: sellerPosition.id },
+          data: {
+            commitmentAmount: newCommitmentAmount,
+            undrawnAmount: newUndrawnAmount,
+            share: newShare
+          }
+        })
+
+        await createFacilityPositionHistory({
+          facilityId: trade.facilityId,
+          lenderId: trade.sellerCounterpartyId,
+          changeType: PositionChangeType.TRADE,
+          previousCommitmentAmount: sellerPosition.commitmentAmount,
+          newCommitmentAmount,
+          previousUndrawnAmount: sellerPosition.undrawnAmount,
+          newUndrawnAmount,
+          previousDrawnAmount: sellerPosition.drawnAmount,
+          newDrawnAmount: sellerPosition.drawnAmount,
+          previousShare: sellerPosition.share,
+          newShare,
+          previousStatus: sellerPosition.status,
+          newStatus: sellerPosition.status,
+          changeAmount: -trade.parAmount,
+          userId,
+          notes: `Trade ${tradeId} completed - Seller position updated`,
+          tradeId
+        })
+      }
+
+      // Create position history for buyer
+      const buyerPosition = trade.facility.positions.find(
+        (p: FacilityPosition) => p.lenderId === trade.buyerCounterpartyId
+      )
+
+      if (buyerPosition) {
+        const newCommitmentAmount = buyerPosition.commitmentAmount + trade.parAmount
+        const newUndrawnAmount = buyerPosition.undrawnAmount + trade.parAmount
+        const newShare = (newCommitmentAmount / trade.facility.commitmentAmount) * 100
+
+        await tx.facilityPosition.update({
+          where: { id: buyerPosition.id },
+          data: {
+            commitmentAmount: newCommitmentAmount,
+            undrawnAmount: newUndrawnAmount,
+            share: newShare
+          }
+        })
+
+        await createFacilityPositionHistory({
+          facilityId: trade.facilityId,
+          lenderId: trade.buyerCounterpartyId,
+          changeType: PositionChangeType.TRADE,
+          previousCommitmentAmount: buyerPosition.commitmentAmount,
+          newCommitmentAmount,
+          previousUndrawnAmount: buyerPosition.undrawnAmount,
+          newUndrawnAmount,
+          previousDrawnAmount: buyerPosition.drawnAmount,
+          newDrawnAmount: buyerPosition.drawnAmount,
+          previousShare: buyerPosition.share,
+          newShare,
+          previousStatus: buyerPosition.status,
+          newStatus: buyerPosition.status,
+          changeAmount: trade.parAmount,
+          userId,
+          notes: `Trade ${tradeId} completed - Buyer position updated`,
+          tradeId
+        })
+      }
+    })
+
+    return { success: true }
   } catch (error) {
     console.error('Error closing trade:', error)
-    throw error instanceof Error ? error : new Error('Failed to close trade')
+    throw error
   }
 } 
