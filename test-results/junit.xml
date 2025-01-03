@@ -1,11 +1,705 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="3" failures="0" errors="0" time="0.628">
-  <testsuite name="Borrower Creation" errors="0" failures="0" skipped="0" timestamp="2025-01-02T19:39:00" time="0.297" tests="3">
-    <testcase classname="Borrower Creation should create a borrower linked to an entity" name="Borrower Creation should create a borrower linked to an entity" time="0.003">
+<testsuites name="jest tests" tests="55" failures="23" errors="0" time="1.041">
+  <testsuite name="Credit Agreement Tests" errors="0" failures="7" skipped="0" timestamp="2025-01-03T12:15:53" time="0.274" tests="10">
+    <testcase classname="Credit Agreement Tests createCreditAgreement should create a credit agreement with valid inputs" name="Credit Agreement Tests createCreditAgreement should create a credit agreement with valid inputs" time="0.017">
+      <failure>Error: PrismaClient is unable to run in this browser environment, or has been bundled for the browser (running in `Node.js`).
+If this is unexpected, please open an issue: https://pris.ly/prisma-prisma-bug-report
+    at Object.get (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/.prisma/client/index-browser.js:502:15)
+    at entity (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/createCreditAgreement.ts:29:41)
+    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:108:49)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
     </testcase>
-    <testcase classname="Borrower Creation should fail to create borrower for non-existent entity" name="Borrower Creation should fail to create borrower for non-existent entity" time="0.012">
+    <testcase classname="Credit Agreement Tests createCreditAgreement should throw error if borrower does not exist" name="Credit Agreement Tests createCreditAgreement should throw error if borrower does not exist" time="0.004">
+      <failure>Error: expect(received).rejects.toThrow(expected)
+
+Expected substring: &quot;Borrower not found&quot;
+Received message:   &quot;PrismaClient is unable to run in this browser environment, or has been bundled for the browser (running in `Node.js`).
+If this is unexpected, please open an issue: https://pris.ly/prisma-prisma-bug-report&quot;
+
+      27 |
+      28 |     // Validate borrower exists
+    &gt; 29 |     const borrowerEntity = await prisma.entity.findUnique({
+         |                                         ^
+      30 |       where: { id: data.borrowerId },
+      31 |       include: {
+      32 |         borrower: true
+
+      at Object.get (node_modules/.prisma/client/index-browser.js:502:15)
+      at entity (server/actions/loan/createCreditAgreement.ts:29:41)
+      at Object.&lt;anonymous&gt; (__tests__/credit-agreement.test.ts:120:41)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:218:22)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:121:18)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Credit Agreement Tests createCreditAgreement should throw error if lender does not exist" name="Credit Agreement Tests createCreditAgreement should throw error if lender does not exist" time="0.002">
+      <failure>Error: expect(received).rejects.toThrow(expected)
+
+Expected substring: &quot;Lender not found&quot;
+Received message:   &quot;PrismaClient is unable to run in this browser environment, or has been bundled for the browser (running in `Node.js`).
+If this is unexpected, please open an issue: https://pris.ly/prisma-prisma-bug-report&quot;
+
+      27 |
+      28 |     // Validate borrower exists
+    &gt; 29 |     const borrowerEntity = await prisma.entity.findUnique({
+         |                                         ^
+      30 |       where: { id: data.borrowerId },
+      31 |       include: {
+      32 |         borrower: true
+
+      at Object.get (node_modules/.prisma/client/index-browser.js:502:15)
+      at entity (server/actions/loan/createCreditAgreement.ts:29:41)
+      at Object.&lt;anonymous&gt; (__tests__/credit-agreement.test.ts:130:41)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:218:22)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:131:18)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Credit Agreement Tests createCreditAgreement should validate maturity date is after start date" name="Credit Agreement Tests createCreditAgreement should validate maturity date is after start date" time="0.001">
+    </testcase>
+    <testcase classname="Credit Agreement Tests createCreditAgreement should validate positive amount and interest rate" name="Credit Agreement Tests createCreditAgreement should validate positive amount and interest rate" time="0.003">
+    </testcase>
+    <testcase classname="Credit Agreement Tests createCreditAgreement should validate at least one facility is provided" name="Credit Agreement Tests createCreditAgreement should validate at least one facility is provided" time="0.001">
+    </testcase>
+    <testcase classname="Credit Agreement Tests updateCreditAgreement should update credit agreement details while preserving facility relationships" name="Credit Agreement Tests updateCreditAgreement should update credit agreement details while preserving facility relationships" time="0.003">
+      <failure>Error: PrismaClient is unable to run in this browser environment, or has been bundled for the browser (running in `Node.js`).
+If this is unexpected, please open an issue: https://pris.ly/prisma-prisma-bug-report
+    at Object.get (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/.prisma/client/index-browser.js:502:15)
+    at creditAgreement (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/updateCreditAgreement.ts:15:44)
+    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:218:49)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Credit Agreement Tests updateCreditAgreement should reject updates that would make facility commitments exceed new credit agreement amount" name="Credit Agreement Tests updateCreditAgreement should reject updates that would make facility commitments exceed new credit agreement amount" time="0.002">
+      <failure>Error: expect(received).rejects.toThrow(expected)
+
+Expected substring: &quot;Credit agreement amount cannot be less than total facility commitments&quot;
+Received message:   &quot;PrismaClient is unable to run in this browser environment, or has been bundled for the browser (running in `Node.js`).
+If this is unexpected, please open an issue: https://pris.ly/prisma-prisma-bug-report&quot;
+
+      13 |
+      14 |     // Check if credit agreement exists
+    &gt; 15 |     const existingAgreement = await prisma.creditAgreement.findUnique({
+         |                                            ^
+      16 |       where: { id: validatedData.id }
+      17 |     })
+      18 |
+
+      at Object.get (node_modules/.prisma/client/index-browser.js:502:15)
+      at creditAgreement (server/actions/loan/updateCreditAgreement.ts:15:44)
+      at Object.&lt;anonymous&gt; (__tests__/credit-agreement.test.ts:238:41)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:218:22)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:239:18)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Credit Agreement Tests updateCreditAgreement should reject updates that would make facility maturity dates invalid" name="Credit Agreement Tests updateCreditAgreement should reject updates that would make facility maturity dates invalid" time="0.003">
+      <failure>Error: expect(received).rejects.toThrow(expected)
+
+Expected substring: &quot;Credit agreement maturity date cannot be earlier than facility maturity dates&quot;
+Received message:   &quot;PrismaClient is unable to run in this browser environment, or has been bundled for the browser (running in `Node.js`).
+If this is unexpected, please open an issue: https://pris.ly/prisma-prisma-bug-report&quot;
+
+      13 |
+      14 |     // Check if credit agreement exists
+    &gt; 15 |     const existingAgreement = await prisma.creditAgreement.findUnique({
+         |                                            ^
+      16 |       where: { id: validatedData.id }
+      17 |     })
+      18 |
+
+      at Object.get (node_modules/.prisma/client/index-browser.js:502:15)
+      at creditAgreement (server/actions/loan/updateCreditAgreement.ts:15:44)
+      at Object.&lt;anonymous&gt; (__tests__/credit-agreement.test.ts:258:41)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:218:22)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:259:18)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Credit Agreement Tests updateCreditAgreement should reject currency changes when facilities exist" name="Credit Agreement Tests updateCreditAgreement should reject currency changes when facilities exist" time="0.003">
+      <failure>Error: expect(received).rejects.toThrow(expected)
+
+Expected substring: &quot;Cannot change currency of credit agreement with existing facilities&quot;
+Received message:   &quot;PrismaClient is unable to run in this browser environment, or has been bundled for the browser (running in `Node.js`).
+If this is unexpected, please open an issue: https://pris.ly/prisma-prisma-bug-report&quot;
+
+      13 |
+      14 |     // Check if credit agreement exists
+    &gt; 15 |     const existingAgreement = await prisma.creditAgreement.findUnique({
+         |                                            ^
+      16 |       where: { id: validatedData.id }
+      17 |     })
+      18 |
+
+      at Object.get (node_modules/.prisma/client/index-browser.js:502:15)
+      at creditAgreement (server/actions/loan/updateCreditAgreement.ts:15:44)
+      at Object.&lt;anonymous&gt; (__tests__/credit-agreement.test.ts:275:41)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:218:22)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/credit-agreement.test.ts:276:18)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="Servicing Activity Tests" errors="0" failures="4" skipped="0" timestamp="2025-01-03T12:15:53" time="0.061" tests="9">
+    <testcase classname="Servicing Activity Tests addServicingActivity should create a servicing activity" name="Servicing Activity Tests addServicingActivity should create a servicing activity" time="0.001">
+    </testcase>
+    <testcase classname="Servicing Activity Tests addServicingActivity should throw error if facility does not exist" name="Servicing Activity Tests addServicingActivity should throw error if facility does not exist" time="0.003">
+    </testcase>
+    <testcase classname="Servicing Activity Tests addServicingActivity should validate required fields" name="Servicing Activity Tests addServicingActivity should validate required fields" time="0.001">
+    </testcase>
+    <testcase classname="Servicing Activity Tests processPaydown should process a paydown without creating duplicate servicing activity" name="Servicing Activity Tests processPaydown should process a paydown without creating duplicate servicing activity" time="0.002">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;name&apos;)
+    at name (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/processPaydown.ts:87:53)
+    at processPaydown (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/processPaydown.ts:47:12)
+    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/servicing.test.ts:176:22)</failure>
+    </testcase>
+    <testcase classname="Servicing Activity Tests processPaydown should create new servicing activity if no existing activity provided" name="Servicing Activity Tests processPaydown should create new servicing activity if no existing activity provided" time="0.001">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;name&apos;)
+    at name (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/processPaydown.ts:87:53)
+    at processPaydown (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/processPaydown.ts:47:12)
+    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/servicing.test.ts:245:22)</failure>
+    </testcase>
+    <testcase classname="Servicing Activity Tests processPaydown should throw error if paydown amount exceeds outstanding balance" name="Servicing Activity Tests processPaydown should throw error if paydown amount exceeds outstanding balance" time="0.001">
+    </testcase>
+    <testcase classname="Servicing Activity Tests updateServicingActivity should update activity status and process paydown when completed" name="Servicing Activity Tests updateServicingActivity should update activity status and process paydown when completed" time="0.004">
+      <failure>Error: Activity or facility not found
+    at processPositionUpdates (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/updateServicingActivity.ts:33:11)
+    at updateServicingActivity (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/updateServicingActivity.ts:94:7)
+    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/servicing.test.ts:323:22)</failure>
+    </testcase>
+    <testcase classname="Servicing Activity Tests updateServicingActivity should throw error if activity does not exist" name="Servicing Activity Tests updateServicingActivity should throw error if activity does not exist" time="0.001">
+    </testcase>
+    <testcase classname="Servicing Activity Tests updateServicingActivity should clear completion fields when status is not COMPLETED" name="Servicing Activity Tests updateServicingActivity should clear completion fields when status is not COMPLETED" time="0.002">
+      <failure>Error: expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+- Expected
++ Received
+
+  Object {
+    &quot;data&quot;: Object {
+      &quot;completedAt&quot;: null,
+      &quot;completedBy&quot;: null,
++     &quot;facilityOutstandingAmount&quot;: null,
+      &quot;status&quot;: &quot;PENDING&quot;,
++     &quot;transactions&quot;: undefined,
+    },
+    &quot;where&quot;: Object {
+      &quot;id&quot;: &quot;activity-1&quot;,
+    },
+  },
+
+Number of calls: 1
+    at Object.toHaveBeenCalledWith (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/servicing.test.ts:381:47)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="Borrower Creation" errors="0" failures="3" skipped="0" timestamp="2025-01-03T12:15:53" time="0.042" tests="3">
+    <testcase classname="Borrower Creation should create a borrower linked to an entity" name="Borrower Creation should create a borrower linked to an entity" time="0.005">
+      <failure>ZodError: [
+  {
+    &quot;expected&quot;: &quot;&apos;PENDING&apos; | &apos;IN_PROGRESS&apos; | &apos;APPROVED&apos; | &apos;REJECTED&apos;&quot;,
+    &quot;received&quot;: &quot;undefined&quot;,
+    &quot;code&quot;: &quot;invalid_type&quot;,
+    &quot;path&quot;: [
+      &quot;kycStatus&quot;
+    ],
+    &quot;message&quot;: &quot;Required&quot;
+  }
+]
+    at Object.get error [as error] (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/zod/lib/types.js:55:31)
+    at ZodObject.parse (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/zod/lib/types.js:131:22)
+    at parse (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/borrower/createBorrower.ts:9:47)
+    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/borrower.test.ts:63:42)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Borrower Creation should fail to create borrower for non-existent entity" name="Borrower Creation should fail to create borrower for non-existent entity" time="0.002">
+      <failure>Error: expect(received).rejects.toThrow(expected)
+
+Expected substring: &quot;Entity not found&quot;
+Received message:   &quot;[
+  {
+    \&quot;expected\&quot;: \&quot;&apos;PENDING&apos; | &apos;IN_PROGRESS&apos; | &apos;APPROVED&apos; | &apos;REJECTED&apos;\&quot;,
+    \&quot;received\&quot;: \&quot;undefined\&quot;,
+    \&quot;code\&quot;: \&quot;invalid_type\&quot;,
+    \&quot;path\&quot;: [
+      \&quot;kycStatus\&quot;
+    ],
+    \&quot;message\&quot;: \&quot;Required\&quot;
+  }
+]&quot;
+
+       7 |   try {
+       8 |     // Validate input data
+    &gt;  9 |     const validatedData = borrowerInputSchema.parse(data)
+         |                                               ^
+      10 |
+      11 |     // Verify the entity exists
+      12 |     const entity = await prisma.entity.findUnique({
+
+      at Object.get error [as error] (node_modules/zod/lib/types.js:55:31)
+      at ZodObject.parse (node_modules/zod/lib/types.js:131:22)
+      at parse (server/actions/borrower/createBorrower.ts:9:47)
+      at Object.&lt;anonymous&gt; (__tests__/borrower.test.ts:101:32)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:218:22)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/borrower.test.ts:101:56)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
     </testcase>
     <testcase classname="Borrower Creation should fail to create duplicate borrower for same entity" name="Borrower Creation should fail to create duplicate borrower for same entity" time="0.001">
+      <failure>Error: expect(received).rejects.toThrow(expected)
+
+Expected substring: &quot;Entity already has a borrower role&quot;
+Received message:   &quot;[
+  {
+    \&quot;expected\&quot;: \&quot;&apos;PENDING&apos; | &apos;IN_PROGRESS&apos; | &apos;APPROVED&apos; | &apos;REJECTED&apos;\&quot;,
+    \&quot;received\&quot;: \&quot;undefined\&quot;,
+    \&quot;code\&quot;: \&quot;invalid_type\&quot;,
+    \&quot;path\&quot;: [
+      \&quot;kycStatus\&quot;
+    ],
+    \&quot;message\&quot;: \&quot;Required\&quot;
+  }
+]&quot;
+
+       7 |   try {
+       8 |     // Validate input data
+    &gt;  9 |     const validatedData = borrowerInputSchema.parse(data)
+         |                                               ^
+      10 |
+      11 |     // Verify the entity exists
+      12 |     const entity = await prisma.entity.findUnique({
+
+      at Object.get error [as error] (node_modules/zod/lib/types.js:55:31)
+      at ZodObject.parse (node_modules/zod/lib/types.js:131:22)
+      at parse (server/actions/borrower/createBorrower.ts:9:47)
+      at Object.&lt;anonymous&gt; (__tests__/borrower.test.ts:131:32)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:218:22)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/borrower.test.ts:131:56)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="Facility Position Management" errors="0" failures="7" skipped="0" timestamp="2025-01-03T12:15:53" time="0.054" tests="8">
+    <testcase classname="Facility Position Management Position Creation should create a facility position within available amount" name="Facility Position Management Position Creation should create a facility position within available amount" time="0.002">
+      <failure>ZodError: [
+  {
+    &quot;code&quot;: &quot;invalid_type&quot;,
+    &quot;expected&quot;: &quot;number&quot;,
+    &quot;received&quot;: &quot;undefined&quot;,
+    &quot;path&quot;: [
+      &quot;commitmentAmount&quot;
+    ],
+    &quot;message&quot;: &quot;Required&quot;
+  }
+]
+    at Object.get error [as error] (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/zod/lib/types.js:55:31)
+    at ZodObject.parse (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/zod/lib/types.js:131:22)
+    at parse (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/createFacilityPosition.ts:9:55)
+    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/facilityPosition.test.ts:71:52)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Facility Position Management Position Creation should reject position exceeding facility available amount" name="Facility Position Management Position Creation should reject position exceeding facility available amount" time="0.001">
+      <failure>Error: expect(received).rejects.toThrow(expected)
+
+Expected substring: &quot;Total positions would exceed facility commitment&quot;
+Received message:   &quot;[
+  {
+    \&quot;code\&quot;: \&quot;invalid_type\&quot;,
+    \&quot;expected\&quot;: \&quot;number\&quot;,
+    \&quot;received\&quot;: \&quot;undefined\&quot;,
+    \&quot;path\&quot;: [
+      \&quot;commitmentAmount\&quot;
+    ],
+    \&quot;message\&quot;: \&quot;Required\&quot;
+  }
+]&quot;
+
+       7 |   try {
+       8 |     // Validate input data
+    &gt;  9 |     const validatedData = facilityPositionInputSchema.parse(data)
+         |                                                       ^
+      10 |
+      11 |     // Get facility to validate against
+      12 |     const facility = await prisma.facility.findUnique({
+
+      at Object.get error [as error] (node_modules/zod/lib/types.js:55:31)
+      at ZodObject.parse (node_modules/zod/lib/types.js:131:22)
+      at parse (server/actions/loan/createFacilityPosition.ts:9:55)
+      at Object.&lt;anonymous&gt; (__tests__/facilityPosition.test.ts:97:42)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:218:22)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/facilityPosition.test.ts:98:18)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Facility Position Management Position Creation should validate total positions do not exceed facility commitment" name="Facility Position Management Position Creation should validate total positions do not exceed facility commitment" time="0.001">
+      <failure>Error: expect(received).rejects.toThrow(expected)
+
+Expected substring: &quot;Total position shares would exceed 100%&quot;
+Received message:   &quot;[
+  {
+    \&quot;code\&quot;: \&quot;invalid_type\&quot;,
+    \&quot;expected\&quot;: \&quot;number\&quot;,
+    \&quot;received\&quot;: \&quot;undefined\&quot;,
+    \&quot;path\&quot;: [
+      \&quot;commitmentAmount\&quot;
+    ],
+    \&quot;message\&quot;: \&quot;Required\&quot;
+  }
+]&quot;
+
+       7 |   try {
+       8 |     // Validate input data
+    &gt;  9 |     const validatedData = facilityPositionInputSchema.parse(data)
+         |                                                       ^
+      10 |
+      11 |     // Get facility to validate against
+      12 |     const facility = await prisma.facility.findUnique({
+
+      at Object.get error [as error] (node_modules/zod/lib/types.js:55:31)
+      at ZodObject.parse (node_modules/zod/lib/types.js:131:22)
+      at parse (server/actions/loan/createFacilityPosition.ts:9:55)
+      at Object.&lt;anonymous&gt; (__tests__/facilityPosition.test.ts:129:42)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:218:22)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/facilityPosition.test.ts:130:18)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Facility Position Management Position Creation should validate position amount covers pro-rata share of loans" name="Facility Position Management Position Creation should validate position amount covers pro-rata share of loans" time="0.002">
+      <failure>Error: expect(received).rejects.toThrow(expected)
+
+Expected substring: &quot;Position amount must cover pro-rata share of outstanding loans&quot;
+Received message:   &quot;[
+  {
+    \&quot;code\&quot;: \&quot;invalid_type\&quot;,
+    \&quot;expected\&quot;: \&quot;number\&quot;,
+    \&quot;received\&quot;: \&quot;undefined\&quot;,
+    \&quot;path\&quot;: [
+      \&quot;commitmentAmount\&quot;
+    ],
+    \&quot;message\&quot;: \&quot;Required\&quot;
+  }
+]&quot;
+
+       7 |   try {
+       8 |     // Validate input data
+    &gt;  9 |     const validatedData = facilityPositionInputSchema.parse(data)
+         |                                                       ^
+      10 |
+      11 |     // Get facility to validate against
+      12 |     const facility = await prisma.facility.findUnique({
+
+      at Object.get error [as error] (node_modules/zod/lib/types.js:55:31)
+      at ZodObject.parse (node_modules/zod/lib/types.js:131:22)
+      at parse (server/actions/loan/createFacilityPosition.ts:9:55)
+      at Object.&lt;anonymous&gt; (__tests__/facilityPosition.test.ts:158:42)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:218:22)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/facilityPosition.test.ts:159:18)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Facility Position Management Position Updates should update position amount within available limits" name="Facility Position Management Position Updates should update position amount within available limits" time="0.002">
+      <failure>Error: expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+- Expected
++ Received
+
+  Object {
+    &quot;data&quot;: Object {
+-     &quot;amount&quot;: 600000,
++     &quot;amount&quot;: undefined,
+      &quot;share&quot;: 60,
++     &quot;status&quot;: undefined,
+    },
+    &quot;where&quot;: Object {
+      &quot;id&quot;: &quot;position-1&quot;,
+    },
+  },
+
+Number of calls: 1
+    at Object.toHaveBeenCalledWith (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/facilityPosition.test.ts:203:46)</failure>
+    </testcase>
+    <testcase classname="Facility Position Management Position Updates should reject updates that would exceed facility commitment" name="Facility Position Management Position Updates should reject updates that would exceed facility commitment" time="0.002">
+      <failure>Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: {&quot;amount&quot;: 600000, &quot;facilityId&quot;: &quot;facility-1&quot;, &quot;id&quot;: &quot;position-1&quot;, &quot;lenderId&quot;: &quot;lender-1&quot;, &quot;share&quot;: 60, &quot;status&quot;: &quot;ACTIVE&quot;}
+    at expect (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:113:15)
+    at Object.expect (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/facilityPosition.test.ts:240:13)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Facility Position Management Position Updates should validate position status transitions" name="Facility Position Management Position Updates should validate position status transitions" time="0.002">
+      <failure>Error: expect(received).rejects.toThrow(expected)
+
+Expected substring: &quot;Cannot reactivate completed position&quot;
+Received message:   &quot;Cannot read properties of undefined (reading &apos;safeParse&apos;)&quot;
+
+      73 |     // If updating status, validate transition
+      74 |     if (validatedData.status) {
+    &gt; 75 |       if (!facilityPositionStatusEnum.safeParse(validatedData.status).success) {
+         |                                       ^
+      76 |         throw new Error(&apos;Invalid position status&apos;)
+      77 |       }
+      78 |
+
+      at safeParse (server/actions/loan/updateFacilityPosition.ts:75:39)
+      at Object.&lt;anonymous&gt; (__tests__/facilityPosition.test.ts:270:7)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/expect/build/index.js:218:22)
+    at Object.toThrow (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/facilityPosition.test.ts:271:18)
+    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Facility Position Management Position Updates should validate total shares do not exceed 100%" name="Facility Position Management Position Updates should validate total shares do not exceed 100%" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="Facility Management" errors="0" failures="0" skipped="0" timestamp="2025-01-03T12:15:53" time="0.036" tests="6">
+    <testcase classname="Facility Management createFacility should create a facility within credit agreement limits" name="Facility Management createFacility should create a facility within credit agreement limits" time="0.001">
+    </testcase>
+    <testcase classname="Facility Management createFacility should reject if facility amount exceeds credit agreement amount" name="Facility Management createFacility should reject if facility amount exceeds credit agreement amount" time="0.001">
+    </testcase>
+    <testcase classname="Facility Management createFacility should reject if facility currency does not match credit agreement" name="Facility Management createFacility should reject if facility currency does not match credit agreement" time="0.001">
+    </testcase>
+    <testcase classname="Facility Management createFacility should reject if facility maturity date exceeds credit agreement" name="Facility Management createFacility should reject if facility maturity date exceeds credit agreement" time="0.001">
+    </testcase>
+    <testcase classname="Facility Management createFacility should validate required fields" name="Facility Management createFacility should validate required fields" time="0.001">
+    </testcase>
+    <testcase classname="Facility Management createFacility should validate facility type" name="Facility Management createFacility should validate facility type" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Loan Tests" errors="0" failures="1" skipped="0" timestamp="2025-01-03T12:15:53" time="0.044" tests="8">
+    <testcase classname="Loan Tests createLoan should create a loan with valid inputs" name="Loan Tests createLoan should create a loan with valid inputs" time="0.001">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;map&apos;)
+    at map (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/createLoan.ts:98:44)
+    at createLoan (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/createLoan.ts:29:12)
+    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/loan.test.ts:112:22)</failure>
+    </testcase>
+    <testcase classname="Loan Tests createLoan should validate required fields" name="Loan Tests createLoan should validate required fields" time="0">
+    </testcase>
+    <testcase classname="Loan Tests createLoan should validate loan amount does not exceed available amount" name="Loan Tests createLoan should validate loan amount does not exceed available amount" time="0.001">
+    </testcase>
+    <testcase classname="Loan Tests createLoan should validate currency matches facility" name="Loan Tests createLoan should validate currency matches facility" time="0">
+    </testcase>
+    <testcase classname="Loan Tests updateLoan should update loan with valid changes" name="Loan Tests updateLoan should update loan with valid changes" time="0.001">
+    </testcase>
+    <testcase classname="Loan Tests updateLoan should throw error if loan does not exist" name="Loan Tests updateLoan should throw error if loan does not exist" time="0.001">
+    </testcase>
+    <testcase classname="Loan Tests updateLoan should validate status transitions" name="Loan Tests updateLoan should validate status transitions" time="0">
+    </testcase>
+    <testcase classname="Loan Tests updateLoan should validate amount is not greater than original amount" name="Loan Tests updateLoan should validate amount is not greater than original amount" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Counterparty Tests" errors="0" failures="0" skipped="0" timestamp="2025-01-03T12:15:53" time="0.039" tests="4">
+    <testcase classname="Counterparty Tests createCounterparty should create a counterparty with valid inputs" name="Counterparty Tests createCounterparty should create a counterparty with valid inputs" time="0">
+    </testcase>
+    <testcase classname="Counterparty Tests createCounterparty should validate required fields" name="Counterparty Tests createCounterparty should validate required fields" time="0.002">
+    </testcase>
+    <testcase classname="Counterparty Tests updateCounterparty should update counterparty with valid changes" name="Counterparty Tests updateCounterparty should update counterparty with valid changes" time="0">
+    </testcase>
+    <testcase classname="Counterparty Tests updateCounterparty should throw error if counterparty does not exist" name="Counterparty Tests updateCounterparty should throw error if counterparty does not exist" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="createLoan" errors="0" failures="1" skipped="0" timestamp="2025-01-03T12:15:54" time="0.035" tests="4">
+    <testcase classname="createLoan should create a loan successfully" name="createLoan should create a loan successfully" time="0.003">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;map&apos;)
+    at map (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/createLoan.ts:98:44)
+    at createLoan (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/loan/createLoan.ts:29:12)
+    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/server/actions/loan/createLoan.test.ts:96:20)</failure>
+    </testcase>
+    <testcase classname="createLoan should throw error if facility not found" name="createLoan should throw error if facility not found" time="0.001">
+    </testcase>
+    <testcase classname="createLoan should throw error if currency mismatch" name="createLoan should throw error if currency mismatch" time="0.001">
+    </testcase>
+    <testcase classname="createLoan should throw error if insufficient available amount" name="createLoan should throw error if insufficient available amount" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="getInventory" errors="0" failures="0" skipped="0" timestamp="2025-01-03T12:15:54" time="0.046" tests="3">
+    <testcase classname="getInventory should return loans with their relationships" name="getInventory should return loans with their relationships" time="0">
+    </testcase>
+    <testcase classname="getInventory should handle empty result" name="getInventory should handle empty result" time="0">
+    </testcase>
+    <testcase classname="getInventory should handle errors gracefully" name="getInventory should handle errors gracefully" time="0.003">
     </testcase>
   </testsuite>
 </testsuites>
