@@ -34,7 +34,9 @@ export function CounterpartyDetailsModal({
   onOpenChange,
 }: CounterpartyDetailsModalProps) {
   const [isUpdating, setIsUpdating] = useState(false)
-  const [verificationStatus, setVerificationStatus] = useState(counterparty?.kyc?.verificationStatus || 'PENDING')
+  const [verificationStatus, setVerificationStatus] = useState<'PENDING' | 'VERIFIED' | 'REJECTED'>(
+    (counterparty?.kyc?.verificationStatus as 'PENDING' | 'VERIFIED' | 'REJECTED') || 'PENDING'
+  )
   const [counterpartyVerified, setCounterpartyVerified] = useState(counterparty?.kyc?.counterpartyVerified || false)
 
   if (!counterparty) return null
@@ -72,10 +74,6 @@ export function CounterpartyDetailsModal({
                 <span>{counterparty.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Type:</span>
-                <span>{counterparty.type.name}</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-muted-foreground">Status:</span>
                 <Badge variant={counterparty.status === 'ACTIVE' ? 'success' : 'secondary'}>
                   {counterparty.status}
@@ -101,7 +99,7 @@ export function CounterpartyDetailsModal({
                 <span className="text-muted-foreground">Verification Status:</span>
                 <Select
                   value={verificationStatus}
-                  onValueChange={setVerificationStatus}
+                  onValueChange={(value: 'PENDING' | 'VERIFIED' | 'REJECTED') => setVerificationStatus(value)}
                   disabled={isUpdating}
                 >
                   <SelectTrigger className="w-[180px]">

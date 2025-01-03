@@ -24,11 +24,6 @@ export function CounterpartyList({ counterparties }: CounterpartyListProps) {
       width: 250,
     },
     {
-      field: 'type.name',
-      headerName: 'Type',
-      width: 150,
-    },
-    {
       field: 'status',
       headerName: 'Status',
       width: 120,

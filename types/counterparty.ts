@@ -64,7 +64,6 @@ export type CounterpartyWithRelations = Counterparty & {
 
 export interface CreateCounterpartyInput {
   name: string
-  typeId: string
   status?: string
 }
 

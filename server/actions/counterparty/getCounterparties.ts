@@ -35,10 +35,6 @@ interface CounterpartyWithEntity extends Counterparty {
       lastVerificationDate: Date | null
     } | null
   } | null
-  type: {
-    id: string
-    name: string
-  }
   createdAt: Date
   updatedAt: Date
 }
@@ -86,12 +82,6 @@ export async function getCounterparties() {
             }
           }
         }
-      },
-      type: {
-        select: {
-          id: true,
-          name: true
-        }
       }
     },
     orderBy: {
@@ -109,7 +99,6 @@ export async function getCounterparties() {
       entityId: counterparty.entity!.id,
       createdAt: counterparty.createdAt.toISOString(),
       updatedAt: counterparty.updatedAt.toISOString(),
-      type: counterparty.type,
       status: counterparty.status,
       contacts: counterparty.entity!.contacts,
       addresses: counterparty.entity!.addresses,

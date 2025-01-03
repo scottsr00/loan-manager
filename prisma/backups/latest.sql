@@ -1144,7 +1144,8 @@ cm5fuxpoz0006bqs5gexga8h5	FAC-002-TLA	TERM	cm5fuxpoy0005bqs5x0f1mhmh	10000000	10
 --
 
 COPY public."FacilityPosition" (id, "facilityId", "lenderId", share, status, "createdAt", "updatedAt", "commitmentAmount", "drawnAmount", "undrawnAmount") FROM stdin;
-cm5fuxpoz0008bqs5uttlmh7h	cm5fuxpoz0006bqs5gexga8h5	cm5ep9xbk00bokj5domsprisi	100	ACTIVE	2025-01-02 21:47:55.858	2025-01-02 23:41:31.589	10000000	300000	9700000
+cm5fuxpoz0008bqs5uttlmh7h	cm5fuxpoz0006bqs5gexga8h5	cm5ep9xbk00bokj5domsprisi	99	ACTIVE	2025-01-02 21:47:55.858	2025-01-03 12:16:35.64	9900000	1190000	8710000
+cm5g3b8br001kb0frf7mwulio	cm5fuxpoz0006bqs5gexga8h5	cm5fl88f0000l10nd3kxt8s51	1	ACTIVE	2025-01-03 01:42:23.464	2025-01-03 12:16:35.64	100000	110000	-10000
 \.
 
 
@@ -1184,6 +1185,10 @@ COPY public."LenderPositionHistory" (id, "facilityId", "lenderId", "changeDateTi
 cm5fvbquf0004ihrfekb9oc25	cm5fuxpoz0006bqs5gexga8h5	LEI888888	2025-01-02 21:58:50.535	DRAWDOWN	0	0	100000	SYSTEM	Loan drawdown from FAC-002-TLA	2025-01-02 21:58:50.535	2025-01-02 21:58:50.535	\N	\N	10000000	100000	9900000	10000000	0	10000000
 cm5fvswk5000bihrfjtzjg5ck	cm5fuxpoz0006bqs5gexga8h5	LEI888888	2025-01-02 22:12:11.094	DRAWDOWN	0	0	100000	SYSTEM	Loan drawdown from FAC-002-TLA	2025-01-02 22:12:11.094	2025-01-02 22:12:11.094	\N	\N	10000000	200000	9800000	10000000	100000	9900000
 cm5fyzsr00004m0wd3b98p9rh	cm5fuxpoz0006bqs5gexga8h5	LEI888888	2025-01-02 23:41:31.596	DRAWDOWN	0	0	100000	SYSTEM	Loan drawdown from FAC-002-TLA	2025-01-02 23:41:31.596	2025-01-02 23:41:31.596	\N	\N	10000000	300000	9700000	10000000	200000	9800000
+cm5g3b8cn001mb0frq0urtgig	cm5fuxpoz0006bqs5gexga8h5	LEI888888	2025-01-03 01:42:23.472	TRADE	0	0	-100000	SYSTEM	Trade closed - Sold 100000 to Advanced Corporate Capital	2025-01-03 01:42:23.473	2025-01-03 01:42:23.473	\N	cm5g01dr20002b0frabbwkddu	9900000	200000	9700000	10000000	300000	9700000
+cm5g3b8db001ob0frb63muaid	cm5fuxpoz0006bqs5gexga8h5	LEI000081	2025-01-03 01:42:23.518	TRADE	0	0	100000	SYSTEM	Trade closed - Bought 100000 from Bank of Test	2025-01-03 01:42:23.519	2025-01-03 01:42:23.519	\N	cm5g01dr20002b0frabbwkddu	100000	100000	0	0	0	0
+cm5gpytkx0004860g08598efa	cm5fuxpoz0006bqs5gexga8h5	LEI888888	2025-01-03 12:16:35.649	DRAWDOWN	0	0	990000	SYSTEM	Loan drawdown from FAC-002-TLA	2025-01-03 12:16:35.649	2025-01-03 12:16:35.649	\N	\N	9900000	1190000	8710000	9900000	200000	9700000
+cm5gpytkx0006860g9qimir2g	cm5fuxpoz0006bqs5gexga8h5	LEI000081	2025-01-03 12:16:35.649	DRAWDOWN	0	0	10000	SYSTEM	Loan drawdown from FAC-002-TLA	2025-01-03 12:16:35.649	2025-01-03 12:16:35.649	\N	\N	100000	110000	-10000	100000	100000	0
 \.
 
 
@@ -1195,6 +1200,7 @@ COPY public."Loan" (id, "facilityId", amount, "outstandingAmount", currency, sta
 cm5fvbqtq0002ihrfpngn98uv	cm5fuxpoz0006bqs5gexga8h5	100000	100000	USD	ACTIVE	1M	2025-01-02 21:58:50.481	2.00000	4.00000	2025-01-02 21:58:50.511	2025-01-02 21:58:50.51
 cm5fvswjc0009ihrfm4yfgsaz	cm5fuxpoz0006bqs5gexga8h5	100000	100000	USD	ACTIVE	1M	2025-01-02 22:12:10.982	6.00000	8.00000	2025-01-02 22:12:11.064	2025-01-02 22:12:11.062
 cm5fyzsq60002m0wdk7r2xa8a	cm5fuxpoz0006bqs5gexga8h5	100000	100000	USD	ACTIVE	1M	2025-01-02 23:41:31.454	5.00000	7.00000	2025-01-02 23:41:31.566	2025-01-02 23:41:31.565
+cm5gpytjv0002860gmycepz43	cm5fuxpoz0006bqs5gexga8h5	1000000	1000000	USD	ACTIVE	1M	2025-01-03 12:16:35.32	2.00000	4.00000	2025-01-03 12:16:35.609	2025-01-03 12:16:35.607
 \.
 
 
@@ -1204,6 +1210,7 @@ cm5fyzsq60002m0wdk7r2xa8a	cm5fuxpoz0006bqs5gexga8h5	100000	100000	USD	ACTIVE	1M	
 
 COPY public."ServicingActivity" (id, "facilityId", "activityType", "dueDate", description, amount, status, "completedAt", "completedBy", "createdAt", "updatedAt", "facilityOutstandingAmount") FROM stdin;
 cm5fyzss30008m0wdj0qnjnpx	cm5fuxpoz0006bqs5gexga8h5	DRAWDOWN	2025-01-02 23:41:31.454	Loan drawdown from FAC-002-TLA	100000	COMPLETED	\N	\N	2025-01-02 23:41:31.636	2025-01-02 23:41:31.636	\N
+cm5gpytlf000a860gjilquj6j	cm5fuxpoz0006bqs5gexga8h5	DRAWDOWN	2025-01-03 12:16:35.32	Loan drawdown from FAC-002-TLA	1000000	COMPLETED	\N	\N	2025-01-03 12:16:35.667	2025-01-03 12:16:35.667	\N
 \.
 
 
@@ -1239,7 +1246,7 @@ COPY public."ServicingTeamMember" (id, "assignmentId", "firstName", "lastName", 
 --
 
 COPY public."Trade" (id, "facilityId", "sellerCounterpartyId", "buyerCounterpartyId", "tradeDate", "settlementDate", "parAmount", price, status, "createdAt", "updatedAt", "settlementAmount", "facilityOutstandingAmount") FROM stdin;
-cm5g01dr20002b0frabbwkddu	cm5fuxpoz0006bqs5gexga8h5	cm5fd536f0005143brwcdy7lc	cm5ep9xa2009dkj5dnqizgb10	2025-01-03 00:10:45.084	2025-01-04 00:10:24.996	100000	99	SETTLED	2025-01-03 00:10:45.085	2025-01-03 00:10:56.958	99000	\N
+cm5g01dr20002b0frabbwkddu	cm5fuxpoz0006bqs5gexga8h5	cm5fd536f0005143brwcdy7lc	cm5ep9xa2009dkj5dnqizgb10	2025-01-03 00:10:45.084	2025-01-04 00:10:24.996	100000	99	CLOSED	2025-01-03 00:10:45.085	2025-01-03 01:42:23.524	99000	0
 \.
 
 
@@ -1250,6 +1257,7 @@ cm5g01dr20002b0frabbwkddu	cm5fuxpoz0006bqs5gexga8h5	cm5fd536f0005143brwcdy7lc	cm
 COPY public."TradeStatusChange" (id, "tradeId", "fromStatus", "toStatus", description, "createdAt", "updatedAt") FROM stdin;
 cm5g01i930005b0frx0mzo5zn	cm5g01dr20002b0frabbwkddu	PENDING	CONFIRMED	\N	2025-01-03 00:10:50.919	2025-01-03 00:10:50.919
 cm5g01mwy0007b0frxpj2tlei	cm5g01dr20002b0frabbwkddu	CONFIRMED	SETTLED	\N	2025-01-03 00:10:56.962	2025-01-03 00:10:56.962
+cm5g3b8dl001sb0frdexs6fxw	cm5g01dr20002b0frabbwkddu	SETTLED	CLOSED	\N	2025-01-03 01:42:23.529	2025-01-03 01:42:23.529
 \.
 
 
@@ -1262,6 +1270,8 @@ cm5fvbquo0006ihrfmh3fuu9b	\N	cm5fvbqtq0002ihrfpngn98uv	\N	\N	LOAN_DRAWDOWN	10000
 cm5fvswkh000dihrfmgkmpmoz	\N	cm5fvswjc0009ihrfm4yfgsaz	\N	\N	LOAN_DRAWDOWN	100000	USD	COMPLETED	Loan drawdown from FAC-002-TLA	2025-01-02 22:12:10.982	SYSTEM	2025-01-02 22:12:11.106	2025-01-02 22:12:11.105	\N
 cm5fyzsry0006m0wd7jn6atwp	\N	cm5fyzsq60002m0wdk7r2xa8a	\N	\N	LOAN_DRAWDOWN	100000	USD	COMPLETED	Loan drawdown from FAC-002-TLA	2025-01-02 23:41:31.454	SYSTEM	2025-01-02 23:41:31.63	2025-01-02 23:41:31.629	\N
 cm5g01dr20003b0fro42itudv	\N	\N	cm5g01dr20002b0frabbwkddu	\N	TRADE_CREATED	100000	USD	PENDING	Trade created	2025-01-03 00:10:45.084	SYSTEM	2025-01-03 00:10:45.085	2025-01-03 00:10:45.085	\N
+cm5g3b8dd001qb0frt0l870vh	\N	\N	cm5g01dr20002b0frabbwkddu	\N	TRADE_SETTLEMENT	100000	USD	COMPLETED	Trade closed - 100000 transferred from Bank of Test to Advanced Corporate Capital	2025-01-03 01:42:23.521	SYSTEM	2025-01-03 01:42:23.521	2025-01-03 01:42:23.521	0
+cm5gpytla0008860gaq5j4xbc	\N	cm5gpytjv0002860gmycepz43	\N	\N	LOAN_DRAWDOWN	1000000	USD	COMPLETED	Loan drawdown from FAC-002-TLA	2025-01-03 12:16:35.32	SYSTEM	2025-01-03 12:16:35.662	2025-01-03 12:16:35.661	\N
 \.
 
 

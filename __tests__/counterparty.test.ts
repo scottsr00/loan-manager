@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@prisma/client'
 import { prisma } from '@/server/db/client'
 import { createCounterparty, updateCounterparty } from '@/server/actions/counterparty'
-import { type CreateCounterpartyInput } from '@/types/counterparty'
+import { type CounterpartyInput } from '@/server/types/counterparty'
 
 type MockPrisma = {
   [K in keyof PrismaClient]: {
@@ -17,6 +17,10 @@ jest.mock('@/server/db/client', () => ({
       update: jest.fn(),
       findUnique: jest.fn(),
     },
+    entity: {
+      create: jest.fn(),
+      update: jest.fn(),
+    }
   } as unknown as MockPrisma,
 }))
 
@@ -26,78 +30,138 @@ describe('Counterparty Tests', () => {
   })
 
   describe('createCounterparty', () => {
-    const mockCounterpartyInput: CreateCounterpartyInput = {
+    const mockCounterpartyInput: CounterpartyInput = {
       name: 'Test Counterparty Inc',
-      typeId: 'type-1',
+      status: 'ACTIVE',
+      addresses: [{
+        type: 'BUSINESS',
+        street1: '123 Main St',
+        city: 'San Francisco',
+        state: 'CA',
+        country: 'USA',
+        postalCode: '94105',
+        isPrimary: true
+      }],
+      contacts: [{
+        type: 'PRIMARY',
+        firstName: 'John',
+        lastName: 'Doe',
+        title: 'CEO',
+        email: 'john@example.com',
+        phone: '555-0123',
+        isPrimary: true
+      }]
     }
 
     it('should create a counterparty with valid inputs', async () => {
-      const mockCounterparty = {
-        id: 'counterparty-1',
-        name: mockCounterpartyInput.name,
-        typeId: mockCounterpartyInput.typeId,
+      const mockEntity = {
+        id: 'entity-1',
+        legalName: mockCounterpartyInput.name,
         status: 'ACTIVE',
-        type: {
-          id: 'type-1',
-          name: 'Broker Dealer',
-        },
+        counterparty: {
+          id: 'counterparty-1',
+          status: mockCounterpartyInput.status,
+          addresses: mockCounterpartyInput.addresses,
+          contacts: mockCounterpartyInput.contacts
+        }
       }
 
-      ;(prisma.counterparty.create as jest.Mock).mockResolvedValue(mockCounterparty)
+      ;(prisma.entity.create as jest.Mock).mockResolvedValue(mockEntity)
 
       const result = await createCounterparty(mockCounterpartyInput)
 
       expect(result).toHaveProperty('id', 'counterparty-1')
-      expect(result.name).toBe(mockCounterpartyInput.name)
-      expect(result.typeId).toBe(mockCounterpartyInput.typeId)
-      expect(prisma.counterparty.create).toHaveBeenCalledTimes(1)
+      expect(result.status).toBe('ACTIVE')
+      expect(result.addresses).toEqual(mockCounterpartyInput.addresses)
+      expect(result.contacts).toEqual(mockCounterpartyInput.contacts)
+      expect(prisma.entity.create).toHaveBeenCalledTimes(1)
     })
 
     it('should validate required fields', async () => {
       const invalidInput = {
         name: '',
-        typeId: '',
-      } as CreateCounterpartyInput
+        status: 'ACTIVE',
+        addresses: [],
+        contacts: []
+      } as CounterpartyInput
 
       await expect(createCounterparty(invalidInput))
-        .rejects.toThrow(/Name is required|Counterparty type is required/)
+        .rejects.toThrow(/Name is required/)
 
-      expect(prisma.counterparty.create).not.toHaveBeenCalled()
+      expect(prisma.entity.create).not.toHaveBeenCalled()
     })
   })
 
   describe('updateCounterparty', () => {
     const mockExistingCounterparty = {
       id: 'counterparty-1',
-      name: 'Test Counterparty Inc',
-      typeId: 'type-1',
       status: 'ACTIVE',
-      type: {
-        id: 'type-1',
-        name: 'Broker Dealer',
+      entity: {
+        id: 'entity-1',
+        legalName: 'Test Counterparty Inc'
       },
+      addresses: [{
+        type: 'BUSINESS',
+        street1: '123 Main St',
+        city: 'San Francisco',
+        state: 'CA',
+        country: 'USA',
+        postalCode: '94105',
+        isPrimary: true
+      }],
+      contacts: [{
+        type: 'PRIMARY',
+        firstName: 'John',
+        lastName: 'Doe',
+        title: 'CEO',
+        email: 'john@example.com',
+        phone: '555-0123',
+        isPrimary: true
+      }]
     }
 
-    const mockUpdateInput: Partial<CreateCounterpartyInput> = {
+    const mockUpdateInput: Partial<CounterpartyInput> = {
       name: 'Updated Counterparty Inc',
-      typeId: 'type-2',
       status: 'INACTIVE',
+      addresses: [{
+        type: 'BUSINESS',
+        street1: '456 Market St',
+        city: 'San Francisco',
+        state: 'CA',
+        country: 'USA',
+        postalCode: '94105',
+        isPrimary: true
+      }],
+      contacts: [{
+        type: 'PRIMARY',
+        firstName: 'Jane',
+        lastName: 'Smith',
+        title: 'CFO',
+        email: 'jane@example.com',
+        phone: '555-4567',
+        isPrimary: true
+      }]
     }
 
     it('should update counterparty with valid changes', async () => {
       ;(prisma.counterparty.findUnique as jest.Mock).mockResolvedValue(mockExistingCounterparty)
       ;(prisma.counterparty.update as jest.Mock).mockResolvedValue({
         ...mockExistingCounterparty,
-        name: mockUpdateInput.name,
-        typeId: mockUpdateInput.typeId,
         status: mockUpdateInput.status,
+        entity: {
+          ...mockExistingCounterparty.entity,
+          legalName: mockUpdateInput.name
+        },
+        addresses: mockUpdateInput.addresses,
+        contacts: mockUpdateInput.contacts
       })
 
       const result = await updateCounterparty('counterparty-1', mockUpdateInput)
 
-      expect(result.name).toBe(mockUpdateInput.name)
-      expect(result.typeId).toBe(mockUpdateInput.typeId)
+      expect(result.entity?.legalName).toBe(mockUpdateInput.name)
       expect(result.status).toBe(mockUpdateInput.status)
+      expect(result.addresses).toEqual(mockUpdateInput.addresses)
+      expect(result.contacts).toEqual(mockUpdateInput.contacts)
       expect(prisma.counterparty.update).toHaveBeenCalledTimes(1)
     })
 

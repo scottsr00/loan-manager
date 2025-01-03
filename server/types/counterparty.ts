@@ -4,7 +4,6 @@ import { z } from 'zod'
 // Base Prisma Types with Relations
 export type CounterpartyWithRelations = Prisma.CounterpartyGetPayload<{
   include: {
-    type: true
     addresses: true
     contacts: true
   }
@@ -34,7 +33,6 @@ export const contactSchema = z.object({
 
 export const counterpartyInputSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  typeId: z.string().min(1, 'Counterparty type is required'),
   status: z.string().default('ACTIVE'),
   addresses: z.array(addressSchema).min(1, 'At least one address is required'),
   contacts: z.array(contactSchema).min(1, 'At least one contact is required')
@@ -49,12 +47,6 @@ export type ContactInput = z.infer<typeof contactSchema>
 export interface Counterparty extends PrismaCounterparty {
   id: string
   name: string
-  typeId: string
-  type: {
-    id: string
-    name: string
-    description?: string | null
-  }
   status: string
   addresses: Array<{
     id: string

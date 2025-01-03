@@ -14,11 +14,10 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { counterpartyInputSchema, type CounterpartyInput } from '@/server/types/counterparty'
-import { createCounterparty } from '@/server/actions/counterparty/createCounterparty'
-import { useCounterpartyTypes } from '@/hooks/useCounterpartyTypes'
+import { useCounterparties } from '@/hooks/useCounterparties'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface NewCounterpartyModalProps {
   open: boolean
@@ -30,13 +29,12 @@ export function NewCounterpartyModal({
   onOpenChange,
 }: NewCounterpartyModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { counterpartyTypes, isLoading: isLoadingTypes } = useCounterpartyTypes()
+  const { create } = useCounterparties()
 
   const form = useForm<CounterpartyInput>({
     resolver: zodResolver(counterpartyInputSchema),
     defaultValues: {
       name: '',
-      typeId: '',
       status: 'ACTIVE',
       addresses: [{
         type: 'LEGAL',
@@ -63,26 +61,16 @@ export function NewCounterpartyModal({
   async function onSubmit(data: CounterpartyInput) {
     try {
       setIsSubmitting(true)
-      await createCounterparty(data)
+      await create(data)
+      toast.success('Counterparty created successfully')
       form.reset()
       onOpenChange(false)
     } catch (error) {
       console.error('Error creating counterparty:', error)
+      toast.error('Failed to create counterparty')
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  if (isLoadingTypes) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-          <div className="flex justify-center items-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
   }
 
   return (
@@ -107,31 +95,6 @@ export function NewCounterpartyModal({
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="typeId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {counterpartyTypes?.map((type) => (
-                          <SelectItem key={type.id} value={type.id}>
-                            {type.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -265,21 +228,21 @@ export function NewCounterpartyModal({
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="contacts.0.title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="contacts.0.title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title (Optional)</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="contacts.0.email"
@@ -293,33 +256,36 @@ export function NewCounterpartyModal({
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="contacts.0.phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="tel" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
+
+              <FormField
+                control={form.control}
+                name="contacts.0.phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone (Optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="tel" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  'Create Counterparty'
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
+                Create
               </Button>
             </div>
           </form>

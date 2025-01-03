@@ -331,12 +331,10 @@ model ServicingActivity {
 model Counterparty {
   id                   String                @id @default(cuid())
   entityId             String                @unique
-  typeId               String
   status               String                @default("ACTIVE")
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   entity               Entity                @relation(fields: [entityId], references: [id])
-  type                 CounterpartyType      @relation(fields: [typeId], references: [id])
   addresses            Address[]
   contacts             Contact[]
   counterpartyContacts CounterpartyContact[]
@@ -345,16 +343,6 @@ model Counterparty {
   servicingAssignments ServicingAssignment[]
 
   @@index([entityId])
-  @@index([typeId])
-}
-
-model CounterpartyType {
-  id            String        @id @default(cuid())
-  name          String
-  description   String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  counterparties Counterparty[]
 }
 
 model CounterpartyContact {
