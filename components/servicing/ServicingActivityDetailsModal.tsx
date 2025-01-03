@@ -151,7 +151,8 @@ export function ServicingActivityDetailsModal({
                     const types: Record<string, string> = {
                       'INTEREST_PAYMENT': 'Interest Payment',
                       'PRINCIPAL_PAYMENT': 'Principal Payment',
-                      'UNSCHEDULED_PAYMENT': 'Unscheduled Payment'
+                      'UNSCHEDULED_PAYMENT': 'Unscheduled Payment',
+                      'DRAWDOWN': 'Loan Drawdown'
                     };
                     return types[activity.activityType] || activity.activityType;
                   })()}

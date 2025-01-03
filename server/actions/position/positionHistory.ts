@@ -8,8 +8,12 @@ interface CreatePositionHistoryInput {
   facilityId: string
   lenderId: string
   changeType: 'PAYDOWN' | 'ACCRUAL' | 'TRADE'
-  previousOutstandingAmount: number
-  newOutstandingAmount: number
+  previousCommitmentAmount: number
+  newCommitmentAmount: number
+  previousUndrawnAmount: number
+  newUndrawnAmount: number
+  previousDrawnAmount: number
+  newDrawnAmount: number
   previousAccruedInterest: number
   newAccruedInterest: number
   changeAmount: number

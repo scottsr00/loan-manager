@@ -1,25 +1,9 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { type FacilityPosition } from '@prisma/client'
+import { type FacilityPositionWithRelations, type FacilityPositionView } from '@/server/types/facility-position'
 
-interface PositionWithRelations extends FacilityPosition {
-  lender: {
-    entity: {
-      legalName: string
-      id: string
-    }
-  }
-}
-
-interface FacilityPositionInfo {
-  id: string
-  name: string
-  amount: number
-  share: number
-}
-
-export async function getFacilityPositions(facilityId: string): Promise<FacilityPositionInfo[]> {
+export async function getFacilityPositions(facilityId: string): Promise<FacilityPositionView[]> {
   try {
     const facility = await prisma.facility.findUnique({
       where: { id: facilityId },
@@ -49,11 +33,17 @@ export async function getFacilityPositions(facilityId: string): Promise<Facility
     }
 
     // Map positions to include entity information
-    return facility.positions.map((position: PositionWithRelations) => ({
-      id: position.lender.entity.id,
-      name: position.lender.entity.legalName,
-      amount: position.amount,
-      share: position.share
+    return facility.positions.map((position: FacilityPositionWithRelations) => ({
+      id: position.id,
+      lenderId: position.lender.entity.id,
+      lenderName: position.lender.entity.legalName,
+      facilityId: facility.id,
+      facilityName: facility.facilityName,
+      commitmentAmount: position.commitmentAmount,
+      drawnAmount: position.drawnAmount,
+      undrawnAmount: position.undrawnAmount,
+      share: position.share,
+      status: position.status
     }))
   } catch (error) {
     console.error('Error fetching facility positions:', error)

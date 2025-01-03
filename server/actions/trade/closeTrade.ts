@@ -75,9 +75,9 @@ export async function closeTrade(tradeId: string, userId: string) {
         throw new Error('Seller position not found')
       }
 
-      // Calculate new share percentages
-      const newSellerShare = ((sellerPosition.amount - trade.parAmount) / trade.facility.commitmentAmount) * 100
-      const newBuyerShare = ((buyerPosition?.amount || 0 + trade.parAmount) / trade.facility.commitmentAmount) * 100
+      // Calculate new share percentages based on commitment amounts
+      const newSellerShare = ((sellerPosition.commitmentAmount - trade.parAmount) / trade.facility.commitmentAmount) * 100
+      const newBuyerShare = ((buyerPosition?.commitmentAmount || 0 + trade.parAmount) / trade.facility.commitmentAmount) * 100
 
       // Update seller position
       const updatedSellerPosition = await tx.facilityPosition.update({
@@ -85,7 +85,9 @@ export async function closeTrade(tradeId: string, userId: string) {
           id: sellerPosition.id
         },
         data: {
-          amount: sellerPosition.amount - trade.parAmount,
+          commitmentAmount: sellerPosition.commitmentAmount - trade.parAmount,
+          drawnAmount: sellerPosition.drawnAmount - trade.parAmount,
+          undrawnAmount: sellerPosition.undrawnAmount,
           share: newSellerShare
         }
       })
@@ -98,7 +100,9 @@ export async function closeTrade(tradeId: string, userId: string) {
             id: buyerPosition.id
           },
           data: {
-            amount: buyerPosition.amount + trade.parAmount,
+            commitmentAmount: buyerPosition.commitmentAmount + trade.parAmount,
+            drawnAmount: buyerPosition.drawnAmount + trade.parAmount,
+            undrawnAmount: buyerPosition.undrawnAmount,
             share: newBuyerShare
           }
         })
@@ -107,8 +111,11 @@ export async function closeTrade(tradeId: string, userId: string) {
           data: {
             facilityId: trade.facilityId,
             lenderId: buyerLender.id,
-            amount: trade.parAmount,
-            share: newBuyerShare
+            commitmentAmount: trade.parAmount,
+            drawnAmount: trade.parAmount,
+            undrawnAmount: 0,
+            share: newBuyerShare,
+            status: 'ACTIVE'
           }
         })
       }
@@ -118,8 +125,12 @@ export async function closeTrade(tradeId: string, userId: string) {
         facilityId: trade.facilityId,
         lenderId: trade.sellerCounterparty.entity.id,
         changeType: 'TRADE',
-        previousOutstandingAmount: sellerPosition.amount,
-        newOutstandingAmount: updatedSellerPosition.amount,
+        previousCommitmentAmount: sellerPosition.commitmentAmount,
+        newCommitmentAmount: updatedSellerPosition.commitmentAmount,
+        previousUndrawnAmount: sellerPosition.undrawnAmount,
+        newUndrawnAmount: updatedSellerPosition.undrawnAmount,
+        previousDrawnAmount: sellerPosition.drawnAmount,
+        newDrawnAmount: updatedSellerPosition.drawnAmount,
         previousAccruedInterest: 0,
         newAccruedInterest: 0,
         changeAmount: -trade.parAmount,
@@ -135,8 +146,12 @@ export async function closeTrade(tradeId: string, userId: string) {
         facilityId: trade.facilityId,
         lenderId: trade.buyerCounterparty.entity.id,
         changeType: 'TRADE',
-        previousOutstandingAmount: buyerPosition?.amount || 0,
-        newOutstandingAmount: updatedBuyerPosition.amount,
+        previousCommitmentAmount: buyerPosition?.commitmentAmount || 0,
+        newCommitmentAmount: updatedBuyerPosition.commitmentAmount,
+        previousUndrawnAmount: buyerPosition?.undrawnAmount || 0,
+        newUndrawnAmount: updatedBuyerPosition.undrawnAmount,
+        previousDrawnAmount: buyerPosition?.drawnAmount || 0,
+        newDrawnAmount: updatedBuyerPosition.drawnAmount,
         previousAccruedInterest: 0,
         newAccruedInterest: 0,
         changeAmount: trade.parAmount,

@@ -13,7 +13,7 @@ export async function getCreditAgreementList() {
         agreementNumber: true,
         borrower: {
           select: {
-            name: true
+            legalName: true
           }
         },
         facilities: {

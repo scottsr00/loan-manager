@@ -164,6 +164,18 @@ export async function createLoan(params: CreateLoanParams) {
         }
       })
 
+      // Record the drawdown as a servicing activity
+      await tx.servicingActivity.create({
+        data: {
+          facilityId,
+          activityType: 'DRAWDOWN',
+          dueDate: effectiveDate,
+          description: description || 'Initial loan drawdown',
+          amount,
+          status: 'COMPLETED'
+        }
+      })
+
       return loan
     })
   } catch (error) {

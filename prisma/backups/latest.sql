@@ -35,7 +35,8 @@ ALTER TYPE public."ActivityType" OWNER TO stephenscott;
 CREATE TYPE public."PositionChangeType" AS ENUM (
     'PAYDOWN',
     'ACCRUAL',
-    'TRADE'
+    'TRADE',
+    'DRAWDOWN'
 );
 
 
@@ -95,9 +96,6 @@ ALTER TABLE public."BeneficialOwner" OWNER TO stephenscott;
 CREATE TABLE public."Borrower" (
     id text NOT NULL,
     "entityId" text NOT NULL,
-    name text NOT NULL,
-    "taxId" text,
-    "countryOfIncorporation" text,
     "industrySegment" text,
     "businessType" text,
     "creditRating" text,
@@ -248,7 +246,8 @@ CREATE TABLE public."Facility" (
     status text DEFAULT 'ACTIVE'::text NOT NULL,
     description text,
     "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "updatedAt" timestamp(3) without time zone NOT NULL
+    "updatedAt" timestamp(3) without time zone NOT NULL,
+    "outstandingAmount" double precision DEFAULT 0 NOT NULL
 );
 
 
@@ -262,11 +261,13 @@ CREATE TABLE public."FacilityPosition" (
     id text NOT NULL,
     "facilityId" text NOT NULL,
     "lenderId" text NOT NULL,
-    amount double precision NOT NULL,
     share double precision NOT NULL,
     status text DEFAULT 'ACTIVE'::text NOT NULL,
     "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "updatedAt" timestamp(3) without time zone NOT NULL
+    "updatedAt" timestamp(3) without time zone NOT NULL,
+    "commitmentAmount" double precision NOT NULL,
+    "drawnAmount" double precision DEFAULT 0 NOT NULL,
+    "undrawnAmount" double precision NOT NULL
 );
 
 
@@ -333,8 +334,6 @@ CREATE TABLE public."LenderPositionHistory" (
     "lenderId" text NOT NULL,
     "changeDateTime" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     "changeType" public."PositionChangeType" NOT NULL,
-    "previousOutstandingAmount" double precision NOT NULL,
-    "newOutstandingAmount" double precision NOT NULL,
     "previousAccruedInterest" double precision NOT NULL,
     "newAccruedInterest" double precision NOT NULL,
     "changeAmount" double precision NOT NULL,
@@ -343,7 +342,13 @@ CREATE TABLE public."LenderPositionHistory" (
     "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     "updatedAt" timestamp(3) without time zone NOT NULL,
     "servicingActivityId" text,
-    "tradeId" text
+    "tradeId" text,
+    "newCommitmentAmount" double precision NOT NULL,
+    "newDrawnAmount" double precision NOT NULL,
+    "newUndrawnAmount" double precision NOT NULL,
+    "previousCommitmentAmount" double precision NOT NULL,
+    "previousDrawnAmount" double precision NOT NULL,
+    "previousUndrawnAmount" double precision NOT NULL
 );
 
 
@@ -386,7 +391,8 @@ CREATE TABLE public."ServicingActivity" (
     "completedAt" timestamp(3) without time zone,
     "completedBy" text,
     "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "updatedAt" timestamp(3) without time zone NOT NULL
+    "updatedAt" timestamp(3) without time zone NOT NULL,
+    "facilityOutstandingAmount" double precision
 );
 
 
@@ -461,11 +467,29 @@ CREATE TABLE public."Trade" (
     status text DEFAULT 'PENDING'::text NOT NULL,
     "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     "updatedAt" timestamp(3) without time zone NOT NULL,
-    "settlementAmount" double precision NOT NULL
+    "settlementAmount" double precision NOT NULL,
+    "facilityOutstandingAmount" double precision
 );
 
 
 ALTER TABLE public."Trade" OWNER TO stephenscott;
+
+--
+-- Name: TradeStatusChange; Type: TABLE; Schema: public; Owner: stephenscott
+--
+
+CREATE TABLE public."TradeStatusChange" (
+    id text NOT NULL,
+    "tradeId" text NOT NULL,
+    "fromStatus" text NOT NULL,
+    "toStatus" text NOT NULL,
+    description text,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL
+);
+
+
+ALTER TABLE public."TradeStatusChange" OWNER TO stephenscott;
 
 --
 -- Name: TransactionHistory; Type: TABLE; Schema: public; Owner: stephenscott
@@ -485,7 +509,8 @@ CREATE TABLE public."TransactionHistory" (
     "effectiveDate" timestamp(3) without time zone NOT NULL,
     "processedBy" text NOT NULL,
     "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "updatedAt" timestamp(3) without time zone NOT NULL
+    "updatedAt" timestamp(3) without time zone NOT NULL,
+    "facilityOutstandingAmount" double precision
 );
 
 
@@ -681,8 +706,8 @@ COPY public."BeneficialOwner" (id, "entityId", name, "dateOfBirth", nationality,
 -- Data for Name: Borrower; Type: TABLE DATA; Schema: public; Owner: stephenscott
 --
 
-COPY public."Borrower" (id, "entityId", name, "taxId", "countryOfIncorporation", "industrySegment", "businessType", "creditRating", "ratingAgency", "riskRating", "onboardingStatus", "kycStatus", "createdAt", "updatedAt") FROM stdin;
-cm5ep9xbg00blkj5dgg9d962w	LEI999999	Test Company Inc.	TAX123	US	Technology	Corporation	BBB	S&P	Medium	COMPLETED	COMPLETED	2025-01-02 02:21:41.741	2025-01-02 02:21:41.741
+COPY public."Borrower" (id, "entityId", "industrySegment", "businessType", "creditRating", "ratingAgency", "riskRating", "onboardingStatus", "kycStatus", "createdAt", "updatedAt") FROM stdin;
+cm5ep9xbg00blkj5dgg9d962w	LEI999999	Technology	Corporation	BBB	S&P	Medium	COMPLETED	APPROVED	2025-01-02 02:21:41.741	2025-01-02 20:18:06.236
 \.
 
 
@@ -957,6 +982,7 @@ cm5ep9xb300b2kj5dopmp9afl	LEI000096	cm5ep9x060000kj5dao3zpodk	ACTIVE	2025-01-02 
 cm5ep9xb600b6kj5di4ow2nqz	LEI000097	cm5ep9x0h0001kj5d5usts2vv	ACTIVE	2025-01-02 02:21:41.73	2025-01-02 02:21:41.73
 cm5ep9xb800bakj5dgxm04dsk	LEI000098	cm5ep9x0i0002kj5ddvyifkpm	PENDING	2025-01-02 02:21:41.732	2025-01-02 02:21:41.732
 cm5ep9xba00bfkj5d8p6sh22f	LEI000099	cm5ep9x0i0003kj5d6up661uu	ACTIVE	2025-01-02 02:21:41.735	2025-01-02 02:21:41.735
+cm5fd536f0005143brwcdy7lc	LEI888888	cm5fd535j0001143bqcdnfhb4	ACTIVE	2025-01-02 13:29:46.84	2025-01-02 13:29:46.84
 \.
 
 
@@ -979,6 +1005,9 @@ cm5ep9x0i0002kj5ddvyifkpm	Investment	Investment management company	2025-01-02 02
 cm5ep9x0i0003kj5d6up661uu	Corporate	Non-financial corporation	2025-01-02 02:21:41.347	2025-01-02 02:21:41.347
 cm5ep9x0j0004kj5dzfxo6h6x	Government	Government entity	2025-01-02 02:21:41.348	2025-01-02 02:21:41.348
 cm5ep9x0k0005kj5dusi02uua	Non-Profit	Non-profit organization	2025-01-02 02:21:41.348	2025-01-02 02:21:41.348
+cm5fd535j0001143bqcdnfhb4	LENDER	Entity that can lend in facilities	2025-01-02 13:29:46.808	2025-01-02 13:29:46.808
+cm5fd536b0002143bq8tdayra	BORROWER	Entity that can borrow from facilities	2025-01-02 13:29:46.836	2025-01-02 13:29:46.836
+cm5fd536d0003143bmb730nwa	AGENT	Entity that can act as an agent	2025-01-02 13:29:46.837	2025-01-02 13:29:46.837
 \.
 
 
@@ -987,7 +1016,7 @@ cm5ep9x0k0005kj5dusi02uua	Non-Profit	Non-profit organization	2025-01-02 02:21:41
 --
 
 COPY public."CreditAgreement" (id, "agreementNumber", "borrowerId", "lenderId", status, amount, currency, "startDate", "maturityDate", "interestRate", description, "createdAt", "updatedAt") FROM stdin;
-cm5ep9xbo00bqkj5d9jws0u3v	CA-2024-001	cm5ep9xbg00blkj5dgg9d962w	LEI888888	ACTIVE	10000000	USD	2025-01-02 02:21:41.746	2026-01-02 02:21:41.746	5.5	\N	2025-01-02 02:21:41.749	2025-01-02 02:35:08.055
+cm5fuxpoy0005bqs5x0f1mhmh	CA-2024-002	LEI999999	LEI888888	ACTIVE	10000000	USD	2025-01-02 21:42:28.066	2030-01-02 21:42:28.066	2	\N	2025-01-02 21:47:55.858	2025-01-02 21:47:55.858
 \.
 
 
@@ -1096,8 +1125,8 @@ LEI000096	Innovative Bank Enterprises	\N	\N	\N	ACTIVE	f	2025-01-02 02:21:41.726	
 LEI000097	Pacific Insurance Enterprises	\N	\N	\N	ACTIVE	f	2025-01-02 02:21:41.729	2025-01-02 02:21:41.729
 LEI000098	Atlantic Investment Enterprises	\N	\N	\N	ACTIVE	f	2025-01-02 02:21:41.731	2025-01-02 02:21:41.731
 LEI000099	United Corporate Enterprises	\N	\N	\N	ACTIVE	f	2025-01-02 02:21:41.733	2025-01-02 02:21:41.733
-LEI999999	Test Company Inc.	\N	TAX123	US	ACTIVE	f	2025-01-02 02:21:41.739	2025-01-02 02:21:41.739
 LEI888888	Bank of Test	Test Bank	BANK456	US	ACTIVE	t	2025-01-02 02:21:41.743	2025-01-02 02:21:41.743
+LEI999999	Test Company Inc.	\N	TAX123	US	ACTIVE	f	2025-01-02 02:21:41.739	2025-01-02 20:18:06.165
 \.
 
 
@@ -1105,8 +1134,8 @@ LEI888888	Bank of Test	Test Bank	BANK456	US	ACTIVE	t	2025-01-02 02:21:41.743	202
 -- Data for Name: Facility; Type: TABLE DATA; Schema: public; Owner: stephenscott
 --
 
-COPY public."Facility" (id, "facilityName", "facilityType", "creditAgreementId", "commitmentAmount", "availableAmount", currency, "startDate", "maturityDate", "interestType", "baseRate", margin, status, description, "createdAt", "updatedAt") FROM stdin;
-cm5ep9xbo00brkj5do5rwlzsd	Term Loan A	TERM_LOAN	cm5ep9xbo00bqkj5d9jws0u3v	6000000	6000000	USD	2025-01-02 02:21:41.746	2026-01-02 02:21:41.746	FLOATING	SOFR	2.5	ACTIVE	\N	2025-01-02 02:21:41.749	2025-01-02 02:21:41.749
+COPY public."Facility" (id, "facilityName", "facilityType", "creditAgreementId", "commitmentAmount", "availableAmount", currency, "startDate", "maturityDate", "interestType", "baseRate", margin, status, description, "createdAt", "updatedAt", "outstandingAmount") FROM stdin;
+cm5fuxpoz0006bqs5gexga8h5	FAC-002-TLA	TERM	cm5fuxpoy0005bqs5x0f1mhmh	10000000	10000000	USD	2025-01-01 05:00:00	2026-02-01 05:00:00	FLOATING	SOFR	2	ACTIVE	\N	2025-01-02 21:47:55.858	2025-01-02 21:47:55.858	0
 \.
 
 
@@ -1114,8 +1143,8 @@ cm5ep9xbo00brkj5do5rwlzsd	Term Loan A	TERM_LOAN	cm5ep9xbo00bqkj5d9jws0u3v	600000
 -- Data for Name: FacilityPosition; Type: TABLE DATA; Schema: public; Owner: stephenscott
 --
 
-COPY public."FacilityPosition" (id, "facilityId", "lenderId", amount, share, status, "createdAt", "updatedAt") FROM stdin;
-cm5ep9xbo00btkj5d5bi0h4v0	cm5ep9xbo00brkj5do5rwlzsd	cm5ep9xbk00bokj5domsprisi	6549999.999999999	100	ACTIVE	2025-01-02 02:21:41.749	2025-01-02 04:18:30.808
+COPY public."FacilityPosition" (id, "facilityId", "lenderId", share, status, "createdAt", "updatedAt", "commitmentAmount", "drawnAmount", "undrawnAmount") FROM stdin;
+cm5fuxpoz0008bqs5uttlmh7h	cm5fuxpoz0006bqs5gexga8h5	cm5ep9xbk00bokj5domsprisi	100	ACTIVE	2025-01-02 21:47:55.858	2025-01-02 23:41:31.589	10000000	300000	9700000
 \.
 
 
@@ -1132,6 +1161,8 @@ COPY public."FacilitySublimit" (id, "facilityId", type, amount, description, "cr
 --
 
 COPY public."KYC" (id, "entityId", "verificationStatus", "lenderVerified", "counterpartyVerified", "lastVerificationDate", "createdAt", "updatedAt") FROM stdin;
+cm5faajkp0001aielemqajbvz	LEI000081	VERIFIED	f	t	2025-01-02 12:10:02.515	2025-01-02 12:10:02.518	2025-01-02 12:10:02.518
+cm5fby4ah0003aiel7u64zz0w	LEI888888	VERIFIED	f	t	2025-01-02 12:56:22.062	2025-01-02 12:56:22.072	2025-01-02 12:56:22.072
 \.
 
 
@@ -1141,6 +1172,7 @@ COPY public."KYC" (id, "entityId", "verificationStatus", "lenderVerified", "coun
 
 COPY public."Lender" (id, "entityId", status, "onboardingDate", "createdAt", "updatedAt") FROM stdin;
 cm5ep9xbk00bokj5domsprisi	LEI888888	ACTIVE	2025-01-02 02:21:41.745	2025-01-02 02:21:41.745	2025-01-02 02:21:41.745
+cm5fl88f0000l10nd3kxt8s51	LEI000081	ACTIVE	2025-01-02 17:16:10.524	2025-01-02 17:16:10.524	2025-01-02 17:16:10.524
 \.
 
 
@@ -1148,13 +1180,10 @@ cm5ep9xbk00bokj5domsprisi	LEI888888	ACTIVE	2025-01-02 02:21:41.745	2025-01-02 02
 -- Data for Name: LenderPositionHistory; Type: TABLE DATA; Schema: public; Owner: stephenscott
 --
 
-COPY public."LenderPositionHistory" (id, "facilityId", "lenderId", "changeDateTime", "changeType", "previousOutstandingAmount", "newOutstandingAmount", "previousAccruedInterest", "newAccruedInterest", "changeAmount", "userId", notes, "createdAt", "updatedAt", "servicingActivityId", "tradeId") FROM stdin;
-cm5es622b000c117n96rkediw	cm5ep9xbo00brkj5do5rwlzsd	LEI888888	2025-01-02 03:42:40.116	PAYDOWN	6999999.999999999	6952631.578947367	0	0	47368.42105263157	SYSTEM	Principal payment of $47,368.42 (100.00% of $47,368.42)	2025-01-02 03:42:40.116	2025-01-02 03:42:40.116	\N	\N
-cm5es624d000h117nsk0qx4p7	cm5ep9xbo00brkj5do5rwlzsd	LEI888888	2025-01-02 03:42:40.189	PAYDOWN	6952631.578947367	6899999.999999999	0	0	52631.57894736843	SYSTEM	Principal payment of $52,631.58 (100.00% of $52,631.58)	2025-01-02 03:42:40.189	2025-01-02 03:42:40.189	\N	\N
-cm5esbowe0010117njvn8vrxi	cm5ep9xbo00brkj5do5rwlzsd	LEI888888	2025-01-02 03:47:02.991	PAYDOWN	6899999.999999999	6878835.386338185	0	0	21164.61366181411	SYSTEM	Principal payment of $21,164.61 (100.00% of $21,164.61)	2025-01-02 03:47:02.991	2025-01-02 03:47:02.991	\N	\N
-cm5esboyi0015117n2s86o0pv	cm5ep9xbo00brkj5do5rwlzsd	LEI888888	2025-01-02 03:47:03.067	PAYDOWN	6878835.386338185	6855319.148936169	0	0	23516.23740201568	SYSTEM	Principal payment of $23,516.24 (100.00% of $23,516.24)	2025-01-02 03:47:03.067	2025-01-02 03:47:03.067	\N	\N
-cm5esboyx001a117nc9poavnq	cm5ep9xbo00brkj5do5rwlzsd	LEI888888	2025-01-02 03:47:03.081	PAYDOWN	6855319.148936169	6599999.999999999	0	0	255319.1489361702	SYSTEM	Principal payment of $255,319.15 (100.00% of $255,319.15)	2025-01-02 03:47:03.081	2025-01-02 03:47:03.081	\N	\N
-cm5etg5jt000aev0dsvdjkuex	cm5ep9xbo00brkj5do5rwlzsd	LEI888888	2025-01-02 04:18:30.81	PAYDOWN	6559999.999999999	6549999.999999999	0	0	10000	SYSTEM	Principal payment of $10,000.00 (100.00% of $10,000.00)	2025-01-02 04:18:30.81	2025-01-02 04:18:30.81	cm5et539t001e117n83up8u9i	\N
+COPY public."LenderPositionHistory" (id, "facilityId", "lenderId", "changeDateTime", "changeType", "previousAccruedInterest", "newAccruedInterest", "changeAmount", "userId", notes, "createdAt", "updatedAt", "servicingActivityId", "tradeId", "newCommitmentAmount", "newDrawnAmount", "newUndrawnAmount", "previousCommitmentAmount", "previousDrawnAmount", "previousUndrawnAmount") FROM stdin;
+cm5fvbquf0004ihrfekb9oc25	cm5fuxpoz0006bqs5gexga8h5	LEI888888	2025-01-02 21:58:50.535	DRAWDOWN	0	0	100000	SYSTEM	Loan drawdown from FAC-002-TLA	2025-01-02 21:58:50.535	2025-01-02 21:58:50.535	\N	\N	10000000	100000	9900000	10000000	0	10000000
+cm5fvswk5000bihrfjtzjg5ck	cm5fuxpoz0006bqs5gexga8h5	LEI888888	2025-01-02 22:12:11.094	DRAWDOWN	0	0	100000	SYSTEM	Loan drawdown from FAC-002-TLA	2025-01-02 22:12:11.094	2025-01-02 22:12:11.094	\N	\N	10000000	200000	9800000	10000000	100000	9900000
+cm5fyzsr00004m0wd3b98p9rh	cm5fuxpoz0006bqs5gexga8h5	LEI888888	2025-01-02 23:41:31.596	DRAWDOWN	0	0	100000	SYSTEM	Loan drawdown from FAC-002-TLA	2025-01-02 23:41:31.596	2025-01-02 23:41:31.596	\N	\N	10000000	300000	9700000	10000000	200000	9800000
 \.
 
 
@@ -1163,9 +1192,9 @@ cm5etg5jt000aev0dsvdjkuex	cm5ep9xbo00brkj5do5rwlzsd	LEI888888	2025-01-02 04:18:3
 --
 
 COPY public."Loan" (id, "facilityId", amount, "outstandingAmount", currency, status, "interestPeriod", "drawDate", "baseRate", "effectiveRate", "createdAt", "updatedAt") FROM stdin;
-cm5epvynu0004t6nh56ktvmfz	cm5ep9xbo00brkj5do5rwlzsd	1000000	306886.8980963044	USD	ACTIVE	1M	2025-01-02 02:38:49.857	5.00000	7.50000	2025-01-02 02:38:49.914	2025-01-02 04:18:30.687
-cm5eq5tc7000it6nhcbh1otzv	cm5ep9xbo00brkj5do5rwlzsd	1000000	340985.4423292274	USD	ACTIVE	1M	2025-01-02 02:46:29.522	4.00000	6.50000	2025-01-02 02:46:29.576	2025-01-02 04:18:30.773
-cm5esao8f000q117nowxyg5xs	cm5ep9xbo00brkj5do5rwlzsd	4000000	3702127.65957447	USD	ACTIVE	1M	2025-01-02 03:46:15.417	1.00000	3.50000	2025-01-02 03:46:15.471	2025-01-02 04:18:30.787
+cm5fvbqtq0002ihrfpngn98uv	cm5fuxpoz0006bqs5gexga8h5	100000	100000	USD	ACTIVE	1M	2025-01-02 21:58:50.481	2.00000	4.00000	2025-01-02 21:58:50.511	2025-01-02 21:58:50.51
+cm5fvswjc0009ihrfm4yfgsaz	cm5fuxpoz0006bqs5gexga8h5	100000	100000	USD	ACTIVE	1M	2025-01-02 22:12:10.982	6.00000	8.00000	2025-01-02 22:12:11.064	2025-01-02 22:12:11.062
+cm5fyzsq60002m0wdk7r2xa8a	cm5fuxpoz0006bqs5gexga8h5	100000	100000	USD	ACTIVE	1M	2025-01-02 23:41:31.454	5.00000	7.00000	2025-01-02 23:41:31.566	2025-01-02 23:41:31.565
 \.
 
 
@@ -1173,15 +1202,8 @@ cm5esao8f000q117nowxyg5xs	cm5ep9xbo00brkj5do5rwlzsd	4000000	3702127.65957447	USD
 -- Data for Name: ServicingActivity; Type: TABLE DATA; Schema: public; Owner: stephenscott
 --
 
-COPY public."ServicingActivity" (id, "facilityId", "activityType", "dueDate", description, amount, status, "completedAt", "completedBy", "createdAt", "updatedAt") FROM stdin;
-cm5epuv390001t6nhz0kpocmb	cm5ep9xbo00brkj5do5rwlzsd	PRINCIPAL_PAYMENT	2025-01-02 02:36:03.965		100000	COMPLETED	2025-01-02 02:39:19.331	Current User	2025-01-02 02:37:58.627	2025-01-02 02:39:19.331
-cm5eq494m000bt6nhd4uumyia	cm5ep9xbo00brkj5do5rwlzsd	PRINCIPAL_PAYMENT	2025-01-02 02:44:58.498		10000000	PENDING	\N	\N	2025-01-02 02:45:16.726	2025-01-02 02:45:16.726
-cm5eq50k7000et6nhn98jlwgh	cm5ep9xbo00brkj5do5rwlzsd	PRINCIPAL_PAYMENT	2025-01-02 02:45:16.777		1000000	COMPLETED	2025-01-02 02:46:39.47	Current User	2025-01-02 02:45:52.279	2025-01-02 02:46:39.471
-cm5es1esg0001117n4pqba7i0	cm5ep9xbo00brkj5do5rwlzsd	PRINCIPAL_PAYMENT	2025-01-02 03:38:52.713		100000	COMPLETED	2025-01-02 03:39:09.61	Current User	2025-01-02 03:39:03.328	2025-01-02 03:39:09.61
-cm5es5z6b0009117n40mgmina	cm5ep9xbo00brkj5do5rwlzsd	PRINCIPAL_PAYMENT	2025-01-02 03:42:28.986		100000	COMPLETED	2025-01-02 03:42:40.202	Current User	2025-01-02 03:42:36.371	2025-01-02 03:42:40.203
-cm5es9k2e000l117nvm0vkjsu	cm5ep9xbo00brkj5do5rwlzsd	PRINCIPAL_PAYMENT	2025-01-02 03:45:13.33		5000000	PENDING	\N	\N	2025-01-02 03:45:23.413	2025-01-02 03:45:23.413
-cm5esbl9f000x117n0102crsx	cm5ep9xbo00brkj5do5rwlzsd	PRINCIPAL_PAYMENT	2025-01-02 03:46:19.148		300000	COMPLETED	2025-01-02 03:47:03.097	Current User	2025-01-02 03:46:58.275	2025-01-02 03:47:03.098
-cm5et539t001e117n83up8u9i	cm5ep9xbo00brkj5do5rwlzsd	PRINCIPAL_PAYMENT	2025-01-02 04:09:47.486		10000	COMPLETED	2025-01-02 04:18:30.821	Current User	2025-01-02 04:09:54.64	2025-01-02 04:18:30.821
+COPY public."ServicingActivity" (id, "facilityId", "activityType", "dueDate", description, amount, status, "completedAt", "completedBy", "createdAt", "updatedAt", "facilityOutstandingAmount") FROM stdin;
+cm5fyzss30008m0wdj0qnjnpx	cm5fuxpoz0006bqs5gexga8h5	DRAWDOWN	2025-01-02 23:41:31.454	Loan drawdown from FAC-002-TLA	100000	COMPLETED	\N	\N	2025-01-02 23:41:31.636	2025-01-02 23:41:31.636	\N
 \.
 
 
@@ -1216,7 +1238,18 @@ COPY public."ServicingTeamMember" (id, "assignmentId", "firstName", "lastName", 
 -- Data for Name: Trade; Type: TABLE DATA; Schema: public; Owner: stephenscott
 --
 
-COPY public."Trade" (id, "facilityId", "sellerCounterpartyId", "buyerCounterpartyId", "tradeDate", "settlementDate", "parAmount", price, status, "createdAt", "updatedAt", "settlementAmount") FROM stdin;
+COPY public."Trade" (id, "facilityId", "sellerCounterpartyId", "buyerCounterpartyId", "tradeDate", "settlementDate", "parAmount", price, status, "createdAt", "updatedAt", "settlementAmount", "facilityOutstandingAmount") FROM stdin;
+cm5g01dr20002b0frabbwkddu	cm5fuxpoz0006bqs5gexga8h5	cm5fd536f0005143brwcdy7lc	cm5ep9xa2009dkj5dnqizgb10	2025-01-03 00:10:45.084	2025-01-04 00:10:24.996	100000	99	SETTLED	2025-01-03 00:10:45.085	2025-01-03 00:10:56.958	99000	\N
+\.
+
+
+--
+-- Data for Name: TradeStatusChange; Type: TABLE DATA; Schema: public; Owner: stephenscott
+--
+
+COPY public."TradeStatusChange" (id, "tradeId", "fromStatus", "toStatus", description, "createdAt", "updatedAt") FROM stdin;
+cm5g01i930005b0frx0mzo5zn	cm5g01dr20002b0frabbwkddu	PENDING	CONFIRMED	\N	2025-01-03 00:10:50.919	2025-01-03 00:10:50.919
+cm5g01mwy0007b0frxpj2tlei	cm5g01dr20002b0frabbwkddu	CONFIRMED	SETTLED	\N	2025-01-03 00:10:56.962	2025-01-03 00:10:56.962
 \.
 
 
@@ -1224,35 +1257,11 @@ COPY public."Trade" (id, "facilityId", "sellerCounterpartyId", "buyerCounterpart
 -- Data for Name: TransactionHistory; Type: TABLE DATA; Schema: public; Owner: stephenscott
 --
 
-COPY public."TransactionHistory" (id, "creditAgreementId", "loanId", "tradeId", "servicingActivityId", "activityType", amount, currency, status, description, "effectiveDate", "processedBy", "createdAt", "updatedAt") FROM stdin;
-cm5epvyo80006t6nh58cp10hh	\N	cm5epvynu0004t6nh56ktvmfz	\N	\N	LOAN_DRAWDOWN	1000000	USD	COMPLETED	Loan drawdown from Term Loan A	2025-01-02 02:38:49.857	SYSTEM	2025-01-02 02:38:49.929	2025-01-02 02:38:49.927
-cm5epwlc70009t6nhw75j7r51	cm5ep9xbo00bqkj5d9jws0u3v	cm5epvynu0004t6nh56ktvmfz	\N	cm5epuv390001t6nhz0kpocmb	PRINCIPAL_PAYMENT	100000	USD	COMPLETED	Principal payment of 100000	2025-01-02 02:39:19.109	SYSTEM	2025-01-02 02:39:19.303	2025-01-02 02:39:19.303
-cm5eq5tce000kt6nhloud5oke	\N	cm5eq5tc7000it6nhcbh1otzv	\N	\N	LOAN_DRAWDOWN	1000000	USD	COMPLETED	Loan drawdown from Term Loan A	2025-01-02 02:46:29.522	SYSTEM	2025-01-02 02:46:29.583	2025-01-02 02:46:29.582
-cm5eq60xp000nt6nh9yy6v9i0	cm5ep9xbo00bqkj5d9jws0u3v	cm5epvynu0004t6nh56ktvmfz	\N	cm5eq50k7000et6nhn98jlwgh	PRINCIPAL_PAYMENT	473684.2105263158	USD	COMPLETED	Principal payment of 473684.2105263158	2025-01-02 02:46:39.353	SYSTEM	2025-01-02 02:46:39.422	2025-01-02 02:46:39.422
-cm5eq60yk000qt6nhueg85c53	cm5ep9xbo00bqkj5d9jws0u3v	cm5eq5tc7000it6nhcbh1otzv	\N	cm5eq50k7000et6nhn98jlwgh	PRINCIPAL_PAYMENT	526315.7894736842	USD	COMPLETED	Principal payment of 526315.7894736842	2025-01-02 02:46:39.354	SYSTEM	2025-01-02 02:46:39.453	2025-01-02 02:46:39.453
-cm5es1jlr0004117n2ewusx34	cm5ep9xbo00bqkj5d9jws0u3v	cm5epvynu0004t6nh56ktvmfz	\N	cm5es1esg0001117n4pqba7i0	PRINCIPAL_PAYMENT	47368.42105263158	USD	COMPLETED	Principal payment of 47368.42105263158	2025-01-02 03:39:09.497	SYSTEM	2025-01-02 03:39:09.567	2025-01-02 03:39:09.567
-cm5es1jml0007117nfb2gfgev	cm5ep9xbo00bqkj5d9jws0u3v	cm5eq5tc7000it6nhcbh1otzv	\N	cm5es1esg0001117n4pqba7i0	PRINCIPAL_PAYMENT	52631.57894736842	USD	COMPLETED	Principal payment of 52631.57894736842	2025-01-02 03:39:09.498	SYSTEM	2025-01-02 03:39:09.598	2025-01-02 03:39:09.598
-cm5es622v000e117niwpq0hwo	cm5ep9xbo00bqkj5d9jws0u3v	cm5epvynu0004t6nh56ktvmfz	\N	cm5es5z6b0009117n40mgmina	PRINCIPAL_PAYMENT	47368.42105263157	USD	COMPLETED	Principal payment of $47,368.42	2025-01-02 03:42:39.967	SYSTEM	2025-01-02 03:42:40.135	2025-01-02 03:42:40.135
-cm5es624f000j117n9s8y1bud	cm5ep9xbo00bqkj5d9jws0u3v	cm5eq5tc7000it6nhcbh1otzv	\N	cm5es5z6b0009117n40mgmina	PRINCIPAL_PAYMENT	52631.57894736843	USD	COMPLETED	Principal payment of $52,631.58	2025-01-02 03:42:39.967	SYSTEM	2025-01-02 03:42:40.192	2025-01-02 03:42:40.192
-cm5esao8k000s117n48x2h6ir	\N	cm5esao8f000q117nowxyg5xs	\N	\N	LOAN_DRAWDOWN	4000000	USD	COMPLETED	Loan drawdown from Term Loan A	2025-01-02 03:46:15.417	SYSTEM	2025-01-02 03:46:15.476	2025-01-02 03:46:15.476
-cm5esboxa0012117npeeb8ojd	cm5ep9xbo00bqkj5d9jws0u3v	cm5epvynu0004t6nh56ktvmfz	\N	cm5esbl9f000x117n0102crsx	PRINCIPAL_PAYMENT	21164.61366181411	USD	COMPLETED	Principal payment of $21,164.61	2025-01-02 03:47:02.898	SYSTEM	2025-01-02 03:47:03.023	2025-01-02 03:47:03.023
-cm5esboyk0017117ne5k1rjhb	cm5ep9xbo00bqkj5d9jws0u3v	cm5eq5tc7000it6nhcbh1otzv	\N	cm5esbl9f000x117n0102crsx	PRINCIPAL_PAYMENT	23516.23740201568	USD	COMPLETED	Principal payment of $23,516.24	2025-01-02 03:47:02.899	SYSTEM	2025-01-02 03:47:03.068	2025-01-02 03:47:03.068
-cm5esboyy001c117nkdcdzz7i	cm5ep9xbo00bqkj5d9jws0u3v	cm5esao8f000q117nowxyg5xs	\N	cm5esbl9f000x117n0102crsx	PRINCIPAL_PAYMENT	255319.1489361702	USD	COMPLETED	Principal payment of $255,319.15	2025-01-02 03:47:02.899	SYSTEM	2025-01-02 03:47:03.083	2025-01-02 03:47:03.083
-cm5et565g001h117n27d7v7ci	cm5ep9xbo00bqkj5d9jws0u3v	cm5epvynu0004t6nh56ktvmfz	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	705.4871220604701	USD	PENDING	Principal payment of $705.49	2025-01-02 04:09:58.278	SYSTEM	2025-01-02 04:09:58.373	2025-01-02 04:09:58.373
-cm5et566h001k117n80ey7d7u	cm5ep9xbo00bqkj5d9jws0u3v	cm5eq5tc7000it6nhcbh1otzv	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	783.8745800671892	USD	PENDING	Principal payment of $783.87	2025-01-02 04:09:58.278	SYSTEM	2025-01-02 04:09:58.41	2025-01-02 04:09:58.41
-cm5et566w001n117ng2k3eaqg	cm5ep9xbo00bqkj5d9jws0u3v	cm5esao8f000q117nowxyg5xs	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	8510.638297872341	USD	PENDING	Principal payment of $8,510.64	2025-01-02 04:09:58.278	SYSTEM	2025-01-02 04:09:58.424	2025-01-02 04:09:58.424
-cm5et710r001s117notjyr593	cm5ep9xbo00bqkj5d9jws0u3v	cm5epvynu0004t6nh56ktvmfz	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	705.48712206047	USD	PENDING	Principal payment of $705.49	2025-01-02 04:11:24.015	SYSTEM	2025-01-02 04:11:25.035	2025-01-02 04:11:25.035
-cm5et714y001v117npwccakzo	cm5ep9xbo00bqkj5d9jws0u3v	cm5eq5tc7000it6nhcbh1otzv	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	783.8745800671891	USD	PENDING	Principal payment of $783.87	2025-01-02 04:11:24.018	SYSTEM	2025-01-02 04:11:25.186	2025-01-02 04:11:25.186
-cm5et71ec001y117nmd7ola3h	cm5ep9xbo00bqkj5d9jws0u3v	cm5esao8f000q117nowxyg5xs	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	8510.638297872341	USD	PENDING	Principal payment of $8,510.64	2025-01-02 04:11:24.018	SYSTEM	2025-01-02 04:11:25.524	2025-01-02 04:11:25.524
-cm5et7ne90002913mu4z30sjv	cm5ep9xbo00bqkj5d9jws0u3v	cm5epvynu0004t6nh56ktvmfz	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	705.4871220604698	USD	PENDING	Principal payment of $705.49	2025-01-02 04:11:53.904	SYSTEM	2025-01-02 04:11:54.034	2025-01-02 04:11:54.034
-cm5et7ngj0005913m6mzcv26u	cm5ep9xbo00bqkj5d9jws0u3v	cm5eq5tc7000it6nhcbh1otzv	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	783.8745800671891	USD	PENDING	Principal payment of $783.87	2025-01-02 04:11:53.905	SYSTEM	2025-01-02 04:11:54.116	2025-01-02 04:11:54.116
-cm5et7ngz0008913mr6tup4oa	cm5ep9xbo00bqkj5d9jws0u3v	cm5esao8f000q117nowxyg5xs	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	8510.638297872341	USD	PENDING	Principal payment of $8,510.64	2025-01-02 04:11:53.905	SYSTEM	2025-01-02 04:11:54.132	2025-01-02 04:11:54.132
-cm5et9dy8000d913mdth74hzt	cm5ep9xbo00bqkj5d9jws0u3v	cm5epvynu0004t6nh56ktvmfz	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	705.4871220604698	USD	PENDING	Principal payment of $705.49	2025-01-02 04:13:14.756	SYSTEM	2025-01-02 04:13:15.104	2025-01-02 04:13:15.104
-cm5et9dzn000g913m9s0l7y7y	cm5ep9xbo00bqkj5d9jws0u3v	cm5eq5tc7000it6nhcbh1otzv	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	783.8745800671891	USD	PENDING	Principal payment of $783.87	2025-01-02 04:13:14.76	SYSTEM	2025-01-02 04:13:15.155	2025-01-02 04:13:15.155
-cm5et9e03000j913m4d7g7jf9	cm5ep9xbo00bqkj5d9jws0u3v	cm5esao8f000q117nowxyg5xs	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	8510.638297872341	USD	PENDING	Principal payment of $8,510.64	2025-01-02 04:13:14.76	SYSTEM	2025-01-02 04:13:15.172	2025-01-02 04:13:15.172
-cm5etg5hh0002ev0d0oumoctd	cm5ep9xbo00bqkj5d9jws0u3v	cm5epvynu0004t6nh56ktvmfz	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	705.4871220604696	USD	PENDING	Principal payment of $705.49	2025-01-02 04:18:30.606	SYSTEM	2025-01-02 04:18:30.725	2025-01-02 04:18:30.725
-cm5etg5iu0005ev0dkmsn2g9b	cm5ep9xbo00bqkj5d9jws0u3v	cm5eq5tc7000it6nhcbh1otzv	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	783.8745800671891	USD	PENDING	Principal payment of $783.87	2025-01-02 04:18:30.607	SYSTEM	2025-01-02 04:18:30.774	2025-01-02 04:18:30.774
-cm5etg5j80008ev0dcyiggb1h	cm5ep9xbo00bqkj5d9jws0u3v	cm5esao8f000q117nowxyg5xs	\N	cm5et539t001e117n83up8u9i	PRINCIPAL_PAYMENT	8510.638297872341	USD	PENDING	Principal payment of $8,510.64	2025-01-02 04:18:30.607	SYSTEM	2025-01-02 04:18:30.788	2025-01-02 04:18:30.788
+COPY public."TransactionHistory" (id, "creditAgreementId", "loanId", "tradeId", "servicingActivityId", "activityType", amount, currency, status, description, "effectiveDate", "processedBy", "createdAt", "updatedAt", "facilityOutstandingAmount") FROM stdin;
+cm5fvbquo0006ihrfmh3fuu9b	\N	cm5fvbqtq0002ihrfpngn98uv	\N	\N	LOAN_DRAWDOWN	100000	USD	COMPLETED	Loan drawdown from FAC-002-TLA	2025-01-02 21:58:50.481	SYSTEM	2025-01-02 21:58:50.544	2025-01-02 21:58:50.543	\N
+cm5fvswkh000dihrfmgkmpmoz	\N	cm5fvswjc0009ihrfm4yfgsaz	\N	\N	LOAN_DRAWDOWN	100000	USD	COMPLETED	Loan drawdown from FAC-002-TLA	2025-01-02 22:12:10.982	SYSTEM	2025-01-02 22:12:11.106	2025-01-02 22:12:11.105	\N
+cm5fyzsry0006m0wd7jn6atwp	\N	cm5fyzsq60002m0wdk7r2xa8a	\N	\N	LOAN_DRAWDOWN	100000	USD	COMPLETED	Loan drawdown from FAC-002-TLA	2025-01-02 23:41:31.454	SYSTEM	2025-01-02 23:41:31.63	2025-01-02 23:41:31.629	\N
+cm5g01dr20003b0fro42itudv	\N	\N	cm5g01dr20002b0frabbwkddu	\N	TRADE_CREATED	100000	USD	PENDING	Trade created	2025-01-03 00:10:45.084	SYSTEM	2025-01-03 00:10:45.085	2025-01-03 00:10:45.085	\N
 \.
 
 
@@ -1261,9 +1270,19 @@ cm5etg5j80008ev0dcyiggb1h	cm5ep9xbo00bqkj5d9jws0u3v	cm5esao8f000q117nowxyg5xs	\N
 --
 
 COPY public._prisma_migrations (id, checksum, finished_at, migration_name, logs, rolled_back_at, started_at, applied_steps_count) FROM stdin;
+238fb754-f81b-4ba4-9cc9-4207b77eda8f	b92d1ed21cc553207af59cff0cea09b703801ddcb5c281b38d028abb7187b194	2025-01-02 16:45:19.997309-05	20250102214519_add_drawdown_position_change_type	\N	\N	2025-01-02 16:45:19.994182-05	1
 6606862a-6514-4e04-add3-de250f0c6284	4e30124d60cbf33e7a7366dd43542ddd9657ddd1b31988b4bfbc56e0fd2cb612	2025-01-01 21:05:32.096699-05	20250102020531_init	\N	\N	2025-01-01 21:05:31.979119-05	1
 351e1b70-392d-4f18-af97-06c54ef708a9	70b09fad9d39a6fc4668f97bfef66494ce8973d4bc488fad284639bc9690d43b	2025-01-01 21:56:54.515506-05	20250102025654_add_lender_position_history	\N	\N	2025-01-01 21:56:54.485428-05	1
 fa8b5ba8-c571-4186-9c22-9326cbbe767a	4ec6e05cdffda9f85e3581c8ede17dc2c3d2c4d37bcbd681ecaf9b04bcf20760	2025-01-01 23:17:44.815552-05	20250102041744_update_lender_position_history	\N	\N	2025-01-01 23:17:44.793285-05	1
+63052748-0c64-40b0-b7cb-6bf703d57fa3	32ab715af55473d59b16d49d18ec30e80635c7f3049f95993fbf9168af289395	2025-01-02 09:38:56.778421-05	20250102143856_add_trade_status_change	\N	\N	2025-01-02 09:38:56.76107-05	1
+ba50fdf2-5602-4a70-9067-c2a8abf9590f	17ae556eac6d16d4f141f30849110b280eb74edf13a13d57f7421bc5dabe3941	2025-01-02 13:12:44.330339-05	20250102181244_add_facility_outstanding_amount	\N	\N	2025-01-02 13:12:44.32494-05	1
+6eaafda4-8186-4666-a71d-0fb73e320c54	47f9ba7d6a53c7b57329a7c8cbf2ca05da621f8b529324a1daa2dcf1261696f4	2025-01-02 13:14:05.930793-05	20250102181405_add_facility_outstanding_amount_to_transaction	\N	\N	2025-01-02 13:14:05.926999-05	1
+15a78709-9c9c-413c-872d-63f5ee8669c7	b575e5f2bc9a8eb7b1c80fd453c58577c5927e0cfc2ae7964ccb9057063a0787	2025-01-02 13:29:53.627371-05	20250102182953_add_facility_outstanding_amount	\N	\N	2025-01-02 13:29:53.619954-05	1
+dd7ba9bc-d8ab-4c9e-89df-9c71e06c4170	de35ccc1f9703580b8f5fc31ce26275bdbeb3af688301722ded6d31cf882a2af	2025-01-02 13:56:21.697058-05	20250102185621_add_commitment_reduced_to_transaction_history	\N	\N	2025-01-02 13:56:21.689942-05	1
+c7f32b8b-ca3e-48ff-b9e5-9ebc5cbdc11a	0414f05682e4a51ca61e28b0a5d5ec47cf487299ed01b4117d31254f86ef2a77	2025-01-02 14:06:10.023601-05	20250102190610_remove_commitment_reduced_field	\N	\N	2025-01-02 14:06:10.017364-05	1
+c9e2ee8a-aea9-4198-be9b-f784f5f50aaa	edcb9f59bde3d4fd7490766f8a32242361d28e75c7e599a3fde9dd84c2182f45	2025-01-02 15:17:29.021961-05	20250102201729_add_kyc_status_to_borrower	\N	\N	2025-01-02 15:17:29.010607-05	1
+1a416b7f-67e1-4e3b-93f4-f20334e53431	478c0312895781c2f9fdbb22ca2a19ebec691288a53b6cf73fd6b1836b67a526	2025-01-02 16:24:43.733327-05	20250102212443_update_facility_position_amounts	\N	\N	2025-01-02 16:24:43.540544-05	1
+6ed0f5cb-038b-4f6f-8c87-3a4274d8788c	4794e2b4889366a3252104d35af0b84c4977dbdc206a62eb95a3b3b5c6f95287	2025-01-02 16:26:43.866222-05	20250102212643_update_position_history_amounts	\N	\N	2025-01-02 16:26:43.860617-05	1
 \.
 
 
@@ -1425,6 +1444,14 @@ ALTER TABLE ONLY public."ServicingRole"
 
 ALTER TABLE ONLY public."ServicingTeamMember"
     ADD CONSTRAINT "ServicingTeamMember_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: TradeStatusChange TradeStatusChange_pkey; Type: CONSTRAINT; Schema: public; Owner: stephenscott
+--
+
+ALTER TABLE ONLY public."TradeStatusChange"
+    ADD CONSTRAINT "TradeStatusChange_pkey" PRIMARY KEY (id);
 
 
 --
@@ -1676,6 +1703,13 @@ CREATE INDEX "ServicingTeamMember_assignmentId_idx" ON public."ServicingTeamMemb
 
 
 --
+-- Name: TradeStatusChange_tradeId_idx; Type: INDEX; Schema: public; Owner: stephenscott
+--
+
+CREATE INDEX "TradeStatusChange_tradeId_idx" ON public."TradeStatusChange" USING btree ("tradeId");
+
+
+--
 -- Name: Trade_buyerCounterpartyId_idx; Type: INDEX; Schema: public; Owner: stephenscott
 --
 
@@ -1801,7 +1835,7 @@ ALTER TABLE ONLY public."Counterparty"
 --
 
 ALTER TABLE ONLY public."CreditAgreement"
-    ADD CONSTRAINT "CreditAgreement_borrowerId_fkey" FOREIGN KEY ("borrowerId") REFERENCES public."Borrower"(id) ON UPDATE CASCADE ON DELETE RESTRICT;
+    ADD CONSTRAINT "CreditAgreement_borrowerId_fkey" FOREIGN KEY ("borrowerId") REFERENCES public."Entity"(id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
@@ -1930,6 +1964,14 @@ ALTER TABLE ONLY public."ServicingAssignment"
 
 ALTER TABLE ONLY public."ServicingTeamMember"
     ADD CONSTRAINT "ServicingTeamMember_assignmentId_fkey" FOREIGN KEY ("assignmentId") REFERENCES public."ServicingAssignment"(id) ON UPDATE CASCADE ON DELETE RESTRICT;
+
+
+--
+-- Name: TradeStatusChange TradeStatusChange_tradeId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: stephenscott
+--
+
+ALTER TABLE ONLY public."TradeStatusChange"
+    ADD CONSTRAINT "TradeStatusChange_tradeId_fkey" FOREIGN KEY ("tradeId") REFERENCES public."Trade"(id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --

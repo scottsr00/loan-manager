@@ -72,7 +72,7 @@ export async function getServicingActivities(params: GetServicingActivitiesParam
         const totalOutstanding = activeLoans.reduce((sum: number, loan: Loan) => sum + loan.outstandingAmount, 0)
 
         // For payment activities, include all active loans with their proportional amounts
-        if (['PRINCIPAL_PAYMENT', 'INTEREST_PAYMENT', 'UNSCHEDULED_PAYMENT'].includes(activity.activityType)) {
+        if (['PRINCIPAL_PAYMENT', 'INTEREST_PAYMENT', 'UNSCHEDULED_PAYMENT', 'DRAWDOWN'].includes(activity.activityType)) {
           return {
             ...rest,
             facility,

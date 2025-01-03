@@ -1,25 +1,72 @@
 import { z } from 'zod'
 
-export const facilityPositionStatusEnum = z.enum([
-  'ACTIVE',
-  'PENDING',
-  'CANCELLED',
-  'COMPLETED'
-])
+// Database schema type
+export interface FacilityPosition {
+  id: string
+  facilityId: string
+  lenderId: string
+  commitmentAmount: number
+  undrawnAmount: number
+  drawnAmount: number
+  share: number
+  status: FacilityPositionStatus
+  createdAt: Date
+  updatedAt: Date
+}
 
+// Status enum
+export const FacilityPositionStatus = {
+  ACTIVE: 'ACTIVE',
+  PENDING: 'PENDING',
+  CANCELLED: 'CANCELLED',
+  COMPLETED: 'COMPLETED'
+} as const
+
+export type FacilityPositionStatus = typeof FacilityPositionStatus[keyof typeof FacilityPositionStatus]
+
+// Database type with loaded relations
+export interface FacilityPositionWithRelations extends FacilityPosition {
+  lender: {
+    entity: {
+      id: string
+      legalName: string
+    }
+  }
+  facility: {
+    id: string
+    facilityName: string
+  }
+}
+
+// UI view model (simplified for display)
+export interface FacilityPositionView {
+  id: string
+  lenderName: string
+  lenderId: string
+  facilityName: string
+  facilityId: string
+  commitmentAmount: number
+  drawnAmount: number
+  undrawnAmount: number
+  share: number
+  status: FacilityPositionStatus
+}
+
+// Server Action input validation
 export const facilityPositionInputSchema = z.object({
   facilityId: z.string().min(1, 'Facility ID is required'),
   lenderId: z.string().min(1, 'Lender ID is required'),
-  amount: z.number().positive('Amount must be positive'),
+  commitmentAmount: z.number().positive('Commitment amount must be positive'),
   share: z.number().min(0, 'Share must be non-negative').max(100, 'Share cannot exceed 100%'),
-  status: facilityPositionStatusEnum.default('ACTIVE')
+  status: z.enum(Object.values(FacilityPositionStatus) as [string, ...string[]]).default('ACTIVE')
 })
 
+// Server Action update validation
 export const facilityPositionUpdateSchema = z.object({
   id: z.string().min(1, 'Position ID is required'),
-  amount: z.number().positive('Amount must be positive').optional(),
+  commitmentAmount: z.number().positive('Commitment amount must be positive').optional(),
   share: z.number().min(0, 'Share must be non-negative').max(100, 'Share cannot exceed 100%').optional(),
-  status: facilityPositionStatusEnum.optional()
+  status: z.enum(Object.values(FacilityPositionStatus) as [string, ...string[]]).optional()
 })
 
 export type FacilityPositionInput = z.infer<typeof facilityPositionInputSchema>

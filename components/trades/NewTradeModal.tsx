@@ -47,7 +47,7 @@ interface CreditAgreement {
   id: string
   agreementNumber: string
   borrower: {
-    name: string
+    legalName: string
   }
   facilities: Facility[]
 }
@@ -268,7 +268,7 @@ export function NewTradeModal({
                   <SelectContent>
                     {creditAgreements.map((ca) => (
                       <SelectItem key={ca.id} value={ca.id}>
-                        {ca.borrower.name} - {ca.agreementNumber}
+                        {ca.borrower.legalName} - {ca.agreementNumber}
                       </SelectItem>
                     ))}
                   </SelectContent>
