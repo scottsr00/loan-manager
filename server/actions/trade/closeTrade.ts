@@ -68,10 +68,20 @@ export async function closeTrade(tradeId: string, userId: string) {
         (p: FacilityPosition) => p.lenderId === buyerLender.id
       )
 
+      // Store buyer's previous values before any updates
+      const buyerPreviousCommitment = buyerPosition?.commitmentAmount ?? 0
+      const buyerPreviousDrawn = buyerPosition?.drawnAmount ?? 0
+      const buyerPreviousShare = buyerPosition?.share ?? 0
+      const buyerPreviousStatus = buyerPosition?.status || 'ACTIVE'
+      const buyerNewCommitment = buyerPreviousCommitment + trade.parAmount
+      const buyerNewDrawn = buyerPreviousDrawn + trade.parAmount
+      const buyerNewShare = (buyerNewCommitment / trade.facility.commitmentAmount) * 100
+
       // Update seller position first
       if (sellerPosition) {
         const newCommitmentAmount = sellerPosition.commitmentAmount - trade.parAmount
         const newDrawnAmount = sellerPosition.drawnAmount - trade.parAmount
+        // Calculate share based on total facility commitment
         const newShare = (newCommitmentAmount / trade.facility.commitmentAmount) * 100
 
         await tx.facilityPosition.update({
@@ -87,6 +97,7 @@ export async function closeTrade(tradeId: string, userId: string) {
 
       // Create or update buyer position
       if (!buyerPosition) {
+        const newShare = (trade.parAmount / trade.facility.commitmentAmount) * 100
         buyerPosition = await tx.facilityPosition.create({
           data: {
             facilityId: trade.facilityId,
@@ -94,7 +105,7 @@ export async function closeTrade(tradeId: string, userId: string) {
             commitmentAmount: trade.parAmount,
             drawnAmount: trade.parAmount,
             undrawnAmount: 0,
-            share: (trade.parAmount / trade.facility.commitmentAmount) * 100,
+            share: newShare,
             status: 'ACTIVE'
           }
         })
@@ -120,6 +131,16 @@ export async function closeTrade(tradeId: string, userId: string) {
         const newDrawnAmount = sellerPosition.drawnAmount - trade.parAmount
         const newShare = (newCommitmentAmount / trade.facility.commitmentAmount) * 100
 
+        console.log('Seller position history values:', {
+          previousCommitmentAmount: sellerPosition.commitmentAmount,
+          newCommitmentAmount,
+          previousDrawnAmount: sellerPosition.drawnAmount,
+          newDrawnAmount,
+          previousShare: sellerPosition.share,
+          newShare,
+          facilityCommitment: trade.facility.commitmentAmount
+        })
+
         await tx.facilityPositionHistory.create({
           data: {
             facilityId: trade.facilityId,
@@ -143,21 +164,36 @@ export async function closeTrade(tradeId: string, userId: string) {
         })
       }
 
+      console.log('Buyer position history values:', {
+        previousCommitmentAmount: buyerPreviousCommitment,
+        newCommitmentAmount: buyerNewCommitment,
+        previousDrawnAmount: buyerPreviousDrawn,
+        newDrawnAmount: buyerNewDrawn,
+        previousShare: buyerPreviousShare,
+        newShare: buyerNewShare,
+        buyerPosition: buyerPosition ? {
+          commitmentAmount: buyerPosition.commitmentAmount,
+          drawnAmount: buyerPosition.drawnAmount,
+          share: buyerPosition.share
+        } : null,
+        facilityCommitment: trade.facility.commitmentAmount
+      })
+
       // Create position history for buyer
       await tx.facilityPositionHistory.create({
         data: {
           facilityId: trade.facilityId,
           lenderId: buyerLender.id,
           changeType: PositionChangeType.TRADE,
-          previousCommitmentAmount: buyerPosition.commitmentAmount || 0,
-          newCommitmentAmount: buyerPosition.commitmentAmount + trade.parAmount,
+          previousCommitmentAmount: buyerPreviousCommitment,
+          newCommitmentAmount: buyerNewCommitment,
           previousUndrawnAmount: 0,
           newUndrawnAmount: 0,
-          previousDrawnAmount: buyerPosition.drawnAmount || 0,
-          newDrawnAmount: (buyerPosition.drawnAmount || 0) + trade.parAmount,
-          previousShare: buyerPosition.share || 0,
-          newShare: ((buyerPosition.commitmentAmount + trade.parAmount) / trade.facility.commitmentAmount) * 100,
-          previousStatus: buyerPosition.status || 'ACTIVE',
+          previousDrawnAmount: buyerPreviousDrawn,
+          newDrawnAmount: buyerNewDrawn,
+          previousShare: buyerPreviousShare,
+          newShare: buyerNewShare,
+          previousStatus: buyerPreviousStatus,
           newStatus: 'ACTIVE',
           changeAmount: trade.parAmount,
           userId,

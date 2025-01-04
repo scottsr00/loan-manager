@@ -97,29 +97,50 @@ export function PositionHistory({ facilityId, selectedActivity, lenderId, startD
       cellRenderer: (params: ICellRendererParams) => getChangeTypeBadge(params.value)
     },
     {
+      field: 'previousDrawnAmount',
+      headerName: 'Previous Drawn',
+      flex: 1,
+      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
+      filter: 'agNumberColumnFilter'
+    },
+    {
       field: 'newDrawnAmount',
-      headerName: 'Facility Outstanding',
+      headerName: 'New Drawn',
+      flex: 1,
+      valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
+      filter: 'agNumberColumnFilter'
+    },
+    {
+      field: 'previousCommitmentAmount',
+      headerName: 'Previous Commitment',
       flex: 1,
       valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
       filter: 'agNumberColumnFilter'
     },
     {
       field: 'newCommitmentAmount',
-      headerName: 'Commitment Amount',
+      headerName: 'New Commitment',
       flex: 1,
       valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
       filter: 'agNumberColumnFilter'
     },
     {
+      field: 'previousShare',
+      headerName: 'Previous Share %',
+      flex: 1,
+      valueFormatter: (params: ValueFormatterParams) => `${params.value}%`,
+      filter: 'agNumberColumnFilter'
+    },
+    {
       field: 'newShare',
-      headerName: 'Share %',
+      headerName: 'New Share %',
       flex: 1,
       valueFormatter: (params: ValueFormatterParams) => `${params.value}%`,
       filter: 'agNumberColumnFilter'
     },
     {
       field: 'changeAmount',
-      headerName: 'Last Change Amount',
+      headerName: 'Change Amount',
       flex: 1,
       valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
       filter: 'agNumberColumnFilter'

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DataGrid } from '@/components/ui/data-grid'
 import { getFacilities } from '@/server/actions/loan/getFacilities'
+import { resetFacility } from '@/server/actions/facility/resetFacility'
 import { formatCurrency } from '@/lib/utils'
 import { FacilityDetailsModal } from './FacilityDetailsModal'
 import { PositionHistoryModal } from '@/components/positions/PositionHistoryModal'
@@ -22,23 +23,33 @@ export function FacilityList() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
 
-  useEffect(() => {
-    const loadFacilities = async () => {
-      try {
-        setIsLoading(true)
-        const data = await getFacilities()
-        console.log('Facilities:', JSON.stringify(data, null, 2))
-        setFacilities(data)
-      } catch (err) {
-        console.error('Error loading facilities:', err)
-        setError('Failed to load facilities')
-      } finally {
-        setIsLoading(false)
-      }
+  const loadFacilities = async () => {
+    try {
+      setIsLoading(true)
+      const data = await getFacilities()
+      console.log('Facilities:', JSON.stringify(data, null, 2))
+      setFacilities(data)
+    } catch (err) {
+      console.error('Error loading facilities:', err)
+      setError('Failed to load facilities')
+    } finally {
+      setIsLoading(false)
     }
+  }
 
+  useEffect(() => {
     loadFacilities()
   }, [])
+
+  const handleReset = async (facilityId: string) => {
+    try {
+      await resetFacility(facilityId)
+      await loadFacilities() // Reload the facilities after reset
+    } catch (err) {
+      console.error('Error resetting facility:', err)
+      setError('Failed to reset facility')
+    }
+  }
 
   const columnDefs = useMemo<ColDef[]>(() => [
     {
@@ -121,7 +132,7 @@ export function FacilityList() {
     {
       headerName: 'Actions',
       field: 'actions',
-      width: 200,
+      width: 300,
       cellRenderer: (params: any) => (
         <div className="flex gap-2">
           <Button
@@ -145,6 +156,18 @@ export function FacilityList() {
             }}
           >
             History
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (confirm('Are you sure you want to reset this facility? This will delete all loans, trades, and history.')) {
+                handleReset(params.data.id)
+              }
+            }}
+          >
+            Reset
           </Button>
         </div>
       ),

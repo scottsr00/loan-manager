@@ -32,8 +32,10 @@ export interface FacilityPositionHistoryView {
   lenderName: string
   changeDateTime: Date
   changeType: string
-  previousAmount: number
-  newAmount: number
+  previousCommitmentAmount: number
+  newCommitmentAmount: number
+  previousDrawnAmount: number
+  newDrawnAmount: number
   previousShare: number
   newShare: number
   previousStatus: FacilityPositionStatus
