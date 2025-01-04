@@ -17,6 +17,7 @@ import { getCounterparties } from '@/server/actions/counterparty/getCounterparti
 import { getFacilityPositions } from '@/server/actions/facility/getFacilityPositions'
 import { createLenderCounterparty } from '@/server/actions/counterparty/createLenderCounterparty'
 import { PrismaClient } from '@prisma/client'
+import { useCounterparties } from '@/hooks/useCounterparties'
 
 const prisma = new PrismaClient()
 
@@ -38,9 +39,15 @@ interface CounterpartyWithEntity {
 
 interface FacilityPositionInfo {
   id: string
-  name: string
-  amount: number
+  lenderId: string
+  lenderName: string
+  facilityId: string
+  facilityName: string
+  commitmentAmount: number
+  drawnAmount: number
+  undrawnAmount: number
   share: number
+  status: string
 }
 
 interface CreditAgreement {
@@ -81,11 +88,10 @@ export function NewTradeModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingCreditAgreements, setIsLoadingCreditAgreements] = useState(true)
   const [creditAgreements, setCreditAgreements] = useState<CreditAgreement[]>([])
-  const [counterparties, setCounterparties] = useState<CounterpartyWithEntity[]>([])
   const [facilityPositions, setFacilityPositions] = useState<FacilityPositionInfo[]>([])
-  const [isLoadingCounterparties, setIsLoadingCounterparties] = useState(false)
   const [isLoadingPositions, setIsLoadingPositions] = useState(false)
   const { lenders, isLoading: isLoadingLenders } = useLenders()
+  const { counterparties, isLoading: isLoadingCounterparties } = useCounterparties()
 
   const [formData, setFormData] = useState({
     creditAgreementId: '',
@@ -112,21 +118,7 @@ export function NewTradeModal({
       }
     }
 
-    const loadCounterparties = async () => {
-      setIsLoadingCounterparties(true)
-      try {
-        const data = await getCounterparties()
-        setCounterparties(data)
-      } catch (error) {
-        console.error('Error fetching counterparties:', error)
-        toast.error('Failed to fetch counterparties')
-      } finally {
-        setIsLoadingCounterparties(false)
-      }
-    }
-
     loadCreditAgreements()
-    loadCounterparties()
   }, [])
 
   useEffect(() => {
@@ -155,12 +147,27 @@ export function NewTradeModal({
   }, [creditAgreements, formData.creditAgreementId])
 
   const availableSellers = useMemo(() => {
-    // Use facility positions directly for sellers
-    return facilityPositions.map(pos => ({
-      id: pos.id,
-      name: pos.name
-    }))
+    // Only show lenders who have positions in the selected facility
+    console.log('Raw facility positions:', facilityPositions)
+    return facilityPositions.map(pos => {
+      console.log('Mapping position:', pos)
+      return {
+        id: pos.id,  // Use position ID as the select value
+        entityId: pos.lenderId,  // Store the entity ID for creating counterparty
+        name: pos.lenderName
+      }
+    })
   }, [facilityPositions])
+
+  const availableBuyers = useMemo(() => {
+    // Filter active counterparties for buyers
+    return (counterparties || [])
+      .filter(cp => cp.status === 'ACTIVE')
+      .map(cp => ({
+        id: cp.id,
+        name: cp.name
+      }))
+  }, [counterparties])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -189,14 +196,15 @@ export function NewTradeModal({
         throw new Error('Please enter a price')
       }
 
-      // Get the seller's entity ID from the facility positions
-      const sellerPosition = facilityPositions.find(pos => pos.id === formData.sellerLenderId)
-      if (!sellerPosition) {
-        throw new Error('Seller position not found')
+      // Find the selected seller to get the entity ID
+      const selectedSeller = facilityPositions.find(pos => pos.id === formData.sellerLenderId)
+      if (!selectedSeller) {
+        throw new Error('Selected seller not found')
       }
 
-      // Get or create a counterparty for the seller
-      const sellerCounterparty = await createLenderCounterparty(sellerPosition.id)
+      console.log('Creating counterparty with entity ID:', selectedSeller.lenderId)
+      // Create or get seller counterparty using the entity ID
+      const sellerCounterparty = await createLenderCounterparty(selectedSeller.lenderId)
 
       const tradeData = {
         facilityId: formData.facilityId,
@@ -315,9 +323,9 @@ export function NewTradeModal({
                   } />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableSellers.map((cp) => (
-                    <SelectItem key={cp.id} value={cp.id}>
-                      {cp.name}
+                  {availableSellers.map((seller) => (
+                    <SelectItem key={seller.id} value={seller.id}>
+                      {seller.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -335,9 +343,9 @@ export function NewTradeModal({
                   <SelectValue placeholder={isLoadingCounterparties ? "Loading..." : "Select buyer"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {counterparties.map((cp) => (
-                    <SelectItem key={cp.id} value={cp.id}>
-                      {cp.name}
+                  {availableBuyers.map((buyer) => (
+                    <SelectItem key={buyer.id} value={buyer.id}>
+                      {buyer.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -17,6 +17,16 @@ import { PositionHistory } from '@/components/positions/PositionHistory'
 import { DataGrid } from '@/components/ui/data-grid'
 import { type ColDef, type ValueFormatterParams, type ICellRendererParams } from 'ag-grid-community'
 import '@/lib/ag-grid-init'
+import type { FacilityWithRelations } from '@/server/types/facility'
+
+interface Activity {
+  id: string
+  type: 'SERVICING' | 'TRADE'
+  date: Date
+  amount: number
+  status: string
+  activityType?: string
+}
 
 interface FacilityDetailsModalProps {
   facilityId?: string
@@ -29,9 +39,9 @@ export function FacilityDetailsModal({
   open,
   onOpenChange,
 }: FacilityDetailsModalProps) {
-  const [facility, setFacility] = useState<any>(null)
-  const [selectedActivity, setSelectedActivity] = useState<any>(null)
-  const [activities, setActivities] = useState<any[]>([])
+  const [facility, setFacility] = useState<FacilityWithRelations | null>(null)
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
+  const [activities, setActivities] = useState<Activity[]>([])
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -39,18 +49,28 @@ export function FacilityDetailsModal({
       if (!facilityId) return
       try {
         const data = await getFacility(facilityId)
+        if (!data) {
+          setError('Facility not found')
+          return
+        }
         setFacility(data)
+        
         // Combine servicing activities and trades into a single timeline
         const allActivities = [
-          ...(data.servicingActivities || []).map((activity: any) => ({
-            ...activity,
-            type: 'SERVICING',
-            date: activity.dueDate
+          ...(data.servicingActivities || []).map((activity) => ({
+            id: activity.id,
+            type: 'SERVICING' as const,
+            date: activity.dueDate,
+            amount: activity.amount,
+            status: activity.status,
+            activityType: activity.activityType
           })),
-          ...(data.trades || []).map((trade: any) => ({
-            ...trade,
-            type: 'TRADE',
-            date: trade.tradeDate
+          ...(data.trades || []).map((trade) => ({
+            id: trade.id,
+            type: 'TRADE' as const,
+            date: trade.tradeDate,
+            amount: trade.parAmount,
+            status: trade.status
           }))
         ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         
@@ -77,7 +97,7 @@ export function FacilityDetailsModal({
       flex: 1,
       cellRenderer: (params: ICellRendererParams) => (
         <Badge variant={params.value === 'TRADE' ? 'default' : 'secondary'}>
-          {params.value}
+          {params.value === 'SERVICING' ? params.data.activityType : params.value}
         </Badge>
       )
     },
@@ -169,11 +189,17 @@ export function FacilityDetailsModal({
                         </div>
                         <div>
                           <span className="font-semibold">Borrower:</span>{' '}
-                          {facility.creditAgreement.borrower?.entity?.legalName}
+                          {facility.creditAgreement.borrower?.legalName}
+                          {facility.creditAgreement.borrower?.dba && (
+                            <span className="text-muted-foreground"> ({facility.creditAgreement.borrower.dba})</span>
+                          )}
                         </div>
                         <div>
                           <span className="font-semibold">Lender:</span>{' '}
                           {facility.creditAgreement.lender?.legalName}
+                          {facility.creditAgreement.lender?.dba && (
+                            <span className="text-muted-foreground"> ({facility.creditAgreement.lender.dba})</span>
+                          )}
                         </div>
                       </>
                     )}

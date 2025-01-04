@@ -80,8 +80,40 @@ export async function createFacility(data: CreateFacilityInput) {
       },
       include: {
         sublimits: true,
-        creditAgreement: true,
+        creditAgreement: {
+          include: {
+            lender: {
+              include: {
+                lender: true
+              }
+            }
+          }
+        },
       },
+    })
+
+    // Get the lender ID first
+    const lender = await prisma.lender.findFirst({
+      where: {
+        entityId: facility.creditAgreement.lender.id
+      }
+    })
+
+    if (!lender) {
+      throw new Error('Lender not found')
+    }
+
+    // Create initial position for the agent lender
+    await prisma.facilityPosition.create({
+      data: {
+        facilityId: facility.id,
+        lenderId: lender.id,  // Use the actual Lender ID
+        commitmentAmount: data.commitmentAmount,
+        undrawnAmount: data.commitmentAmount,
+        drawnAmount: 0,
+        share: 100,  // 100% since it's the only lender
+        status: 'ACTIVE'
+      }
     })
 
     return facility

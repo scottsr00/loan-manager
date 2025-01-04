@@ -57,4 +57,5 @@ export async function updateTradeStatus({ id, status, description, userId = 'SYS
   })
 
   revalidatePath('/trades')
+  revalidatePath('/') // Revalidate the main page where positions are shown
 } 

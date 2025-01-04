@@ -1,101 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="4" failures="4" errors="0" time="0.71">
-  <testsuite name="Facility Position History Integration" errors="0" failures="4" skipped="0" timestamp="2025-01-03T22:07:09" time="0.38" tests="4">
-    <testcase classname="Facility Position History Integration Trade Flow should create position history records when closing a trade" name="Facility Position History Integration Trade Flow should create position history records when closing a trade" time="0.02">
-      <failure>Error: PrismaClient is unable to run in this browser environment, or has been bundled for the browser (running in `Node.js`).
-If this is unexpected, please open an issue: https://pris.ly/prisma-prisma-bug-report
-    at Object.get (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/.prisma/client/index-browser.js:516:15)
-    at trade (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/trade/closeTrade.ts:10:32)
-    at /Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-mock/build/index.js:397:39
-    at /Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-mock/build/index.js:404:13
-    at mockConstructor (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-mock/build/index.js:108:19)
-    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/integration/facilityPositionHistory.integration.test.ts:227:23)
-    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
-    at new Promise (&lt;anonymous&gt;)
-    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
-    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+<testsuites name="jest tests" tests="4" failures="4" errors="0" time="0.726">
+  <testsuite name="Facility Position History Integration" errors="0" failures="4" skipped="0" timestamp="2025-01-04T00:07:00" time="0.327" tests="4">
+    <testcase classname="Facility Position History Integration Trade Flow should create position history records when closing a trade" name="Facility Position History Integration Trade Flow should create position history records when closing a trade" time="0.018">
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;positions&apos;)
+    at positions (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/trade/closeTrade.ts:40:45)
     at processTicksAndRejections (node:internal/process/task_queues:95:5)
-    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
-    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
-    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
-    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
-    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    at closeTrade (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/trade/closeTrade.ts:30:5)
+    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/integration/facilityPositionHistory.integration.test.ts:284:7)</failure>
     </testcase>
     <testcase classname="Facility Position History Integration Trade Flow should update position shares correctly" name="Facility Position History Integration Trade Flow should update position shares correctly" time="0.002">
-      <failure>Error: PrismaClient is unable to run in this browser environment, or has been bundled for the browser (running in `Node.js`).
-If this is unexpected, please open an issue: https://pris.ly/prisma-prisma-bug-report
-    at Object.get (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/.prisma/client/index-browser.js:516:15)
-    at trade (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/trade/closeTrade.ts:10:32)
-    at /Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-mock/build/index.js:397:39
-    at /Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-mock/build/index.js:404:13
-    at mockConstructor (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-mock/build/index.js:108:19)
-    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/integration/facilityPositionHistory.integration.test.ts:270:23)
-    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
-    at new Promise (&lt;anonymous&gt;)
-    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
-    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
+      <failure>TypeError: Cannot read properties of undefined (reading &apos;positions&apos;)
+    at positions (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/trade/closeTrade.ts:40:45)
     at processTicksAndRejections (node:internal/process/task_queues:95:5)
-    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
-    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
-    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
-    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
-    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    at closeTrade (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/trade/closeTrade.ts:30:5)
+    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/integration/facilityPositionHistory.integration.test.ts:327:7)</failure>
     </testcase>
-    <testcase classname="Facility Position History Integration Manual Position Updates should create position history record for manual updates" name="Facility Position History Integration Manual Position Updates should create position history record for manual updates" time="0.003">
-      <failure>Error: PrismaClient is unable to run in this browser environment, or has been bundled for the browser (running in `Node.js`).
-If this is unexpected, please open an issue: https://pris.ly/prisma-prisma-bug-report
-    at Object.get (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/.prisma/client/index-browser.js:516:15)
-    at facilityPositionHistory (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/facility/facilityPositionHistory.ts:86:34)
-    at /Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-mock/build/index.js:397:39
-    at /Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-mock/build/index.js:404:13
-    at mockConstructor (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-mock/build/index.js:103:19)
-    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/integration/facilityPositionHistory.integration.test.ts:316:42)
-    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
-    at new Promise (&lt;anonymous&gt;)
-    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
-    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
-    at processTicksAndRejections (node:internal/process/task_queues:95:5)
-    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
-    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
-    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
-    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
-    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    <testcase classname="Facility Position History Integration Manual Position Updates should create position history record for manual updates" name="Facility Position History Integration Manual Position Updates should create position history record for manual updates" time="0.002">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 800000
+Received: 1000000
+    at Object.toBe (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/integration/facilityPositionHistory.integration.test.ts:414:41)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)</failure>
     </testcase>
-    <testcase classname="Facility Position History Integration History Retrieval should filter history by date range" name="Facility Position History Integration History Retrieval should filter history by date range" time="0.004">
-      <failure>Error: PrismaClient is unable to run in this browser environment, or has been bundled for the browser (running in `Node.js`).
-If this is unexpected, please open an issue: https://pris.ly/prisma-prisma-bug-report
-    at Object.get (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/.prisma/client/index-browser.js:516:15)
-    at facilityPositionHistory (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/server/actions/facility/facilityPositionHistory.ts:86:34)
-    at /Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-mock/build/index.js:397:39
-    at /Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-mock/build/index.js:404:13
-    at mockConstructor (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-mock/build/index.js:103:19)
-    at Object.&lt;anonymous&gt; (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/integration/facilityPositionHistory.integration.test.ts:377:42)
-    at Promise.then.completed (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:298:28)
-    at new Promise (&lt;anonymous&gt;)
-    at callAsyncCircusFn (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/utils.js:231:10)
-    at _callCircusTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:316:40)
-    at processTicksAndRejections (node:internal/process/task_queues:95:5)
-    at _runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:252:3)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:126:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at _runTestsForDescribeBlock (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:121:9)
-    at run (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/run.js:71:3)
-    at runAndTransformResultsToJestFormat (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
-    at jestAdapter (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
-    at runTestInternal (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:367:16)
-    at runTest (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    <testcase classname="Facility Position History Integration History Retrieval should filter history by date range" name="Facility Position History Integration History Retrieval should filter history by date range" time="0.001">
+      <failure>Error: expect(received).toBeLessThanOrEqual(expected)
+
+Expected: &lt;= 1706659200000
+Received:    1735949221004
+    at toBeLessThanOrEqual (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/integration/facilityPositionHistory.integration.test.ts:490:49)
+    at Array.forEach (&lt;anonymous&gt;)
+    at Object.forEach (/Users/stephenscott/Dev/Apps/Loans-v0/loans-v2/__tests__/integration/facilityPositionHistory.integration.test.ts:488:15)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)</failure>
     </testcase>
   </testsuite>
 </testsuites>

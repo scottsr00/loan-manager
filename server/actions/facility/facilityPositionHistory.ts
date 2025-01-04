@@ -39,7 +39,7 @@ type FacilityPositionHistoryWithRelations = {
   }
   servicingActivity?: {
     id: string
-    type: string
+    activityType: string
     dueDate: Date
     amount: number
     status: string
@@ -175,7 +175,7 @@ export async function getFacilityPositionHistory(params: GetFacilityPositionHist
         ...(history.servicingActivity ? {
           servicingActivity: {
             id: history.servicingActivity.id,
-            type: history.servicingActivity.type,
+            activityType: history.servicingActivity.activityType,
             dueDate: history.servicingActivity.dueDate,
             amount: history.servicingActivity.amount,
             status: history.servicingActivity.status
@@ -243,7 +243,7 @@ export async function getFacilityPositionHistory(params: GetFacilityPositionHist
       ...(history.servicingActivity ? {
         servicingActivity: {
           id: history.servicingActivity.id,
-          type: history.servicingActivity.type,
+          activityType: history.servicingActivity.activityType,
           dueDate: history.servicingActivity.dueDate,
           amount: history.servicingActivity.amount,
           status: history.servicingActivity.status

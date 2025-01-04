@@ -27,6 +27,8 @@ export type FacilityPositionStatus = typeof FacilityPositionStatus[keyof typeof 
 // Database type with loaded relations
 export interface FacilityPositionWithRelations extends FacilityPosition {
   lender: {
+    id: string
+    entityId: string
     entity: {
       id: string
       legalName: string
@@ -83,17 +85,23 @@ export interface FacilityPositionHierarchyView {
   }
   agent: {
     name: string
+    type?: string
     isAgent: boolean
   }
   amount: number
   currency: string
   status: string
+  interestRate: number
   facilities: {
     id: string
     facilityName: string
     facilityType: string
     commitmentAmount: number
     currency: string
+    status: string
+    interestType: string
+    baseRate: string
+    margin: number
     positions: FacilityPositionView[]
     trades?: {
       id: string
@@ -114,6 +122,16 @@ export interface FacilityPositionHierarchyView {
       drawDate: Date
       baseRate: string
       effectiveRate: string
+    }[]
+    servicingActivities?: {
+      id: string
+      activityType: string
+      dueDate: Date
+      description: string | null
+      amount: number
+      status: string
+      completedAt: Date | null
+      completedBy: string | null
     }[]
   }[]
 }

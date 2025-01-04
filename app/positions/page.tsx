@@ -6,7 +6,7 @@ export default function PositionsPage() {
     <Card>
       <CardHeader>
         <CardTitle>Loan Positions</CardTitle>
-        <CardDescription>View and manage your loan positions</CardDescription>
+        <CardDescription>View and manage your loan positions in a hierarchy</CardDescription>
       </CardHeader>
       <CardContent>
         <LoanPositionsHierarchy />

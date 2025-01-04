@@ -63,7 +63,10 @@ export function CreditAgreementList({ creditAgreements, onUpdate }: CreditAgreem
       field: 'margin',
       headerName: 'Margin (%)',
       width: 120,
-      valueFormatter: (params) => params.value ? `${params.value}%` : '',
+      valueFormatter: (params) => {
+        if (params.value == null || isNaN(params.value)) return '-'
+        return `${Number(params.value).toFixed(2)}%`
+      },
     },
     {
       field: 'status',
@@ -104,7 +107,10 @@ export function CreditAgreementList({ creditAgreements, onUpdate }: CreditAgreem
       field: 'interestRate',
       headerName: 'Interest Rate',
       width: 120,
-      valueFormatter: (params) => `${params.value}%`,
+      valueFormatter: (params) => {
+        if (params.value == null || isNaN(params.value)) return '-'
+        return `${Number(params.value).toFixed(2)}%`
+      },
     },
     {
       field: 'startDate',

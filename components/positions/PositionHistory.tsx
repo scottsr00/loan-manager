@@ -11,11 +11,15 @@ import type { FacilityPositionHistoryView } from '@/server/types/facility-positi
 import '@/lib/ag-grid-init'
 
 interface Activity {
-  id: string
-  type: 'SERVICING' | 'TRADE'
-  date: Date
-  amount: number
-  status: string
+  id: string;
+  type: 'SERVICING' | 'TRADE';
+  activityType: string;
+  dueDate: Date;
+  description: string | null;
+  amount: number;
+  status: string;
+  completedAt: Date | null;
+  completedBy: string | null;
 }
 
 interface PositionHistoryProps {
@@ -43,7 +47,7 @@ export function PositionHistory({ facilityId, selectedActivity, lenderId, startD
           ...(selectedActivity 
             ? {
                 activityId: selectedActivity.id,
-                activityType: selectedActivity.type
+                activityType: selectedActivity.type as 'SERVICING' | 'TRADE'
               }
             : {
                 startDate,

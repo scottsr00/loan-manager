@@ -48,12 +48,18 @@ interface FacilityFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (data: FacilityFormValues) => void
+  defaultStartDate?: Date
+  defaultMaturityDate?: Date
+  defaultCommitmentAmount?: number
 }
 
 export function FacilityFormDialog({
   open,
   onOpenChange,
   onSubmit,
+  defaultStartDate,
+  defaultMaturityDate,
+  defaultCommitmentAmount,
 }: FacilityFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -65,6 +71,9 @@ export function FacilityFormDialog({
       interestType: 'FLOATING',
       baseRate: 'SOFR',
       margin: 0,
+      startDate: defaultStartDate,
+      maturityDate: defaultMaturityDate,
+      commitmentAmount: defaultCommitmentAmount,
     },
   })
 

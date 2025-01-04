@@ -62,7 +62,7 @@ interface Facility {
   status: string;
   interestType: string;
   baseRate: string;
-  margin: string;
+  margin: number;
   positions: FacilityPosition[];
   trades: Trade[];
   loans: Loan[];
@@ -73,20 +73,73 @@ interface PositionResponse {
   agreementNumber: string;
   borrower: {
     name: string;
-    type: string;
+    type: string | undefined;
     status: string;
   };
   agent: {
     name: string;
-    type: string;
+    type: string | undefined;
+    isAgent: boolean;
   };
   amount: number;
   currency: string;
   status: string;
   startDate: Date;
   maturityDate: Date;
-  interestRate: string;
-  facilities: Facility[];
+  interestRate: number;
+  facilities: {
+    id: string;
+    facilityName: string;
+    facilityType: string;
+    commitmentAmount: number;
+    currency: string;
+    status: string;
+    interestType: string;
+    baseRate: string;
+    margin: number;
+    positions: {
+      id: string;
+      lenderName: string;
+      lenderId: string;
+      facilityName: string;
+      facilityId: string;
+      commitmentAmount: number;
+      drawnAmount: number;
+      undrawnAmount: number;
+      share: number;
+      status: string;
+    }[];
+    trades?: {
+      id: string;
+      counterparty: string;
+      amount: number;
+      price: number;
+      status: string;
+      tradeDate: Date;
+      settlementDate: Date;
+    }[];
+    loans?: {
+      id: string;
+      amount: number;
+      outstandingAmount: number;
+      currency: string;
+      status: string;
+      interestPeriod: string;
+      drawDate: Date;
+      baseRate: string;
+      effectiveRate: string;
+    }[];
+    servicingActivities?: {
+      id: string;
+      activityType: string;
+      dueDate: Date;
+      description: string | null;
+      amount: number;
+      status: string;
+      completedAt: Date | null;
+      completedBy: string | null;
+    }[];
+  }[];
 }
 
 interface ExpandedState {
@@ -392,9 +445,9 @@ export function LoanPositionsHierarchy() {
   ], [])
 
   const positionColumnDefs = useMemo<ColDef[]>(() => [
-    { field: 'lender', headerName: 'Lender', flex: 1 },
+    { field: 'lenderName', headerName: 'Lender', flex: 1 },
     { 
-      field: 'commitment', 
+      field: 'commitmentAmount', 
       headerName: 'Commitment',
       valueFormatter: (params: ValueFormatterParams) => formatCurrency(params.value),
       flex: 1 
@@ -414,11 +467,7 @@ export function LoanPositionsHierarchy() {
     { 
       field: 'share', 
       headerName: 'Share %',
-      valueFormatter: (params: ValueFormatterParams) => {
-        const commitment = params.data.commitment || 0;
-        const facilityCommitment = params.data.facilityCommitmentAmount || 0;
-        return `${((commitment / facilityCommitment) * 100).toFixed(2)}%`;
-      },
+      valueFormatter: (params: ValueFormatterParams) => `${params.value.toFixed(2)}%`,
       flex: 1 
     },
     { 
@@ -496,7 +545,7 @@ export function LoanPositionsHierarchy() {
                     <TableCell>
                       <div className="space-y-1">
                         <div>{position.agent.name}</div>
-                        <Badge variant="outline">{position.agent.type}</Badge>
+                        <Badge variant="outline">{position.agent.type || 'Agent'}</Badge>
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -536,10 +585,10 @@ export function LoanPositionsHierarchy() {
                           <div className="space-y-1">
                             <div>{formatCurrency(facility.commitmentAmount)} (Committed)</div>
                             <div className="text-sm text-muted-foreground">
-                              {formatCurrency(facility.commitmentAmount - facility.loans.reduce((sum, loan) => sum + (loan.outstandingAmount || 0), 0))} (Available)
+                              {formatCurrency(facility.commitmentAmount - (facility.loans || []).reduce((sum, loan) => sum + (loan.outstandingAmount || 0), 0))} (Available)
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {formatCurrency(facility.loans.reduce((sum, loan) => sum + (loan.outstandingAmount || 0), 0))} (Outstanding)
+                              {formatCurrency((facility.loans || []).reduce((sum, loan) => sum + (loan.outstandingAmount || 0), 0))} (Outstanding)
                             </div>
                           </div>
                         </TableCell>
@@ -580,7 +629,7 @@ export function LoanPositionsHierarchy() {
                                     <NewLoanModal
                                       facilityId={facility.id}
                                       facilityName={facility.facilityName}
-                                      availableAmount={facility.commitmentAmount - facility.loans.reduce((sum, loan) => sum + (loan.outstandingAmount || 0), 0)}
+                                      availableAmount={facility.commitmentAmount - (facility.loans || []).reduce((sum, loan) => sum + (loan.outstandingAmount || 0), 0)}
                                       currency={facility.currency}
                                       margin={facility.margin}
                                       onSuccess={() => {
@@ -601,7 +650,7 @@ export function LoanPositionsHierarchy() {
                                     }))}
                                   />
                                   <DataGrid
-                                    rowData={facility.loans}
+                                    rowData={facility.loans || []}
                                     columnDefs={loanColumnDefs}
                                     className={`w-full transition-all duration-200 ${
                                       expandedTables[facility.id]?.loans ? 'h-[300px]' : 'h-[150px]'
@@ -629,9 +678,7 @@ export function LoanPositionsHierarchy() {
                                   <DataGrid
                                     rowData={facility.positions.map(pos => ({
                                       ...pos,
-                                      commitment: pos.commitment || 0,
-                                      facilityCommitmentAmount: facility.commitmentAmount,
-                                      share: pos.commitment ? (pos.commitment / facility.commitmentAmount) * 100 : 0
+                                      facilityCommitmentAmount: facility.commitmentAmount
                                     }))}
                                     columnDefs={positionColumnDefs}
                                     className={`w-full transition-all duration-200 ${
@@ -647,7 +694,7 @@ export function LoanPositionsHierarchy() {
                                   <CardTitle className="text-sm font-medium">Servicing History</CardTitle>
                                 </CardHeader>
                                 <CardContent className="pt-0 p-2">
-                                  <ServicingTable facilityId={facility.id} servicingActivities={facility.servicingActivities} />
+                                  <ServicingTable facilityId={facility.id} servicingActivities={facility.servicingActivities || []} />
                                 </CardContent>
                               </Card>
                             </div>
@@ -673,7 +720,12 @@ export function LoanPositionsHierarchy() {
       <FacilityDetailsModal
         facilityId={selectedFacility || ''}
         open={!!selectedFacility}
-        onOpenChange={(open) => !open && setSelectedFacility(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedFacility(null)
+            window.location.reload() // Force refresh when modal is closed
+          }
+        }}
       />
     </Card>
   )

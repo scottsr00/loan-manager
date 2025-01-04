@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type Facility, type CreditAgreement, type Borrower, type Entity, type Lender, type Trade, type TransactionHistory, type FacilityPosition } from '@prisma/client'
+import { type Facility, type CreditAgreement, type Borrower, type Entity, type Lender, type Trade, type TransactionHistory, type FacilityPosition, type ServicingActivity } from '@prisma/client'
 
 export const facilityTypeEnum = z.enum([
   'TERM_LOAN',
@@ -81,5 +81,12 @@ export type FacilityWithRelations = Facility & {
         dba?: string | null
       }
     }
+  })[]
+  servicingActivities: (ServicingActivity & {
+    id: string
+    activityType: string
+    dueDate: Date
+    amount: number
+    status: string
   })[]
 } 

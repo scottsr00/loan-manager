@@ -5,8 +5,16 @@ import { type Facility, type Entity } from '@prisma/client'
 
 interface FacilityWithRelations extends Facility {
   creditAgreement: {
-    borrower: Entity | null
-    lender: Entity | null
+    borrower: {
+      id: string
+      legalName: string
+      dba: string | null
+    } | null
+    lender: {
+      id: string
+      legalName: string
+      dba: string | null
+    } | null
   } | null
   servicingActivities: any[]
   trades: any[]
@@ -21,8 +29,20 @@ export async function getFacilities() {
       include: {
         creditAgreement: {
           include: {
-            borrower: true,
-            lender: true
+            borrower: {
+              select: {
+                id: true,
+                legalName: true,
+                dba: true
+              }
+            },
+            lender: {
+              select: {
+                id: true,
+                legalName: true,
+                dba: true
+              }
+            }
           }
         },
         servicingActivities: {

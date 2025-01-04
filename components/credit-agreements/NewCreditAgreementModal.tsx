@@ -436,6 +436,9 @@ export function NewCreditAgreementModal({
         open={isFacilityDialogOpen}
         onOpenChange={setIsFacilityDialogOpen}
         onSubmit={handleAddFacility}
+        defaultStartDate={form.getValues('startDate')}
+        defaultMaturityDate={form.getValues('maturityDate')}
+        defaultCommitmentAmount={form.getValues('amount')}
       />
     </>
   )

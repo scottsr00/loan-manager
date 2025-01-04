@@ -42,7 +42,7 @@ export interface FacilityPositionHistoryView {
   notes?: string
   servicingActivity?: {
     id: string
-    type: string
+    activityType: string
     dueDate: Date
     amount: number
     status: string

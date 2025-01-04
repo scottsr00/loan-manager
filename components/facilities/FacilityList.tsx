@@ -12,12 +12,13 @@ import { FacilityDetailsModal } from './FacilityDetailsModal'
 import { PositionHistoryModal } from '@/components/positions/PositionHistoryModal'
 import { ScrollText } from 'lucide-react'
 import '@/lib/ag-grid-init'
+import type { FacilityWithRelations } from '@/server/types/facility'
 
 export function FacilityList() {
-  const [facilities, setFacilities] = useState<any[]>([])
+  const [facilities, setFacilities] = useState<FacilityWithRelations[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedFacility, setSelectedFacility] = useState<any | null>(null)
+  const [selectedFacility, setSelectedFacility] = useState<FacilityWithRelations | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
 
@@ -60,13 +61,13 @@ export function FacilityList() {
       valueGetter: (params) => params.data.creditAgreement?.agreementNumber || 'N/A',
     },
     {
-      field: 'creditAgreement.borrower.entity.legalName',
+      field: 'creditAgreement.borrower.legalName',
       headerName: 'Borrower',
       filter: 'agTextColumnFilter',
       width: 200,
       valueGetter: (params) => {
-        const entity = params.data.creditAgreement?.borrower?.entity
-        return entity ? `${entity.legalName}${entity.dba ? ` (${entity.dba})` : ''}` : 'N/A'
+        const borrower = params.data.creditAgreement?.borrower
+        return borrower ? `${borrower.legalName}${borrower.dba ? ` (${borrower.dba})` : ''}` : 'N/A'
       }
     },
     {
@@ -75,8 +76,8 @@ export function FacilityList() {
       filter: 'agTextColumnFilter',
       width: 200,
       valueGetter: (params) => {
-        const entity = params.data.creditAgreement?.lender
-        return entity ? `${entity.legalName}${entity.dba ? ` (${entity.dba})` : ''}` : 'N/A'
+        const lender = params.data.creditAgreement?.lender
+        return lender ? `${lender.legalName}${lender.dba ? ` (${lender.dba})` : ''}` : 'N/A'
       }
     },
     {

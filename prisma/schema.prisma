@@ -313,7 +313,7 @@ model TransactionHistory {
 model ServicingActivity {
   id                String                @id @default(cuid())
   facilityId        String
-  type              String
+  activityType      String                // Renamed from 'type'
   dueDate          DateTime
   description      String?
   amount           Float
